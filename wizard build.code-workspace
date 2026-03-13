@@ -1,0 +1,52 @@
+{
+	"folders": [
+		{
+			"name": "WineWizard — Backend",
+			"path": "backend"
+		},
+		{
+			"name": "WineWizard — Frontend",
+			"path": "frontend"
+		}
+	],
+	"settings": {
+		"python.defaultInterpreterPath": "${workspaceFolder:WineWizard — Backend}/venv/Scripts/python.exe",
+		"python.terminal.activateEnvironment": true,
+		"dart.flutterSdkPath": "C:\\flutter",
+		"editor.formatOnSave": true,
+		"editor.rulers": [88],
+		"files.trimTrailingWhitespace": true,
+		"explorer.openEditors.visible": 5,
+		"workbench.editor.enablePreview": false
+	},
+	"extensions": {
+		"recommendations": [
+			"dart-code.flutter",
+			"dart-code.dart-code",
+			"ms-python.python",
+			"ms-python.vscode-pylance"
+		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Run Backend (uvicorn)",
+				"type": "debugpy",
+				"request": "launch",
+				"module": "uvicorn",
+				"args": ["main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"],
+				"cwd": "${workspaceFolder:WineWizard — Backend}",
+				"jinja": true
+			},
+			{
+				"name": "Run Flutter (Android Emulator)",
+				"type": "node",
+				"request": "launch",
+				"program": "${workspaceFolder:WineWizard — Frontend}/lib/main.dart",
+				"runtimeExecutable": "C:\\flutter\\bin\\flutter.bat",
+				"runtimeArgs": ["run"]
+			}
+		]
+	}
+}
