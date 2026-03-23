@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'screens/age_gate_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/quiz_screen.dart';
 
-void main() => runApp(const WineWizardApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  runApp(const WineWizardApp());
+}
 
 enum _AppStage { ageGate, onboarding, quiz }
 
