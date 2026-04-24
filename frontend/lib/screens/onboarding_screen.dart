@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/palate_dial.dart';
-import '../widgets/wizard_animation.dart';
+import '../widgets/sage_fox_widget.dart';
 
 class OnboardingScreen extends StatefulWidget {
   final VoidCallback onComplete;
@@ -129,7 +129,7 @@ class _CardIntroduction extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [WwColors.bgDeep, Color(0xFF160F1E)],
+          colors: [WwColors.bgDeep, WwColors.bgSurface],
         ),
       ),
       child: SafeArea(
@@ -138,7 +138,7 @@ class _CardIntroduction extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const WizardHeroWidget(),
+              const SageFoxWidget(),
 
               const SizedBox(height: 44),
 
@@ -151,7 +151,7 @@ class _CardIntroduction extends StatelessWidget {
               const SizedBox(height: 18),
 
               Text(
-                "I'm the Cellar Sage, and I'm here to make sure you never drink a boring bottle again.",
+                "I'm the Sage Fox — your algorithmic guide to finding the right bottle, every time.",
                 textAlign: TextAlign.center,
                 style: WwText.bodyLarge(color: WwColors.textSecondary),
               ),
