@@ -1,126 +1,451 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy Policy | Cellar Sage</title>
-    <style>
-        :root {
-            --bg:        #0F0F14;
-            --surface:   #16161E;
-            --violet:    #C3A5FF;
-            --violet-muted: #7B6FA3;
-            --text:      #FFFFFF;
-            --text-muted: #9499B8;
-            --border:    #252535;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Cellar Sage</title>
+  <meta name="description" content="Cellar Sage Privacy Policy — how we collect, use, and protect your personal information under the Australian Privacy Act 1988." />
+  <meta name="theme-color" content="#0F0F14" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg);
-            color: var(--text-muted);
-            line-height: 1.7;
-            padding: 2rem 1rem;
-        }
+    :root {
+      --bg:          #0F0F14;
+      --bg-surface:  #1A1B26;
+      --accent:      #C3A5FF;
+      --accent-deep: #7C54CD;
+      --glow:        rgba(195,165,255,.10);
+      --text:        #EEEEF6;
+      --text-muted:  #7878A0;
+      --border:      rgba(195,165,255,.10);
+      --radius:      14px;
+    }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: var(--surface);
-            padding: 3rem;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-        }
+    html { scroll-behavior: smooth; }
 
-        header {
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-        }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+      overflow-x: hidden;
+    }
 
-        h1 {
-            color: var(--text);
-            margin: 0;
-        }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
 
-        h2 {
-            color: var(--violet);
-            margin-top: 2rem;
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
+    .wrap {
+      width: min(1120px, 100% - 3rem);
+      margin-inline: auto;
+    }
 
-        p, ul {
-            margin-bottom: 1rem;
-        }
+    /* ── Nav ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15,15,20,.82);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .95rem 0;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: .7rem;
+      font-family: 'Syne', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .nav-brand svg { width: 32px; height: 32px; flex-shrink: 0; }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-muted);
+      font-size: .875rem;
+      font-weight: 500;
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--accent); text-decoration: none; }
+    .nav-pill {
+      background: var(--accent) !important;
+      color: #0F0F14 !important;
+      padding: .4rem 1.1rem;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: .82rem;
+    }
+    @media (max-width: 680px) {
+      .nav-links li:not(:last-child) { display: none; }
+    }
 
-        strong {
-            color: var(--text);
-        }
+    /* ── Page header ── */
+    .page-header {
+      padding: 4rem 0 3rem;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .page-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 60% 80% at 50% -20%, rgba(124,84,205,.2) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .page-header-inner {
+      position: relative;
+      z-index: 1;
+    }
+    .tag {
+      display: inline-block;
+      background: var(--glow);
+      border: 1px solid var(--border);
+      color: var(--accent);
+      font-size: .72rem;
+      font-weight: 600;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      padding: .3rem .85rem;
+      border-radius: 999px;
+    }
+    .page-header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -.025em;
+      margin: .85rem 0 .75rem;
+    }
+    .page-header p { color: var(--text-muted); font-size: .9rem; }
 
-        ul {
-            padding-left: 1.5rem;
-        }
+    /* ── Content ── */
+    .content-wrap {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 4rem;
+      padding: 4rem 0 6rem;
+      align-items: start;
+    }
+    @media (max-width: 820px) {
+      .content-wrap { grid-template-columns: 1fr; gap: 2rem; }
+      .toc { display: none; }
+    }
 
-        .footer-link {
-            display: block;
-            margin-top: 3rem;
-            text-align: center;
-            color: var(--violet);
-            text-decoration: none;
-            font-weight: 600;
-        }
+    /* Table of contents */
+    .toc {
+      position: sticky;
+      top: 80px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      font-size: .82rem;
+    }
+    .toc-title {
+      font-family: 'Syne', sans-serif;
+      font-size: .8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--text-muted);
+      margin-bottom: .9rem;
+    }
+    .toc ol {
+      list-style: none;
+      counter-reset: toc;
+    }
+    .toc ol li {
+      counter-increment: toc;
+      margin-bottom: .5rem;
+    }
+    .toc ol li a {
+      color: var(--text-muted);
+      display: flex;
+      gap: .5rem;
+      align-items: baseline;
+      transition: color .2s;
+      line-height: 1.4;
+    }
+    .toc ol li a::before {
+      content: counter(toc) ".";
+      color: var(--accent);
+      font-weight: 600;
+      flex-shrink: 0;
+      font-size: .75rem;
+    }
+    .toc ol li a:hover { color: var(--accent); text-decoration: none; }
 
-        .footer-link:hover { text-decoration: underline; }
+    /* Policy sections */
+    .policy h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 2.75rem 0 .9rem;
+      padding-top: .25rem;
+      scroll-margin-top: 90px;
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+    .policy h2:first-child { margin-top: 0; }
+    .section-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px; height: 26px;
+      background: var(--glow);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-size: .72rem;
+      font-weight: 700;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .policy p {
+      color: var(--text-muted);
+      margin-bottom: .9rem;
+      font-size: .925rem;
+      line-height: 1.75;
+    }
+    .policy ul, .policy ol {
+      color: var(--text-muted);
+      font-size: .925rem;
+      line-height: 1.75;
+      padding-left: 1.25rem;
+      margin-bottom: .9rem;
+    }
+    .policy li { margin-bottom: .4rem; }
+    .policy strong { color: var(--text); font-weight: 600; }
+    .policy a { color: var(--accent); }
 
-        @media (max-width: 600px) {
-            .container { padding: 1.5rem; }
-        }
-    </style>
+    .info-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      margin: 1.25rem 0;
+    }
+    .info-card p { margin: 0; }
+
+    .contact-card {
+      background: linear-gradient(135deg, rgba(124,84,205,.12), rgba(195,165,255,.06));
+      border: 1px solid rgba(195,165,255,.18);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-top: 1.25rem;
+    }
+    .contact-card p { margin-bottom: .35rem; }
+    .contact-card p:last-child { margin: 0; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2.25rem 0;
+    }
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: .95rem;
+      color: var(--text);
+    }
+    .footer-brand svg { width: 22px; height: 22px; }
+    .footer-copy { color: var(--text-muted); font-size: .78rem; }
+    .footer-links { display: flex; gap: 1.5rem; list-style: none; }
+    .footer-links a { color: var(--text-muted); font-size: .82rem; transition: color .2s; }
+    .footer-links a:hover { color: var(--accent); text-decoration: none; }
+    @media (max-width: 560px) {
+      .footer-inner { flex-direction: column; text-align: center; }
+    }
+  </style>
 </head>
 <body>
 
-    <div class="container">
-        <header>
-            <h1>Privacy Policy</h1>
-            <p><strong>Last Updated: April 2026</strong></p>
-        </header>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="fox" viewBox="0 0 80 80">
+    <polygon points="14,37 3,5 28,23"  fill="#C3A5FF"/>
+    <polygon points="16,37 8,10 26,24" fill="#0F0F14"/>
+    <polygon points="66,37 77,5 52,23"  fill="#7C54CD"/>
+    <polygon points="64,37 72,10 54,24" fill="#0F0F14"/>
+    <polygon points="10,41 40,25 70,41 62,61 40,67 18,61" fill="#1A1B26"/>
+    <polygon points="28,53 40,67 52,53 40,47" fill="#C3A5FF" opacity="0.62"/>
+    <ellipse cx="26" cy="42" rx="5" ry="4" fill="#C3A5FF"/>
+    <circle  cx="26" cy="42" r="2.4"        fill="#0F0F14"/>
+    <circle  cx="27.2" cy="40.8" r="1"      fill="white" opacity=".88"/>
+    <ellipse cx="54" cy="42" rx="5" ry="4" fill="#C3A5FF"/>
+    <circle  cx="54" cy="42" r="2.4"        fill="#0F0F14"/>
+    <circle  cx="55.2" cy="40.8" r="1"      fill="white" opacity=".88"/>
+    <polygon points="37,54 43,54 40,58" fill="#7C54CD"/>
+  </symbol>
+</svg>
 
-        <section>
-            <p>Welcome to <strong>Cellar Sage</strong>. We are committed to protecting the privacy of our users. This policy outlines how we handle your data in accordance with the Australian Privacy Principles (APPs) and global standards.</p>
-
-            <h2>1. Data Collection</h2>
-            <p>To provide a personalised recommendation experience, we collect:</p>
-            <ul>
-                <li><strong>Palate Preferences:</strong> Responses to our onboarding quiz and adjustments made to the Palate Dial (Acidity, Body, Tannin, Aromatics).</li>
-                <li><strong>Location Data:</strong> With your permission, we collect your GPS coordinates to find licensed wine merchants in your immediate vicinity.</li>
-                <li><strong>Technical Info:</strong> Anonymous device identifiers and performance logs.</li>
-            </ul>
-
-            <h2>2. Use of Information</h2>
-            <p>Your data is used solely to:</p>
-            <ul>
-                <li>Calculate and refine your weighted palate scores.</li>
-                <li>Display nearby bottle shops and stock availability.</li>
-                <li>Improve the accuracy of our recommendation engine.</li>
-            </ul>
-
-            <h2>3. Third-Party Sharing</h2>
-            <p>We do not sell your personal data. We only share information with:</p>
-            <ul>
-                <li><strong>Mapping Services:</strong> Location data is shared with map providers to show local search results.</li>
-                <li><strong>Affiliate Partners:</strong> If you purchase a wine via a link, a unique ID is shared with the merchant to track the referral.</li>
-            </ul>
-
-            <h2>4. Your Rights</h2>
-            <p>Under Australian law, you have the right to access, correct, or delete your personal information. You can request data deletion by contacting us directly.</p>
-
-            <h2>5. Contact Us</h2>
-            <p>If you have questions about this policy, please contact us at <a href="mailto:craigquarrell@gmail.com" style="color: var(--violet);">craigquarrell@gmail.com</a>.</p>
-        </section>
-
-        <a href="index.html" class="footer-link">&larr; Back to Cellar Sage</a>
+<!-- ─── Nav ─────────────────────────────────── -->
+<nav>
+  <div class="wrap">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">
+        <svg aria-hidden="true"><use href="#fox"/></svg>
+        Cellar Sage
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html#features">Features</a></li>
+        <li><a href="index.html#algorithm">Algorithm</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a href="mailto:support@cellarsage.com.au" class="nav-pill">Contact</a></li>
+      </ul>
     </div>
+  </div>
+</nav>
+
+<!-- ─── Page Header ──────────────────────────── -->
+<div class="page-header">
+  <div class="wrap page-header-inner">
+    <span class="tag">Legal</span>
+    <h1>Privacy Policy</h1>
+    <p>Last updated: April 2026 &middot; Applies to the Cellar Sage mobile application and website</p>
+  </div>
+</div>
+
+<!-- ─── Content ──────────────────────────────── -->
+<div class="wrap">
+  <div class="content-wrap">
+
+    <!-- Sticky TOC -->
+    <aside class="toc" aria-label="Table of contents">
+      <div class="toc-title">Contents</div>
+      <ol>
+        <li><a href="#s1">Introduction</a></li>
+        <li><a href="#s2">Information We Collect</a></li>
+        <li><a href="#s3">Automated Processing</a></li>
+        <li><a href="#s4">Use of Data</a></li>
+        <li><a href="#s5">Third-Party Links</a></li>
+        <li><a href="#s6">Data Security</a></li>
+        <li><a href="#s7">Your Rights</a></li>
+        <li><a href="#s8">Contact Us</a></li>
+      </ol>
+    </aside>
+
+    <!-- Policy body -->
+    <article class="policy">
+
+      <h2 id="s1"><span class="section-num">1</span> Introduction</h2>
+      <p>Cellar Sage ("we", "us", or "our") is committed to protecting your privacy. This policy outlines how we handle your personal information in accordance with the <strong>Australian Privacy Act 1988 (Cth)</strong> and the <strong>Australian Privacy Principles (APPs)</strong>.</p>
+      <p>By using the Cellar Sage application or website, you agree to the collection and use of information in accordance with this policy.</p>
+
+      <h2 id="s2"><span class="section-num">2</span> Information We Collect</h2>
+      <p>To provide you with high-quality beverage recommendations, we collect the following types of information:</p>
+      <ul>
+        <li>
+          <strong>Location Data:</strong> With your permission, we use your geographic location (specifically within Australia) to identify local merchant availability and regional product trends.
+        </li>
+        <li>
+          <strong>Usage Data:</strong> We collect anonymous information about how you interact with the app (e.g., search trends, style preferences) to improve our services.
+        </li>
+        <li>
+          <strong>Account Information:</strong> If you choose to create an account, we may collect your name and email address.
+        </li>
+      </ul>
+      <div class="info-card">
+        <p>We collect only the minimum information necessary to deliver our service. We do not collect sensitive information such as financial details, health data, or government identifiers.</p>
+      </div>
+
+      <h2 id="s3"><span class="section-num">3</span> Automated Processing &amp; Custom Algorithms</h2>
+      <p>Cellar Sage utilises a <strong>custom proprietary algorithm</strong> to provide tailored recommendations.</p>
+      <ul>
+        <li>This algorithm processes data points including, but not limited to, user location, product styles, and price parameters to generate suggestions.</li>
+        <li>These automated decisions are designed solely for the purpose of enhancing user experience and do not have legal or significant effects on the individual user.</li>
+      </ul>
+
+      <h2 id="s4"><span class="section-num">4</span> Use of Data</h2>
+      <p>We use the collected data to:</p>
+      <ul>
+        <li>Deliver localised product recommendations tailored to your location and preferences.</li>
+        <li>Facilitate redirects to third-party affiliate merchants (e.g., Endeavour Group).</li>
+        <li>Improve the performance and accuracy of our custom recommendation algorithm.</li>
+      </ul>
+
+      <h2 id="s5"><span class="section-num">5</span> Third-Party Links &amp; Affiliate Disclosure</h2>
+      <p>Cellar Sage participates in various affiliate marketing programs.</p>
+      <ul>
+        <li>When you click a link within the app to view a product on a merchant's website (such as Dan Murphy's or BWS), you will be redirected to that merchant's platform.</li>
+        <li>We are not responsible for the privacy practices of these third-party sites. We encourage you to read the privacy policies of any website you visit.</li>
+        <li>We may receive a commission for qualifying purchases made via these links.</li>
+      </ul>
+      <div class="info-card">
+        <p><strong>We do not sell your personal data to advertisers or data brokers.</strong> Affiliate commissions are generated only when you choose to visit a merchant and make a purchase — your data is not part of that transaction.</p>
+      </div>
+
+      <h2 id="s6"><span class="section-num">6</span> Data Security and Storage</h2>
+      <p>We take reasonable steps to protect your personal information from misuse, interference, and unauthorised access. Measures include:</p>
+      <ul>
+        <li>Encrypted data transmission (TLS/HTTPS) for all communications.</li>
+        <li>Secure server environments with access controls and monitoring.</li>
+        <li>Prioritisation of Australian-based data hosting where practicable.</li>
+      </ul>
+      <p>While we implement appropriate safeguards, no method of internet transmission or electronic storage is 100% secure. We will notify you in the event of a data breach as required by the <em>Privacy Amendment (Notifiable Data Breaches) Act 2017</em>.</p>
+
+      <h2 id="s7"><span class="section-num">7</span> Your Rights (Access and Correction)</h2>
+      <p>Under the Australian Privacy Principles, you have the right to:</p>
+      <ul>
+        <li><strong>Access</strong> the personal information we hold about you.</li>
+        <li><strong>Request correction</strong> of inaccurate or out-of-date information.</li>
+        <li><strong>Request deletion</strong> of your account and associated personal data.</li>
+      </ul>
+      <p>To exercise any of these rights, please contact us at the details below. We will respond within 30 days. There is no charge for making an access or correction request.</p>
+
+      <h2 id="s8"><span class="section-num">8</span> Contact Us</h2>
+      <p>If you have any questions, wish to exercise your privacy rights, or wish to lodge a privacy-related complaint, please contact us:</p>
+      <div class="contact-card">
+        <p><strong>Email:</strong> <a href="mailto:support@cellarsage.com.au">support@cellarsage.com.au</a></p>
+        <p><strong>Location:</strong> Mitcham, South Australia, Australia</p>
+      </div>
+      <p style="margin-top:1.25rem">We will endeavour to respond to all privacy inquiries within 30 days. If you are not satisfied with our response, you may contact the <strong>Office of the Australian Information Commissioner (OAIC)</strong> at <a href="https://www.oaic.gov.au" target="_blank" rel="noopener">oaic.gov.au</a>.</p>
+
+    </article>
+  </div>
+</div>
+
+<!-- ─── Footer ───────────────────────────────── -->
+<footer>
+  <div class="wrap">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <svg aria-hidden="true"><use href="#fox"/></svg>
+        Cellar Sage
+      </div>
+      <span class="footer-copy">&copy; 2026 Cellar Sage. All rights reserved. Developed in South Australia.</span>
+      <ul class="footer-links">
+        <li><a href="privacy.html">Privacy Policy</a></li>
+        <li><a href="mailto:support@cellarsage.com.au">Contact</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
 
 </body>
 </html>
