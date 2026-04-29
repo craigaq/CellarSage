@@ -1,0 +1,37 @@
+name: Cellar Sage — Daily Sync
+
+on:
+  # Weekly Sunday at 00:00 ACST (14:30 UTC Saturday → lands Monday 00:00 ACST)
+  # Adjusted to 16:00 UTC Sunday ≈ 01:30 ACST Monday for simplicity.
+  schedule:
+    - cron: "0 16 * * 0"
+
+  # Manual trigger from the Actions tab (useful for testing)
+  workflow_dispatch:
+
+jobs:
+  sync:
+    name: Scrape → Normalise → Upsert
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/sync/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r backend/sync/requirements.txt
+
+      - name: Run sync engine
+        working-directory: backend
+        env:
+          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
+          DATABASE_URL:    ${{ secrets.DATABASE_URL }}
+        run: python -m sync.main
