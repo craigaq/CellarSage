@@ -1,17 +1,16 @@
-name: Cellar Sage — Daily Sync
+name: Cellar Sage Weekly Sync
 
 on:
-  # Weekly Sunday at 00:00 ACST (14:30 UTC Saturday → lands Monday 00:00 ACST)
-  # Adjusted to 16:00 UTC Sunday ≈ 01:30 ACST Monday for simplicity.
+  # Every Sunday at 16:00 UTC (Monday 01:30 ACST)
   schedule:
     - cron: "0 16 * * 0"
 
-  # Manual trigger from the Actions tab (useful for testing)
+  # Manual trigger from the Actions tab
   workflow_dispatch:
 
 jobs:
   sync:
-    name: Scrape → Normalise → Upsert
+    name: Scrape - Normalise - Upsert
     runs-on: ubuntu-latest
     timeout-minutes: 20
 

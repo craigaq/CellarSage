@@ -7,7 +7,7 @@ Orchestrates the full pipeline for every enabled merchant:
 Run locally:
     APIFY_API_TOKEN=... DATABASE_URL=... python -m sync.main
 
-Run via GitHub Actions: see .github/workflows/daily_sync.yml
+Run via GitHub Actions: see .github/workflows/weekly_sync.yml
 """
 
 import logging
