@@ -20,7 +20,7 @@ MERCHANT_REGISTRY: dict = {
     "danmurphys": {
         "actor_id": "apify/web-scraper",
         "max_items": 50,
-        "enabled": True,
+        "enabled": False,
         "actor_input": {
             "startUrls": [
                 {"url": "https://www.danmurphys.com.au/catalogue/wine/red-wine"},
