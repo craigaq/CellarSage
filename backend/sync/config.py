@@ -8,7 +8,14 @@ MERCHANT_REGISTRY: dict = {
         "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
         "max_items": 50,
         "enabled": True,
-        "actor_input": {},          # actor has its own defaults
+        "actor_input": {
+            "operation": "category",
+            "path": "/wine",
+            "state": "sa",
+            "page": 1,
+            "show": 50,
+            "includeRaw": False,
+        },
     },
     "danmurphys": {
         "actor_id": "apify/web-scraper",

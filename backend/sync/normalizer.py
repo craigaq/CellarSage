@@ -118,7 +118,8 @@ def normalize(items: list[dict], merchant: str) -> list[tuple[WineRecord, Mercha
             log.warning("Normalizer skipped item for %s: %s — %r", merchant, exc, item)
 
     if items and not results:
-        log.warning("All %d items dropped for %s — sample raw item: %r", len(items), merchant, items[0])
+        print(f"[DIAG] All {len(items)} items dropped for {merchant}. Sample keys: {list(items[0].keys())}", flush=True)
+        print(f"[DIAG] Sample item: {items[0]}", flush=True)
 
     log.info("Normalised %d/%d items for %s", len(results), len(items), merchant)
     return results
