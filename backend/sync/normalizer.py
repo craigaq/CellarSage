@@ -42,6 +42,23 @@ def _matches_catalog(varietal: Optional[str], name: str) -> bool:
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+# Non-750ml size patterns — anything matching this is rejected.
+# Standard 750ml bottles often omit the size entirely, so we reject only
+# explicit non-standard sizes rather than requiring "750ml" to be present.
+_NON_STD_SIZE_RE = re.compile(
+    r'\b(375\s?m[lL]|187\s?m[lL]|1[.·]5\s?[lL]|1500\s?m[lL]'
+    r'|[2-9]\s?[lL]|[2-9]000\s?m[lL])\b',
+    re.IGNORECASE,
+)
+
+
+def _is_standard_bottle(name: str, item: dict) -> bool:
+    """Return False if the product is clearly not a standard 750ml bottle."""
+    size_field = str(item.get("size") or item.get("volume") or item.get("pack_size") or "")
+    haystack = name + " " + size_field
+    return not _NON_STD_SIZE_RE.search(haystack)
+
+
 def _extract_vintage(text: str) -> Optional[int]:
     """Pull a 4-digit year (1980–2030) out of a product name."""
     if not text:
@@ -89,6 +106,10 @@ def _normalize_liquorland(item: dict, retailer: str) -> Optional[tuple[WineRecor
         log.debug("liquorland item skipped — not in known catalog: %r", name)
         return None
 
+    if not _is_standard_bottle(name, item):
+        log.debug("liquorland item skipped — non-standard bottle size: %r", name)
+        return None
+
     clean_name = re.sub(r'\s*\b(19[89]\d|20[012]\d)\b\s*', ' ', name).strip()
 
     wine  = WineRecord(name=clean_name, vintage=vintage, region=region, varietal=varietal)
@@ -114,6 +135,10 @@ def _normalize_danmurphys(item: dict, retailer: str) -> Optional[tuple[WineRecor
 
     if not _matches_catalog(varietal, name):
         log.debug("danmurphys item skipped — not in known catalog: %r", name)
+        return None
+
+    if not _is_standard_bottle(name, item):
+        log.debug("danmurphys item skipped — non-standard bottle size: %r", name)
         return None
 
     wine  = WineRecord(name=clean_name, vintage=vintage, region=region, varietal=varietal)

@@ -31,11 +31,25 @@ def sync_merchant(merchant: str, cfg: dict) -> SyncResult:
     result = SyncResult(merchant=merchant)
 
     try:
-        raw = run_actor(
-            actor_id=cfg["actor_id"],
-            actor_input=cfg.get("actor_input", {}),
-            max_items=cfg.get("max_items", 50),
-        )
+        pages     = cfg.get("pages", 1)
+        max_items = cfg.get("max_items", 100)
+        base_input = cfg.get("actor_input", {})
+        all_raw: list = []
+
+        for page in range(1, pages + 1):
+            actor_input = {**base_input, "page": page}
+            page_raw = run_actor(
+                actor_id=cfg["actor_id"],
+                actor_input=actor_input,
+                max_items=max_items,
+            )
+            all_raw.extend(page_raw)
+            log.info("%s: page %d/%d returned %d items", merchant, page, pages, len(page_raw))
+            if len(page_raw) < max_items:
+                log.info("%s: short page — stopping early at page %d", merchant, page)
+                break
+
+        raw = all_raw
         result.scraped = len(raw)
 
         pairs = normalize(raw, merchant)

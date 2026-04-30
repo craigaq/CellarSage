@@ -6,14 +6,14 @@ Add new merchants here; the scrape manager picks them up automatically.
 MERCHANT_REGISTRY: dict = {
     "liquorland": {
         "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
-        "max_items": 50,
+        "max_items": 100,
+        "pages": 3,
         "enabled": True,
         "actor_input": {
             "operation": "category",
             "path": "/wine",
             "state": "sa",
-            "page": 1,
-            "show": 50,
+            "show": 100,
             "includeRaw": False,
         },
     },

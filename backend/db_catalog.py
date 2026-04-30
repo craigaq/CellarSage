@@ -11,7 +11,8 @@ import logging
 
 log = logging.getLogger(__name__)
 
-_TTL_SECONDS = 3600
+_TTL_SECONDS    = 3600
+MIN_PRICE_AUD   = 10.0   # filter out bulk/cask wines below this threshold
 
 # Module-level cache: retailer → {"data": dict, "ts": float}
 _CACHE: dict[str, dict] = {}
@@ -115,10 +116,10 @@ def get_cheapest_by_varietal(retailer: str = "liquorland") -> dict[str, dict]:
                 JOIN wines w ON w.id = mo.wine_id
                 WHERE mo.retailer = %s
                   AND mo.price IS NOT NULL
-                  AND mo.price > 0
+                  AND mo.price >= %s
                 ORDER BY mo.price ASC
                 """,
-                (retailer,),
+                (retailer, MIN_PRICE_AUD),
             )
             rows = cur.fetchall()
     except Exception as exc:
