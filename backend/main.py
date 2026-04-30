@@ -1,4 +1,7 @@
 import logging
+from dotenv import load_dotenv
+load_dotenv()  # loads backend/.env in local dev; no-op in production
+
 from fastapi import FastAPI, HTTPException, Query
 
 logging.basicConfig(
