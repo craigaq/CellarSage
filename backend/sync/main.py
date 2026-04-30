@@ -1,3 +1,4 @@
+import sys as _sys; print(f"=== sync/main.py LOADED from {__file__} (Python {_sys.version}) ===", flush=True)
 """
 Cellar Sage Cloud-Sync Engine — entry point.
 
