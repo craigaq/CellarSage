@@ -31,9 +31,12 @@ def sync_merchant(merchant: str, cfg: dict) -> SyncResult:
     result = SyncResult(merchant=merchant)
 
     try:
-        pages     = cfg.get("pages", 1)
-        max_items = cfg.get("max_items", 100)
+        pages      = cfg.get("pages", 1)
+        max_items  = cfg.get("max_items", 50)
         base_input = cfg.get("actor_input", {})
+        # page_size is the number of items a full page returns — used to detect
+        # end-of-catalogue (a page shorter than this means no more pages exist).
+        page_size  = base_input.get("show", max_items)
         all_raw: list = []
 
         for page in range(1, pages + 1):
@@ -45,8 +48,8 @@ def sync_merchant(merchant: str, cfg: dict) -> SyncResult:
             )
             all_raw.extend(page_raw)
             log.info("%s: page %d/%d returned %d items", merchant, page, pages, len(page_raw))
-            if len(page_raw) < max_items:
-                log.info("%s: short page — stopping early at page %d", merchant, page)
+            if len(page_raw) < page_size:
+                log.info("%s: short page — no more pages after page %d", merchant, page)
                 break
 
         raw = all_raw
