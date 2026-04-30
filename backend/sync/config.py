@@ -12,7 +12,6 @@ MERCHANT_REGISTRY: dict = {
         "actor_input": {
             "operation": "category",
             "path": "/wine",
-            "state": "sa",
             "show": 50,
             "includeRaw": False,
         },
