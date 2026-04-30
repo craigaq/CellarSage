@@ -61,12 +61,12 @@ def sync_merchant(merchant: str, cfg: dict) -> SyncResult:
         pairs = normalize(raw, merchant)
         result.normalised = len(pairs)
 
-        if raw and result.normalised < result.scraped * 0.70:
+        if raw and result.normalised < result.scraped * 0.50:
             drop_pct = 100 * (1 - result.normalised / result.scraped)
             raise RuntimeError(
                 f"{merchant}: {drop_pct:.0f}% of scraped items dropped "
                 f"({result.scraped - result.normalised}/{result.scraped}) — "
-                "likely indicates >30% prices missing. Aborting to preserve last known data."
+                "likely indicates scraper failure. Aborting to preserve last known data."
             )
 
         wines, offers = upsert_batch(pairs)
