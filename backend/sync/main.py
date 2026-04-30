@@ -39,17 +39,20 @@ def sync_merchant(merchant: str, cfg: dict) -> SyncResult:
         page_size  = base_input.get("show", max_items)
         all_raw: list = []
 
+        print(f"[PAGES] {merchant}: pages={pages}, max_items={max_items}, page_size={page_size}", flush=True)
+
         for page in range(1, pages + 1):
             actor_input = {**base_input, "page": page}
+            print(f"[PAGES] {merchant}: starting page {page}/{pages}", flush=True)
             page_raw = run_actor(
                 actor_id=cfg["actor_id"],
                 actor_input=actor_input,
                 max_items=max_items,
             )
             all_raw.extend(page_raw)
-            log.info("%s: page %d/%d returned %d items", merchant, page, pages, len(page_raw))
+            print(f"[PAGES] {merchant}: page {page}/{pages} returned {len(page_raw)} items (total so far: {len(all_raw)})", flush=True)
             if len(page_raw) < page_size:
-                log.info("%s: short page — no more pages after page %d", merchant, page)
+                print(f"[PAGES] {merchant}: short page — stopping after page {page}", flush=True)
                 break
 
         raw = all_raw
