@@ -1,0 +1,266 @@
+import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../models/wine_picks.dart';
+import '../services/api_service.dart';
+import '../theme/app_theme.dart';
+
+const _tierColors = {
+  1: WwColors.tierLocal,
+  2: WwColors.tierNational,
+  3: WwColors.tierGlobal,
+};
+
+const _tierIcons = {
+  1: Icons.home_outlined,
+  2: Icons.flag_outlined,
+  3: Icons.public,
+};
+
+class WinePicksScreen extends StatefulWidget {
+  final String varietal;
+
+  const WinePicksScreen({super.key, required this.varietal});
+
+  @override
+  State<WinePicksScreen> createState() => _WinePicksScreenState();
+}
+
+class _WinePicksScreenState extends State<WinePicksScreen> {
+  WinePicksResponse? _response;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error   = null;
+    });
+    try {
+      final response = await ApiService().winePicks(varietal: widget.varietal);
+      if (mounted) setState(() { _response = response; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: WwColors.bgDeep,
+      appBar: AppBar(
+        title: Text(
+          widget.varietal,
+          style: WwText.headlineMedium(),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_loading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(color: WwColors.violet),
+            const SizedBox(height: 16),
+            Text('Finding the best picks…', style: WwText.bodyMedium()),
+          ],
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('🦊', style: TextStyle(fontSize: 48)),
+              const SizedBox(height: 16),
+              Text(
+                'The Cellar Fox couldn\'t find picks right now.',
+                style: WwText.titleMedium(),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(_error!, textAlign: TextAlign.center, style: WwText.bodySmall()),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _load,
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Try Again'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final picks = _response?.picks ?? [];
+
+    if (picks.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('😬', style: TextStyle(fontSize: 48)),
+              const SizedBox(height: 16),
+              Text(
+                'No ${widget.varietal} listings found in Liquorland right now.',
+                textAlign: TextAlign.center,
+                style: WwText.bodyMedium(),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Text(
+            'Three picks — one for every palate.',
+            style: WwText.bodyMedium(),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        for (final pick in picks) _PickCard(pick: pick),
+      ],
+    );
+  }
+}
+
+class _PickCard extends StatelessWidget {
+  final WinePick pick;
+  const _PickCard({required this.pick});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _tierColors[pick.tier] ?? WwColors.violetMuted;
+    final icon  = _tierIcons[pick.tier]  ?? Icons.wine_bar_outlined;
+    final origin = _originLabel(pick);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: WwDecorations.card(),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Tier header strip
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: WwDecorations.tierHeader(color),
+            child: Row(
+              children: [
+                Icon(icon, color: Colors.white, size: 15),
+                const SizedBox(width: 8),
+                Text(
+                  pick.tierLabel.toUpperCase(),
+                  style: WwText.badgeLabel(),
+                ),
+              ],
+            ),
+          ),
+
+          // Card body
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(pick.name, style: WwText.headlineMedium()),
+                if (origin.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(origin, style: WwText.bodySmall()),
+                ],
+                if (pick.rating != null) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded, size: 14, color: Color(0xFFFFCC00)),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${pick.rating!.toStringAsFixed(1)}  ·  ${pick.reviewCount} review${pick.reviewCount == 1 ? '' : 's'}',
+                        style: WwText.bodySmall(),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Text(
+                  'A\$${pick.price.toStringAsFixed(2)}',
+                  style: WwText.priceHero(),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: pick.url.isNotEmpty
+                      ? FilledButton.icon(
+                          onPressed: () => _launch(pick.url),
+                          icon: const Icon(Icons.open_in_new, size: 15),
+                          label: const Text('Buy on Liquorland'),
+                        )
+                      : OutlinedButton.icon(
+                          onPressed: () => _launch('https://www.liquorland.com.au'),
+                          icon: const Icon(Icons.search, size: 15),
+                          label: const Text('Browse Liquorland'),
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _originLabel(WinePick pick) {
+    // For Australian wines, show state if known (e.g. "South Australia").
+    // For international wines, show country only.
+    if (pick.country == 'Australia') {
+      if (pick.state != null && pick.state!.isNotEmpty) {
+        return _stateLabel(pick.state!);
+      }
+      return 'Australia';
+    }
+    return pick.country ?? '';
+  }
+
+  String _stateLabel(String code) => switch (code) {
+    'SA'  => 'South Australia',
+    'VIC' => 'Victoria',
+    'NSW' => 'New South Wales',
+    'WA'  => 'Western Australia',
+    'TAS' => 'Tasmania',
+    'QLD' => 'Queensland',
+    'NT'  => 'Northern Territory',
+    'ACT' => 'ACT',
+    _     => code,
+  };
+
+  Future<void> _launch(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      debugPrint('Could not launch $url');
+    }
+  }
+}

@@ -15,6 +15,8 @@ class WineRecord:
     vintage: Optional[int] = None
     region: Optional[str] = None
     varietal: Optional[str] = None
+    country: Optional[str] = None
+    state: Optional[str] = None
 
 
 @dataclass
@@ -25,6 +27,8 @@ class MerchantOffer:
     retailer: str
     price: float
     url: Optional[str]
+    rating: Optional[float] = None
+    review_count: int = 0
     last_updated: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 

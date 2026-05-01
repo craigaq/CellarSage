@@ -172,6 +172,25 @@ class BuyOption(BaseModel):
     url: str
 
 
+class WinePick(BaseModel):
+    tier: int
+    tier_label: str
+    name: str
+    varietal: Optional[str]
+    country: Optional[str]
+    state: Optional[str]
+    region: Optional[str]
+    price: float
+    url: str
+    rating: Optional[float] = None
+    review_count: int = 0
+
+
+class WinePicksResponse(BaseModel):
+    varietal: str
+    picks: list[WinePick]
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -324,6 +343,21 @@ def recommend(req: RecommendRequest):
         ),
         pairing_conflict=dataclasses.asdict(paradox) if paradox else None,
     )
+
+
+@app.get("/wine-picks", response_model=WinePicksResponse)
+def wine_picks(
+    varietal: str = Query(..., description="Canonical varietal name (e.g. 'Sauvignon Blanc')"),
+    user_state: Optional[str] = Query(None, description="User's Australian state (e.g. 'SA') for Tier 1 filtering"),
+):
+    """
+    Return up to 3 tiered Liquorland picks for a given varietal.
+    Tier 1 = cheapest Australian (state-filtered), Tier 2 = next cheapest Australian,
+    Tier 3 = cheapest non-Australian.
+    """
+    from db_catalog import get_wine_picks
+    picks = get_wine_picks(varietal=varietal, user_state=user_state)
+    return WinePicksResponse(varietal=varietal, picks=[WinePick(**p) for p in picks])
 
 
 @app.get("/buy-options", response_model=list[BuyOption])

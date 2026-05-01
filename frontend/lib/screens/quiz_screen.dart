@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/wine_recommendation.dart';
 import '../services/api_service.dart';
+import '../screens/wine_picks_screen.dart';
 import '../services/currency_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/conflict_alert.dart';
@@ -1074,6 +1075,26 @@ class _WineResultCardState extends State<_WineResultCard> {
                   varietal: widget.wine.varietal,
                   onRetry: _loadBuyOptions,
                 ),
+                if (widget.wine.varietal.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => WinePicksScreen(
+                            varietal: widget.wine.varietal,
+                          ),
+                        ),
+                      ),
+                      icon: const Icon(Icons.wine_bar_outlined, size: 16),
+                      label: const Text('View Wine Picks'),
+                    ),
+                  ),
+                ],
               ],
             ],
           ),

@@ -13,6 +13,9 @@ Run via GitHub Actions: see .github/workflows/weekly_sync.yml
 import logging
 import sys
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from .config import MERCHANT_REGISTRY
 from .models import SyncResult
 from .normalizer import normalize

@@ -84,6 +84,7 @@ def _keywords_for_canonical(canonical: str) -> list[str]:
 
 # Module-level cache for buy-options queries: (varietal, retailer) → {"data": list, "ts": float}
 _BUY_CACHE: dict[tuple, dict] = {}
+_PICKS_CACHE: dict[tuple, dict] = {}
 
 
 def _connection():
@@ -172,6 +173,9 @@ def get_buy_options(
 
     keywords = _keywords_for_canonical(varietal)
     if not keywords:
+        canonical = _infer_varietal(None, varietal) or varietal
+        keywords  = _keywords_for_canonical(canonical)
+    if not keywords:
         log.warning("db_catalog: no keywords found for canonical='%s'", varietal)
         return []
 
@@ -223,3 +227,132 @@ def get_buy_options(
         varietal, retailer, len(result),
     )
     return result
+
+
+def get_wine_picks(
+    varietal: str,
+    user_state: str | None = None,
+    retailer: str = "liquorland",
+) -> list[dict]:
+    """
+    Return up to 3 tiered wine picks for a canonical varietal:
+    - Tier 1 (Local Hero): cheapest Australian wine, state-filtered when user_state is provided
+    - Tier 2 (National Contender): next cheapest distinct Australian wine
+    - Tier 3 (Internationalist): cheapest non-Australian wine
+    """
+    cache_key = (varietal, user_state, retailer)
+    cached = _PICKS_CACHE.get(cache_key)
+    if cached and (time.time() - cached["ts"]) < _TTL_SECONDS:
+        return cached["data"]
+
+    # Accept either a canonical name ("Syrah/Shiraz") or a common alias ("Shiraz").
+    # Try the supplied string first; if it doesn't match, infer the canonical form.
+    keywords = _keywords_for_canonical(varietal)
+    if not keywords:
+        canonical = _infer_varietal(None, varietal) or varietal
+        keywords  = _keywords_for_canonical(canonical)
+    if not keywords:
+        log.warning("get_wine_picks: no keywords for canonical='%s'", varietal)
+        return []
+
+    conn = _connection()
+    if not conn:
+        return _PICKS_CACHE.get(cache_key, {}).get("data", [])
+
+    like_clauses = " OR ".join(
+        f"LOWER(w.varietal) LIKE %s OR LOWER(w.name) LIKE %s"
+        for _ in keywords
+    )
+    params: list = [retailer, MIN_PRICE_AUD]
+    for kw in keywords:
+        params.extend([f"%{kw}%", f"%{kw}%"])
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT w.name, w.country, w.state, w.region, w.varietal,
+                       MIN(mo.price) AS price, MAX(mo.url) AS url,
+                       MAX(mo.rating) AS rating,
+                       MAX(mo.review_count) AS review_count
+                FROM merchant_offers mo
+                JOIN wines w ON w.id = mo.wine_id
+                WHERE mo.retailer = %s
+                  AND mo.price >= %s
+                  AND ({like_clauses})
+                GROUP BY w.id, w.name, w.country, w.state, w.region, w.varietal
+                LIMIT 100
+                """,
+                params,
+            )
+            all_rows = cur.fetchall()
+    except Exception as exc:
+        log.warning("get_wine_picks: query failed — %s", exc)
+        return _PICKS_CACHE.get(cache_key, {}).get("data", [])
+    finally:
+        conn.close()
+
+    def _sort_key(r):
+        rating       = r.get("rating")
+        review_count = int(r.get("review_count") or 0)
+        price        = float(r.get("price") or 9999)
+        if rating is not None and review_count >= 3:
+            score = (float(rating) * min(review_count, 30) / 30) / price
+            return (0, -score)
+        return (1, price)
+
+    au_rows  = sorted(
+        [r for r in all_rows if (r.get("country") or "").lower() == "australia"],
+        key=_sort_key,
+    )
+    int_rows = sorted(
+        [r for r in all_rows if (r.get("country") or "").lower() != "australia"],
+        key=_sort_key,
+    )
+
+    picks: list[dict] = []
+    seen: set[str]    = set()
+
+    def _row_to_pick(r, tier: int, label: str) -> dict:
+        return {
+            "tier": tier, "tier_label": label,
+            "name": r["name"], "country": r.get("country"),
+            "state": r.get("state"), "region": r.get("region"),
+            "varietal": r.get("varietal"),
+            "price": float(r["price"]), "url": r.get("url") or "",
+            "rating": float(r["rating"]) if r.get("rating") is not None else None,
+            "review_count": int(r.get("review_count") or 0),
+        }
+
+    # Tier 1 — best-value Australian, preferring wines from user's state when known.
+    # Falls back to any Australian wine if no state match exists.
+    tier1_pool = au_rows
+    if user_state:
+        state_upper = user_state.upper()
+        state_rows  = [r for r in au_rows if (r.get("state") or "").upper() == state_upper]
+        if state_rows:
+            tier1_pool = state_rows + [r for r in au_rows if r not in state_rows]
+
+    if tier1_pool:
+        r = tier1_pool[0]
+        picks.append(_row_to_pick(r, 1, "The Local Hero"))
+        seen.add(r["name"])
+
+    # Tier 2 — next best-value distinct Australian
+    for r in au_rows:
+        if r["name"] not in seen:
+            picks.append(_row_to_pick(r, 2, "The National Contender"))
+            seen.add(r["name"])
+            break
+
+    # Tier 3 — best-value non-Australian
+    for r in int_rows:
+        if r["name"] not in seen:
+            picks.append(_row_to_pick(r, 3, "The Internationalist"))
+            break
+
+    _PICKS_CACHE[cache_key] = {"data": picks, "ts": time.time()}
+    log.info("get_wine_picks: varietal='%s' → %d picks", varietal, len(picks))
+    return picks
+
+

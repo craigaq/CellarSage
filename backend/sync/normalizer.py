@@ -12,6 +12,79 @@ from .models import WineRecord, MerchantOffer
 
 log = logging.getLogger(__name__)
 
+# ── Country origin markers (checked longest-phrase-first per country) ─────────
+# Maps distinctive region/place names to their country. Default is "Australia"
+# since Liquorland is an Australian retailer and most unlabelled wines are domestic.
+_COUNTRY_MARKERS: list[tuple[str, list[str]]] = [
+    ("New Zealand", [
+        "new zealand", "marlborough", "hawke's bay", "hawkes bay",
+        "central otago", "wairarapa", "martinborough", "gisborne",
+    ]),
+    ("France", [
+        "champagne", "burgundy", "bordeaux", "provence", "alsace",
+        "rhone", "rhône", "loire", "languedoc", "beaujolais",
+        "chablis", "sancerre",
+    ]),
+    ("Italy", [
+        "tuscany", "tuscan", "barolo", "brunello", "chianti",
+        "amarone", "ripasso", "primitivo", "sicilian", "sicily", "gavi",
+        # prosecco omitted: widely used as a style name by Australian producers
+    ]),
+    ("Spain", ["rioja", "ribera del duero", "cava"]),
+    ("Portugal", ["douro", "alentejo", "vinho verde"]),
+    ("Germany", ["mosel", "rheingau", "pfalz"]),
+    ("USA", ["napa valley", "napa", "sonoma", "california"]),
+    ("South Africa", ["stellenbosch", "franschhoek"]),
+    ("Austria", ["wachau", "kamptal", "burgenland"]),
+    ("Argentina", ["mendoza", "lujan de cuyo", "luján de cuyo"]),
+    ("Chile", ["maipo", "colchagua", "casablanca valley", "aconcagua"]),
+]
+
+# Unaccented → accented canonical spellings
+_VARIETAL_CANONICAL: dict[str, str] = {
+    "gruner veltliner": "Grüner Veltliner",
+    "gewurztraminer": "Gewürztraminer",
+    "carmenere": "Carménère",
+    "mourvedre": "Mourvèdre",
+    "airen": "Airén",
+    "albarino": "Albariño",
+    "torrontes": "Torrontés",
+}
+
+
+def _infer_country_keywords(name: str) -> str:
+    """Keyword fallback for country inference when no region matches."""
+    lower = name.lower()
+    for country, markers in _COUNTRY_MARKERS:
+        if any(m in lower for m in markers):
+            return country
+    return "Australia"
+
+
+def _infer_origin(name: str) -> tuple[str, str | None]:
+    """
+    Return (country, state) for a wine product name.
+
+    Tries the region lookup table first for maximum accuracy and state
+    resolution. Falls back to keyword matching, then defaults to Australia.
+    State is only populated for Australian wines where the region is known.
+    """
+    from region_lookup import lookup_region
+    match = lookup_region(name)
+    if match:
+        return match["country"], match.get("state")
+    return _infer_country_keywords(name), None
+
+
+def _infer_varietal(name: str) -> Optional[str]:
+    """Extract the best-matching canonical varietal from a product name."""
+    lower = name.lower()
+    for kw in _CATALOG_KEYWORDS:
+        if kw in lower:
+            return _VARIETAL_CANONICAL.get(kw, kw.title())
+    return None
+
+
 # ── Known catalog varietal keywords (lowercase) ───────────────────────────────
 # Items whose name/varietal don't match any of these are rejected so only
 # wines in our known catalog land in the database.
@@ -100,7 +173,14 @@ def _normalize_liquorland(item: dict, retailer: str) -> Optional[tuple[WineRecor
     vintage  = _extract_vintage(name)
     region   = _first('region', 'wine_region', 'area', src=item)
     varietal = _first('varietal', 'variety', 'grape', 'type', src=item)
-    url      = _first('url', 'productUrl', 'link', src=item)
+    url      = _first('source_url', 'url', 'productUrl', 'link', src=item)
+
+    # Rating: prefer top-level field; fall back to attributes.review_stats
+    _attrs        = item.get('attributes') or {}
+    _review_stats = _attrs.get('review_stats') or {}
+    rating_raw    = item.get('rating') or _review_stats.get('average')
+    rating        = _coerce_price(rating_raw)
+    review_count  = int(item.get('review_count') or _review_stats.get('total') or 0)
 
     if not _matches_catalog(varietal, name):
         log.debug("liquorland item skipped — not in known catalog: %r", name)
@@ -110,11 +190,17 @@ def _normalize_liquorland(item: dict, retailer: str) -> Optional[tuple[WineRecor
         log.debug("liquorland item skipped — non-standard bottle size: %r", name)
         return None
 
-    clean_name = re.sub(r'\s*\b(19[89]\d|20[012]\d)\b\s*', ' ', name).strip()
+    if varietal is None:
+        varietal = _infer_varietal(name)
 
-    wine  = WineRecord(name=clean_name, vintage=vintage, region=region, varietal=varietal)
+    country, state = _infer_origin(name)
+    clean_name     = re.sub(r'\s*\b(19[89]\d|20[012]\d)\b\s*', ' ', name).strip()
+
+    wine  = WineRecord(name=clean_name, vintage=vintage, region=region,
+                       varietal=varietal, country=country, state=state)
     offer = MerchantOffer(wine_name=clean_name, vintage=vintage,
-                          retailer=retailer, price=price, url=url)
+                          retailer=retailer, price=price, url=url,
+                          rating=rating, review_count=review_count)
     return wine, offer
 
 

@@ -26,19 +26,21 @@ def _connection():
 
 def _upsert_wine(cur, wine: WineRecord) -> int:
     """
-    Insert wine if it doesn't exist, or update region/varietal if they were
+    Insert wine if it doesn't exist, or update region/varietal/country if they were
     previously NULL. Returns the wine's id.
     """
     cur.execute(
         """
-        INSERT INTO wines (name, vintage, region, varietal)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO wines (name, vintage, region, varietal, country, state)
+        VALUES (%s, %s, %s, %s, %s, %s)
         ON CONFLICT (name, vintage) DO UPDATE
             SET region   = COALESCE(wines.region,   EXCLUDED.region),
-                varietal = COALESCE(wines.varietal, EXCLUDED.varietal)
+                varietal = COALESCE(wines.varietal, EXCLUDED.varietal),
+                country  = COALESCE(EXCLUDED.country, wines.country),
+                state    = COALESCE(EXCLUDED.state,   wines.state)
         RETURNING id
         """,
-        (wine.name, wine.vintage, wine.region, wine.varietal),
+        (wine.name, wine.vintage, wine.region, wine.varietal, wine.country, wine.state),
     )
     row = cur.fetchone()
     return row["id"]
@@ -50,14 +52,17 @@ def _upsert_offer(cur, wine_id: int, offer: MerchantOffer) -> None:
     """
     cur.execute(
         """
-        INSERT INTO merchant_offers (wine_id, retailer, price, url, last_updated)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO merchant_offers (wine_id, retailer, price, url, rating, review_count, last_updated)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (wine_id, retailer) DO UPDATE
-            SET price        = COALESCE(EXCLUDED.price, merchant_offers.price),
-                url          = COALESCE(EXCLUDED.url, merchant_offers.url),
+            SET price        = COALESCE(EXCLUDED.price,        merchant_offers.price),
+                url          = COALESCE(EXCLUDED.url,          merchant_offers.url),
+                rating       = COALESCE(EXCLUDED.rating,       merchant_offers.rating),
+                review_count = GREATEST(EXCLUDED.review_count, merchant_offers.review_count),
                 last_updated = EXCLUDED.last_updated
         """,
-        (wine_id, offer.retailer, offer.price, offer.url, offer.last_updated),
+        (wine_id, offer.retailer, offer.price, offer.url,
+         offer.rating, offer.review_count, offer.last_updated),
     )
 
 

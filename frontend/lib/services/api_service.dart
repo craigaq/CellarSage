@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/wine_recommendation.dart';
 import '../models/merchant.dart';
+import '../models/wine_picks.dart';
 
 class ApiService {
   // Android emulator routes 10.0.2.2 → host machine's localhost.
@@ -111,6 +112,22 @@ class ApiService {
       return data
           .map((o) => BuyOption.fromJson(o as Map<String, dynamic>))
           .toList();
+    }
+    throw Exception('Server returned status ${response.statusCode}');
+  }
+
+  Future<WinePicksResponse> winePicks({
+    required String varietal,
+    String? userState,
+  }) async {
+    final params = <String, String>{'varietal': varietal};
+    if (userState != null) params['user_state'] = userState;
+    final uri = Uri.parse('$_baseUrl/wine-picks').replace(queryParameters: params);
+    final response = await http.get(uri);
+    if (response.statusCode == 200) {
+      return WinePicksResponse.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
     }
     throw Exception('Server returned status ${response.statusCode}');
   }
