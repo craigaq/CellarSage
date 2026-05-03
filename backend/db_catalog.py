@@ -8,6 +8,9 @@ is not set (local dev) or the query fails.
 import os
 import time
 import logging
+from datetime import datetime, timezone, timedelta
+
+_STALE_DAYS = 8
 
 log = logging.getLogger(__name__)
 
@@ -194,14 +197,14 @@ def get_buy_options(
                 f"""
                 WITH cheapest AS (
                     SELECT DISTINCT ON (wine_id)
-                        wine_id, price, url, retailer
+                        wine_id, price, url, retailer, last_updated
                     FROM merchant_offers
                     WHERE price IS NOT NULL
                       AND price >= %s
                       AND price <= %s
                     ORDER BY wine_id, price ASC
                 )
-                SELECT w.name, c.price, c.url, c.retailer
+                SELECT w.name, c.price, c.url, c.retailer, c.last_updated
                 FROM cheapest c
                 JOIN wines w ON w.id = c.wine_id
                 WHERE ({like_clauses})
@@ -217,12 +220,14 @@ def get_buy_options(
     finally:
         conn.close()
 
+    cutoff = datetime.now(timezone.utc) - timedelta(days=_STALE_DAYS)
     result = [
         {
             "name": row["name"],
             "price": float(row["price"]),
             "url": row["url"] or "",
             "retailer": row["retailer"] or "",
+            "price_is_stale": bool(row.get("last_updated") and row["last_updated"] < cutoff),
         }
         for row in rows
     ]
@@ -275,7 +280,7 @@ def get_wine_picks(
                 f"""
                 WITH cheapest AS (
                     SELECT DISTINCT ON (wine_id)
-                        wine_id, price, url, retailer, rating, review_count
+                        wine_id, price, url, retailer, rating, review_count, last_updated
                     FROM merchant_offers
                     WHERE price IS NOT NULL
                       AND price >= %s
@@ -283,7 +288,7 @@ def get_wine_picks(
                     ORDER BY wine_id, price ASC
                 )
                 SELECT w.name, w.country, w.state, w.region, w.varietal,
-                       c.price, c.url, c.retailer, c.rating, c.review_count
+                       c.price, c.url, c.retailer, c.rating, c.review_count, c.last_updated
                 FROM cheapest c
                 JOIN wines w ON w.id = c.wine_id
                 WHERE ({like_clauses})
@@ -321,6 +326,8 @@ def get_wine_picks(
     seen: set[str]    = set()
 
     def _row_to_pick(r, tier: int, label: str) -> dict:
+        lu = r.get("last_updated")
+        stale = bool(lu and lu < datetime.now(timezone.utc) - timedelta(days=_STALE_DAYS))
         return {
             "tier": tier, "tier_label": label,
             "name": r["name"], "country": r.get("country"),
@@ -328,6 +335,7 @@ def get_wine_picks(
             "varietal": r.get("varietal"),
             "price": float(r["price"]), "url": r.get("url") or "",
             "retailer": r.get("retailer") or "",
+            "price_is_stale": stale,
             "rating": float(r["rating"]) if r.get("rating") is not None else None,
             "review_count": int(r.get("review_count") or 0),
         }

@@ -39,7 +39,7 @@ class _QuizScreenState extends State<QuizScreen> {
   String? _error;
   ConflictAlert? _conflictAlert;
 
-  static const int _totalPages = 10;
+  static const int _totalPages = 9;
 
   /// Each entry: label = UI text, id = backend key, emoji = grid icon,
   /// comment = fox commentary shown when the item is selected.
@@ -182,7 +182,7 @@ class _QuizScreenState extends State<QuizScreen> {
     if (_currentPage == 5 && _foodPairing != 'none') {
       await _checkAndHandlePairingClash();
     }
-    if (_currentPage == 8) {
+    if (_currentPage == 7) {
       _fetchResults();
     }
     if (_currentPage < _totalPages - 1) {
@@ -360,45 +360,57 @@ class _QuizScreenState extends State<QuizScreen> {
           ),
         ),
       ),
-      body: PageView(
-        controller: _controller,
-        physics: const NeverScrollableScrollPhysics(),
-        onPageChanged: (p) => setState(() => _currentPage = p),
+      body: Column(
         children: [
-          _buildWelcome(),
-          _buildAttributeStep(
-            title: 'Crispness (Acidity)',
-            description:
-                'How much do you enjoy a fresh, zesty bite in your wine?',
-            value: _crispness,
-            onChanged: (v) => setState(() => _crispness = v),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            child: (_currentPage >= 1 && _currentPage <= 6)
+                ? _buildLivingPalate()
+                : const SizedBox.shrink(),
           ),
-          _buildAttributeStep(
-            title: 'Weight (Body)',
-            description:
-                'Do you prefer a light, delicate sip or a rich, full-bodied experience?',
-            value: _weight,
-            onChanged: (v) => setState(() => _weight = v),
+          Expanded(
+            child: PageView(
+              controller: _controller,
+              physics: const NeverScrollableScrollPhysics(),
+              onPageChanged: (p) => setState(() => _currentPage = p),
+              children: [
+                _buildWelcome(),
+                _buildAttributeStep(
+                  title: 'Crispness (Acidity)',
+                  description:
+                      'How much do you enjoy a fresh, zesty bite in your wine?',
+                  value: _crispness,
+                  onChanged: (v) => setState(() => _crispness = v),
+                ),
+                _buildAttributeStep(
+                  title: 'Weight (Body)',
+                  description:
+                      'Do you prefer a light, delicate sip or a rich, full-bodied experience?',
+                  value: _weight,
+                  onChanged: (v) => setState(() => _weight = v),
+                ),
+                _buildAttributeStep(
+                  title: 'Texture (Tannin)',
+                  description:
+                      'How do you feel about that dry, grippy sensation common in red wines?',
+                  value: _texture,
+                  onChanged: (v) => setState(() => _texture = v),
+                ),
+                _buildAttributeStep(
+                  title: 'Flavor Intensity (Aromatics)',
+                  description:
+                      'Do you prefer subtle, understated flavors or bold, expressive ones?',
+                  value: _flavor,
+                  onChanged: (v) => setState(() => _flavor = v),
+                ),
+                _buildFoodPairingStep(),
+                _buildBudgetStep(),
+                _buildSummaryStep(),
+                _buildResultsStep(),
+              ],
+            ),
           ),
-          _buildAttributeStep(
-            title: 'Texture (Tannin)',
-            description:
-                'How do you feel about that dry, grippy sensation common in red wines?',
-            value: _texture,
-            onChanged: (v) => setState(() => _texture = v),
-          ),
-          _buildAttributeStep(
-            title: 'Flavor Intensity (Aromatics)',
-            description:
-                'Do you prefer subtle, understated flavors or bold, expressive ones?',
-            value: _flavor,
-            onChanged: (v) => setState(() => _flavor = v),
-          ),
-          _buildFoodPairingStep(),
-          _buildBudgetStep(),
-          _buildPalateDialStep(),
-          _buildSummaryStep(),
-          _buildResultsStep(),
         ],
       ),
       bottomNavigationBar: _buildNavBar(),
@@ -436,7 +448,7 @@ class _QuizScreenState extends State<QuizScreen> {
             else
               FilledButton.icon(
                 onPressed: _goNext,
-                label: Text(_currentPage == 8 ? 'Find My Wine!' : 'Next'),
+                label: Text(_currentPage == 7 ? 'Find My Wine!' : 'Next'),
                 icon: const Icon(Icons.arrow_forward),
                 iconAlignment: IconAlignment.end,
               ),
@@ -464,7 +476,7 @@ class _QuizScreenState extends State<QuizScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Answer 8 quick questions about your palate and we\'ll find wines that actually match how you think.',
+            'Answer 7 quick questions about your palate and we\'ll find wines that actually match how you think.',
             style: WwText.bodyLarge(color: WwColors.textSecondary),
             textAlign: TextAlign.center,
           ),
@@ -686,54 +698,62 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // Step 7 — Palate Dial
+  // Living Palate — persistent radar chart header (steps 1–6)
   // ---------------------------------------------------------------------------
 
-  Widget _buildPalateDialStep() {
-    return _stepShell(
-      child: Column(
+  Widget _buildLivingPalate() {
+    return Container(
+      decoration: BoxDecoration(
+        color: WwColors.bgDeep,
+        border: Border(bottom: BorderSide(color: WwColors.borderSubtle, width: 1)),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text('Your Palate Dial', style: WwText.headlineLarge()),
-          const SizedBox(height: 8),
-          Text(
-            "Here's a snapshot of your palate. Looking good.",
-            style: WwText.bodyMedium(),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          PalateDial(
-            crispness: _crispness,
-            weight: _weight,
-            flavorIntensity: _flavor,
-            texture: _texture,
-          ),
-          if (_hasConflict) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: WwDecorations.witCallout(),
-              child: Row(
-                children: [
-                  const Text('🦊'),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Hmm. Light Weight with High Texture — the Cellar Fox has thoughts. Tap Next.',
-                      style: WwText.witQuote(),
-                    ),
-                  ),
-                ],
-              ),
+          SizedBox(
+            width: 160,
+            height: 160,
+            child: PalateDial(
+              crispness: _crispness,
+              weight: _weight,
+              flavorIntensity: _flavor,
+              texture: _texture,
             ),
-          ],
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: _hasConflict
+                  ? Container(
+                      key: const ValueKey('conflict'),
+                      padding: const EdgeInsets.all(10),
+                      decoration: WwDecorations.witCallout(),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('🦊', style: TextStyle(fontSize: 16)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'That\'s a spiky palate — the Cellar Fox has a few thoughts.',
+                              style: WwText.bodySmall(),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : const SizedBox.shrink(key: ValueKey('ok')),
+            ),
+          ),
         ],
       ),
     );
   }
 
   // ---------------------------------------------------------------------------
-  // Step 8 — Summary
+  // Step 7 — Summary (was Step 8; standalone Palate Dial step removed)
   // ---------------------------------------------------------------------------
 
   Widget _buildSummaryStep() {
@@ -753,7 +773,20 @@ class _QuizScreenState extends State<QuizScreen> {
             'Looking good. Hit "Find My Wine!" when you\'re ready.',
             style: WwText.bodyMedium(),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+          Center(
+            child: SizedBox(
+              height: 200,
+              width: 200,
+              child: PalateDial(
+                crispness: _crispness,
+                weight: _weight,
+                flavorIntensity: _flavor,
+                texture: _texture,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           Container(
             decoration: WwDecorations.card(),
             padding: const EdgeInsets.all(16),
@@ -1199,10 +1232,21 @@ class _BuyOptionRow extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                Text(
-                  'A\$${option.price.toStringAsFixed(2)}',
-                  style: WwText.bodySmall(color: WwColors.violet)
-                      .copyWith(fontWeight: FontWeight.w600),
+                Row(
+                  children: [
+                    Text(
+                      'A\$${option.price.toStringAsFixed(2)}',
+                      style: WwText.bodySmall(color: WwColors.violet)
+                          .copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    if (option.priceIsStale) ...[
+                      const SizedBox(width: 4),
+                      Tooltip(
+                        message: 'Price may be outdated',
+                        child: Icon(Icons.schedule, size: 12, color: WwColors.textDisabled),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),

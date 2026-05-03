@@ -9,6 +9,7 @@ class WinePick {
   final double price;
   final String url;
   final String retailer;
+  final bool priceIsStale;
   final double? rating;
   final int reviewCount;
 
@@ -23,6 +24,7 @@ class WinePick {
     required this.price,
     required this.url,
     this.retailer = '',
+    this.priceIsStale = false,
     this.rating,
     this.reviewCount = 0,
   });
@@ -36,8 +38,9 @@ class WinePick {
         state:       json['state'] as String?,
         region:      json['region'] as String?,
         price:       (json['price'] as num).toDouble(),
-        url:         (json['url'] as String?) ?? '',
-        retailer:    (json['retailer'] as String?) ?? '',
+        url:          (json['url'] as String?) ?? '',
+        retailer:     (json['retailer'] as String?) ?? '',
+        priceIsStale: (json['price_is_stale'] as bool?) ?? false,
         rating:      json['rating'] != null ? (json['rating'] as num).toDouble() : null,
         reviewCount: (json['review_count'] as int?) ?? 0,
       );

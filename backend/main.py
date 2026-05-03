@@ -171,6 +171,7 @@ class BuyOption(BaseModel):
     price: float
     url: str
     retailer: str = ""
+    price_is_stale: bool = False
 
 
 class WinePick(BaseModel):
@@ -184,6 +185,7 @@ class WinePick(BaseModel):
     price: float
     url: str
     retailer: str = ""
+    price_is_stale: bool = False
     rating: Optional[float] = None
     review_count: int = 0
 

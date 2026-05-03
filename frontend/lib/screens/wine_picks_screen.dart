@@ -214,9 +214,21 @@ class _PickCard extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 12),
-                Text(
-                  'A\$${pick.price.toStringAsFixed(2)}',
-                  style: WwText.priceHero(),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'A\$${pick.price.toStringAsFixed(2)}',
+                      style: WwText.priceHero(),
+                    ),
+                    if (pick.priceIsStale) ...[
+                      const SizedBox(width: 6),
+                      Tooltip(
+                        message: 'Price may be outdated — check retailer for current pricing',
+                        child: Icon(Icons.schedule, size: 14, color: WwColors.textDisabled),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
