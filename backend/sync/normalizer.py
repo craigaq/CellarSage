@@ -52,6 +52,122 @@ _VARIETAL_CANONICAL: dict[str, str] = {
 }
 
 
+# ── Australian producer → state mapping ──────────────────────────────────────
+# Keyed by lowercase prefix/brand name, longest entries first so "jacob's creek"
+# matches before a hypothetical "jacob". Expand as new producers appear in data.
+_PRODUCER_STATE: list[tuple[str, str]] = sorted([
+    # South Australia
+    ("penfolds",           "SA"),
+    ("jacob's creek",      "SA"),
+    ("jacobs creek",       "SA"),
+    ("wolf blass",         "SA"),
+    ("hardys",             "SA"),
+    ("hardy's",            "SA"),
+    ("yalumba",            "SA"),
+    ("oxford landing",     "SA"),   # Yalumba brand
+    ("grant burge",        "SA"),
+    ("st hallett",         "SA"),
+    ("peter lehmann",      "SA"),
+    ("saltram",            "SA"),
+    ("seppelt",            "SA"),
+    ("d'arenberg",         "SA"),
+    ("wirra wirra",        "SA"),
+    ("bleasdale",          "SA"),
+    ("pepperjack",         "SA"),
+    ("chateau tanunda",    "SA"),
+    ("angove",             "SA"),
+    ("ruffled feather",    "SA"),   # Angove brand
+    ("annies lane",        "SA"),   # Annie's Lane — TWE Clare Valley
+    ("annie's lane",       "SA"),
+    ("kilikanoon",         "SA"),
+    ("two hands",          "SA"),
+    ("torbreck",           "SA"),
+    ("mitolo",             "SA"),
+    ("gemtree",            "SA"),
+    ("primo estate",       "SA"),
+    ("jim barry",          "SA"),
+    ("tim adams",          "SA"),
+    ("shut the gate",      "SA"),
+    ("coriole",            "SA"),
+    ("henschke",           "SA"),
+    ("elderton",           "SA"),
+    ("chateau reynella",   "SA"),
+    # New South Wales
+    ("de bortoli",         "NSW"),
+    ("mcwilliams",         "NSW"),
+    ("mcguigan",           "NSW"),
+    ("casella",            "NSW"),
+    ("yellow tail",        "NSW"),  # Casella brand
+    ("yellowtail",         "NSW"),
+    ("lindemans",          "NSW"),
+    ("lindeman's",         "NSW"),
+    ("tyrrells",           "NSW"),
+    ("tyrrell's",          "NSW"),
+    ("brokenwood",         "NSW"),
+    ("hungerford hill",    "NSW"),
+    ("tulloch",            "NSW"),
+    ("drayton's",          "NSW"),
+    ("draytons",           "NSW"),
+    ("rosemount",          "NSW"),
+    ("wyndham",            "NSW"),
+    ("zilzie",             "NSW"),  # Murray Darling, straddles NSW/VIC — assign NSW
+    ("mcpherson",          "NSW"),
+    ("family of twelve",   "NSW"),
+    # Victoria
+    ("brown brothers",     "VIC"),
+    ("tahbilk",            "VIC"),
+    ("mitchelton",         "VIC"),
+    ("yellowglen",         "VIC"),
+    ("campbells",          "VIC"),
+    ("all saints",         "VIC"),
+    ("yering station",     "VIC"),
+    ("punt road",          "VIC"),
+    ("balgownie",          "VIC"),
+    ("giaconda",           "VIC"),
+    ("mount langi ghiran", "VIC"),
+    ("stonier",            "VIC"),
+    ("port phillip estate","VIC"),
+    ("kooyong",            "VIC"),
+    ("paringa estate",     "VIC"),
+    # Western Australia
+    ("cape mentelle",      "WA"),
+    ("leeuwin estate",     "WA"),
+    ("leeuwin",            "WA"),
+    ("houghton",           "WA"),
+    ("sandalford",         "WA"),
+    ("howard park",        "WA"),
+    ("vasse felix",        "WA"),
+    ("devil's lair",       "WA"),
+    ("devils lair",        "WA"),
+    ("evans & tate",       "WA"),
+    ("evans and tate",     "WA"),
+    ("cullen",             "WA"),
+    ("voyager estate",     "WA"),
+    ("moss wood",          "WA"),
+    ("xanadu",             "WA"),
+    ("plantagenet",        "WA"),
+    # Tasmania
+    ("josef chromy",       "TAS"),
+    ("bay of fires",       "TAS"),
+    ("pipers brook",       "TAS"),
+    ("kreglinger",         "TAS"),
+    ("moorilla",           "TAS"),
+    ("pressing matters",   "TAS"),
+    # Queensland
+    ("sirromet",           "QLD"),
+    ("ballandean estate",  "QLD"),
+], key=lambda x: -len(x[0]))
+
+
+def _infer_state_from_producer(name: str) -> str | None:
+    """Match the wine name against known Australian producer brands."""
+    lower = name.lower()
+    for producer, state in _PRODUCER_STATE:
+        if lower.startswith(producer) or f" {producer} " in lower:
+            return state
+    return None
+
+
 def _infer_country_keywords(name: str) -> str:
     """Keyword fallback for country inference when no region matches."""
     lower = name.lower()
@@ -65,15 +181,24 @@ def _infer_origin(name: str) -> tuple[str, str | None]:
     """
     Return (country, state) for a wine product name.
 
-    Tries the region lookup table first for maximum accuracy and state
-    resolution. Falls back to keyword matching, then defaults to Australia.
-    State is only populated for Australian wines where the region is known.
+    Resolution order:
+      1. Region lookup table (place names, most accurate)
+      2. Producer-brand lookup (covers brands without region in name)
+      3. Country keyword matching
+      4. Default to Australia with no state
     """
     from region_lookup import lookup_region
     match = lookup_region(name)
     if match:
-        return match["country"], match.get("state")
-    return _infer_country_keywords(name), None
+        country = match["country"]
+        state   = match.get("state") or (
+            _infer_state_from_producer(name) if country == "Australia" else None
+        )
+        return country, state
+
+    country = _infer_country_keywords(name)
+    state   = _infer_state_from_producer(name) if country == "Australia" else None
+    return country, state
 
 
 def _infer_varietal(name: str) -> Optional[str]:

@@ -6,6 +6,7 @@ is not set (local dev) or the query fails.
 """
 
 import os
+import math
 import time
 import logging
 from datetime import datetime, timezone, timedelta
@@ -16,6 +17,52 @@ log = logging.getLogger(__name__)
 
 _TTL_SECONDS    = 3600
 MIN_PRICE_AUD   = 10.0   # filter out bulk/cask wines below this threshold
+
+# ── Producer → state (mirrors sync/normalizer.py — applied at query time for
+# existing DB rows that were upserted before this mapping existed) ─────────────
+_PRODUCER_STATE: list[tuple[str, str]] = sorted([
+    ("penfolds", "SA"), ("jacob's creek", "SA"), ("jacobs creek", "SA"),
+    ("wolf blass", "SA"), ("hardys", "SA"), ("hardy's", "SA"),
+    ("yalumba", "SA"), ("oxford landing", "SA"), ("grant burge", "SA"),
+    ("st hallett", "SA"), ("peter lehmann", "SA"), ("saltram", "SA"),
+    ("seppelt", "SA"), ("d'arenberg", "SA"), ("wirra wirra", "SA"),
+    ("bleasdale", "SA"), ("pepperjack", "SA"), ("chateau tanunda", "SA"),
+    ("angove", "SA"), ("ruffled feather", "SA"), ("annies lane", "SA"),
+    ("annie's lane", "SA"), ("kilikanoon", "SA"), ("two hands", "SA"),
+    ("torbreck", "SA"), ("mitolo", "SA"), ("gemtree", "SA"),
+    ("primo estate", "SA"), ("jim barry", "SA"), ("tim adams", "SA"),
+    ("coriole", "SA"), ("henschke", "SA"), ("elderton", "SA"),
+    ("chateau reynella", "SA"), ("shut the gate", "SA"),
+    ("de bortoli", "NSW"), ("mcwilliams", "NSW"), ("mcguigan", "NSW"),
+    ("casella", "NSW"), ("yellow tail", "NSW"), ("yellowtail", "NSW"),
+    ("lindemans", "NSW"), ("lindeman's", "NSW"), ("tyrrells", "NSW"),
+    ("tyrrell's", "NSW"), ("brokenwood", "NSW"), ("hungerford hill", "NSW"),
+    ("tulloch", "NSW"), ("drayton's", "NSW"), ("draytons", "NSW"),
+    ("rosemount", "NSW"), ("wyndham", "NSW"), ("zilzie", "NSW"),
+    ("mcpherson", "NSW"),
+    ("brown brothers", "VIC"), ("tahbilk", "VIC"), ("mitchelton", "VIC"),
+    ("yellowglen", "VIC"), ("campbells", "VIC"), ("all saints", "VIC"),
+    ("yering station", "VIC"), ("punt road", "VIC"), ("balgownie", "VIC"),
+    ("mount langi ghiran", "VIC"), ("stonier", "VIC"), ("kooyong", "VIC"),
+    ("paringa estate", "VIC"),
+    ("cape mentelle", "WA"), ("leeuwin estate", "WA"), ("leeuwin", "WA"),
+    ("houghton", "WA"), ("sandalford", "WA"), ("howard park", "WA"),
+    ("vasse felix", "WA"), ("devil's lair", "WA"), ("devils lair", "WA"),
+    ("evans & tate", "WA"), ("evans and tate", "WA"), ("cullen", "WA"),
+    ("voyager estate", "WA"), ("moss wood", "WA"), ("xanadu", "WA"),
+    ("plantagenet", "WA"),
+    ("josef chromy", "TAS"), ("bay of fires", "TAS"), ("pipers brook", "TAS"),
+    ("kreglinger", "TAS"), ("moorilla", "TAS"),
+    ("sirromet", "QLD"), ("ballandean estate", "QLD"),
+], key=lambda x: -len(x[0]))
+
+
+def _producer_state(name: str) -> str | None:
+    lower = name.lower()
+    for producer, state in _PRODUCER_STATE:
+        if lower.startswith(producer) or f" {producer} " in lower:
+            return state
+    return None
 
 # Module-level cache: key → {"data": dict, "ts": float}
 _CACHE: dict[str, dict] = {}
@@ -304,12 +351,22 @@ def get_wine_picks(
     finally:
         conn.close()
 
+    # Convert to mutable dicts and backfill missing state from producer lookup.
+    # Rows from the DB may have state=null for wines upserted before the
+    # producer mapping existed; this fixes Tier 1 state filtering at query time.
+    all_rows = [dict(r) for r in all_rows]
+    for r in all_rows:
+        if not r.get("state") and (r.get("country") or "").lower() == "australia":
+            r["state"] = _producer_state(r["name"])
+
     def _sort_key(r):
         rating       = r.get("rating")
         review_count = int(r.get("review_count") or 0)
         price        = float(r.get("price") or 9999)
         if rating is not None and review_count >= 3:
-            score = (float(rating) * min(review_count, 30) / 30) / price
+            # log1p dampens price so a $100 rated wine doesn't dominate a
+            # well-reviewed $25 wine — the gap shrinks from 4x to ~1.6x.
+            score = (float(rating) * min(review_count, 30) / 30) / math.log1p(price)
             return (0, -score)
         return (1, price)
 
