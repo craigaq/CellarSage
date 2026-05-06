@@ -180,8 +180,14 @@ def get_cheapest_by_varietal(retailer: str = "liquorland") -> dict[str, dict]:
     return result
 
 
+def _cellarbrations_search_url(name: str) -> str:
+    import urllib.parse
+    return f"https://www.cellarbrations.com.au/search?q={urllib.parse.quote(name)}"
+
+
 def get_buy_options(
     varietal: str,
+    budget_min_aud: float = 0.0,
     budget_max_aud: float = 9999.0,
 ) -> list[dict]:
     """
@@ -190,12 +196,14 @@ def get_buy_options(
 
     Result shape: [{"name": "...", "price": 18.99, "url": "...", "retailer": "..."}]
     """
-    cache_key = (varietal, budget_max_aud)
+    effective_min = max(MIN_PRICE_AUD, budget_min_aud)
+    cache_key = (varietal, effective_min, budget_max_aud)
     cached = _BUY_CACHE.get(cache_key)
     if cached and (time.time() - cached["ts"]) < _TTL_SECONDS:
         return cached["data"]
 
     keywords = _keywords_for_canonical(varietal)
+
     if not keywords:
         canonical = _infer_varietal(None, varietal) or varietal
         keywords  = _keywords_for_canonical(canonical)
@@ -211,7 +219,7 @@ def get_buy_options(
         f"LOWER(w.varietal) LIKE %s OR LOWER(w.name) LIKE %s"
         for _ in keywords
     )
-    params: list = [MIN_PRICE_AUD, budget_max_aud]
+    params: list = [effective_min, budget_max_aud]
     for kw in keywords:
         params.extend([f"%{kw}%", f"%{kw}%"])
 
@@ -249,7 +257,7 @@ def get_buy_options(
         {
             "name": row["name"],
             "price": float(row["price"]),
-            "url": row["url"] or "",
+            "url": _cellarbrations_search_url(row["name"]) if (row.get("retailer") or "") == "cellarbrations" else (row["url"] or ""),
             "retailer": row["retailer"] or "",
             "price_is_stale": bool(row.get("last_updated") and row["last_updated"] < cutoff),
         }
@@ -263,6 +271,7 @@ def get_buy_options(
 def get_wine_picks(
     varietal: str,
     user_state: str | None = None,
+    budget_min: float = 0.0,
     budget_max: float = 9999.0,
     pref_dry: bool = False,
 ) -> list[dict]:
@@ -273,7 +282,8 @@ def get_wine_picks(
     - Tier 3 (Internationalist): best-value non-Australian wine
     - Tier 4 (The Deal): absolute cheapest, subject to quality floor and dry guard
     """
-    cache_key = (varietal, user_state, budget_max, pref_dry)
+    effective_min = max(MIN_PRICE_AUD, budget_min)
+    cache_key = (varietal, user_state, effective_min, budget_max, pref_dry)
     cached = _PICKS_CACHE.get(cache_key)
     if cached and (time.time() - cached["ts"]) < _TTL_SECONDS:
         return cached["data"]
@@ -295,7 +305,7 @@ def get_wine_picks(
         f"LOWER(w.varietal) LIKE %s OR LOWER(w.name) LIKE %s"
         for _ in keywords
     )
-    params: list = [MIN_PRICE_AUD, budget_max]
+    params: list = [effective_min, budget_max]
     for kw in keywords:
         params.extend([f"%{kw}%", f"%{kw}%"])
 
@@ -371,7 +381,8 @@ def get_wine_picks(
             "name": r["name"], "country": r.get("country"),
             "state": r.get("state"), "region": r.get("region"),
             "varietal": r.get("varietal"),
-            "price": float(r["price"]), "url": r.get("url") or "",
+            "price": float(r["price"]),
+            "url": _cellarbrations_search_url(r["name"]) if (r.get("retailer") or "") == "cellarbrations" else (r.get("url") or ""),
             "retailer": r.get("retailer") or "",
             "price_is_stale": stale,
             "is_member_price": bool(r.get("is_member_price")),

@@ -113,12 +113,14 @@ def _get_wines_for_store(store_id: str, lat: float = -33.8688, lng: float = 151.
 
 
 def _product_url(product: dict, store_id: str) -> str:
-    """Construct the canonical Cellarbrations product URL."""
-    pid = product.get("productId", "")
+    """Construct a Cellarbrations search URL for the product name.
+
+    Direct product URLs require a store session context and reliably 404
+    without one. A search URL always resolves and surfaces the correct product.
+    """
+    import urllib.parse
     name = product.get("name", "")
-    import re
-    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
-    return f"https://www.cellarbrations.com.au/sm/delivery/rsid/cellarbrations/product/{slug}/{pid}"
+    return f"https://www.cellarbrations.com.au/search?q={urllib.parse.quote(name)}"
 
 
 def scrape_cellarbrations() -> list[dict]:

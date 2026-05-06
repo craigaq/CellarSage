@@ -179,6 +179,7 @@ class _MagicPaletteStepState extends State<MagicPaletteStep>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SizedBox(height: 40),
         // Title
         Text(widget.title, style: WwText.headlineLarge()),
         const SizedBox(height: 8),

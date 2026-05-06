@@ -763,17 +763,19 @@ class _QuizScreenState extends State<QuizScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SizedBox(
-            width: 160,
-            height: 160,
-            child: PalateDial(
-              crispness: _crispness,
-              weight: _weight,
-              flavorIntensity: _flavor,
-              texture: _texture,
+          ClipRect(
+            child: SizedBox(
+              width: 90,
+              height: 90,
+              child: PalateDial(
+                crispness: _crispness,
+                weight: _weight,
+                flavorIntensity: _flavor,
+                texture: _texture,
+              ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 20),
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
@@ -789,7 +791,7 @@ class _QuizScreenState extends State<QuizScreen> {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              'That\'s a spiky palate — the Cellar Fox has a few thoughts.',
+                              'That\'s a spiky palate\n— the Cellar Fox has\na few thoughts.',
                               style: WwText.bodySmall(),
                             ),
                           ),
@@ -1011,6 +1013,7 @@ class _WineResultCardState extends State<_WineResultCard> {
     try {
       final options = await ApiService().buyOptions(
         varietal: varietal,
+        budgetMin: widget.budgetMin,
         budgetMax: widget.budgetMax,
       );
       if (mounted) setState(() { _buyOptions = options; _buyLoading = false; });
@@ -1175,6 +1178,7 @@ class _WineResultCardState extends State<_WineResultCard> {
                         MaterialPageRoute(
                           builder: (_) => WinePicksScreen(
                             varietal: widget.wine.varietal,
+                            budgetMin: widget.budgetMin,
                             budgetMax: widget.budgetMax,
                             prefDry: widget.prefDry,
                           ),

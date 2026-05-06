@@ -354,30 +354,32 @@ def recommend(req: RecommendRequest):
 def wine_picks(
     varietal: str = Query(..., description="Canonical varietal name (e.g. 'Sauvignon Blanc')"),
     user_state: Optional[str] = Query(None, description="User's Australian state (e.g. 'SA') for Tier 1 filtering"),
+    budget_min: float = Query(0.0, ge=0, description="Minimum price in AUD"),
     budget_max: float = Query(9999.0, ge=0, description="Maximum price in AUD"),
     pref_dry: bool = Query(False, description="Exclude sweet styles from Tier 4 deal pool"),
 ):
     """
-    Return up to 4 tiered picks for a given varietal, filtered by budget.
+    Return up to 4 tiered picks for a given varietal, filtered to the user's budget range.
     Tier 1 = Local Hero, Tier 2 = National Contender, Tier 3 = Internationalist, Tier 4 = The Deal.
     """
     from db_catalog import get_wine_picks
     picks = get_wine_picks(varietal=varietal, user_state=user_state,
-                           budget_max=budget_max, pref_dry=pref_dry)
+                           budget_min=budget_min, budget_max=budget_max, pref_dry=pref_dry)
     return WinePicksResponse(varietal=varietal, picks=[WinePick(**p) for p in picks])
 
 
 @app.get("/buy-options", response_model=list[BuyOption])
 def buy_options(
     varietal: str = Query(..., description="Canonical varietal name (e.g. 'Cabernet Sauvignon')"),
+    budget_min: float = Query(0.0, ge=0, description="Minimum price in AUD"),
     budget_max: float = Query(9999.0, ge=0, description="Maximum price in AUD"),
 ):
     """
-    Return matching Liquorland listings for a given wine varietal.
+    Return matching listings for a given wine varietal within the user's budget range.
     Used by the Flutter app after the user selects a recommended wine style.
     """
     from db_catalog import get_buy_options
-    options = get_buy_options(varietal=varietal, budget_max_aud=budget_max)
+    options = get_buy_options(varietal=varietal, budget_min_aud=budget_min, budget_max_aud=budget_max)
     return [BuyOption(**o) for o in options]
 
 

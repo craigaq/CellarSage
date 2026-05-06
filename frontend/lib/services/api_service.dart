@@ -100,10 +100,12 @@ class ApiService {
 
   Future<List<BuyOption>> buyOptions({
     required String varietal,
+    double budgetMin = 0.0,
     double budgetMax = 9999.0,
   }) async {
     final uri = Uri.parse('$_baseUrl/buy-options').replace(queryParameters: {
       'varietal': varietal,
+      'budget_min': '$budgetMin',
       'budget_max': '$budgetMax',
     });
     final response = await http.get(uri);
@@ -119,11 +121,13 @@ class ApiService {
   Future<WinePicksResponse> winePicks({
     required String varietal,
     String? userState,
+    double budgetMin = 0.0,
     double budgetMax = 9999.0,
     bool prefDry = false,
   }) async {
     final params = <String, String>{
       'varietal': varietal,
+      'budget_min': '$budgetMin',
       'budget_max': '$budgetMax',
       'pref_dry': '$prefDry',
     };
