@@ -87,7 +87,7 @@
       font-weight: 700;
       color: var(--text);
     }
-    .nav-brand svg { width: 32px; height: 32px; flex-shrink: 0; }
+    .nav-brand svg, .nav-brand img { width: 32px; height: 32px; flex-shrink: 0; border-radius: 7px; }
     .nav-links {
       display: flex;
       align-items: center;
@@ -144,6 +144,7 @@
       50%      { transform: translateY(-8px); }
     }
     .hero-fox {
+      display: block;
       width: 112px;
       height: 112px;
       margin: 0 auto 1.75rem;
@@ -478,7 +479,7 @@
   <div class="wrap">
     <div class="nav-inner">
       <a href="/" class="nav-brand">
-        <svg aria-hidden="true"><use href="#fox"/></svg>
+        <img src="sage_fox.svg" alt="" aria-hidden="true" />
         Cellar Sage
       </a>
       <ul class="nav-links">
