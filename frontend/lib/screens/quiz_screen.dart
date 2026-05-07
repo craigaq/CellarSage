@@ -759,23 +759,22 @@ class _QuizScreenState extends State<QuizScreen> {
         color: WwColors.bgDeep,
         border: Border(bottom: BorderSide(color: WwColors.borderSubtle, width: 1)),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          ClipRect(
-            child: SizedBox(
-              width: 90,
-              height: 90,
-              child: PalateDial(
-                crispness: _crispness,
-                weight: _weight,
-                flavorIntensity: _flavor,
-                texture: _texture,
-              ),
+          SizedBox(
+            width: 144,
+            height: 144,
+            child: PalateDial(
+              crispness: _crispness,
+              weight: _weight,
+              flavorIntensity: _flavor,
+              texture: _texture,
+              compact: true,
             ),
           ),
-          const SizedBox(width: 20),
+          const SizedBox(width: 8),
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
@@ -783,17 +782,17 @@ class _QuizScreenState extends State<QuizScreen> {
                   ? Container(
                       key: const ValueKey('conflict'),
                       padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(left: 36),
                       decoration: WwDecorations.witCallout(),
-                      child: Row(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🦊', style: TextStyle(fontSize: 16)),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              'That\'s a spiky palate\n— the Cellar Fox has\na few thoughts.',
-                              style: WwText.bodySmall(),
-                            ),
+                          const Text('🦊', style: TextStyle(fontSize: 20)),
+                          const SizedBox(height: 4),
+                          Text(
+                            'That\'s a spiky palate —\nthe Cellar Fox has a few thoughts.',
+                            style: WwText.bodySmall(),
                           ),
                         ],
                       ),
@@ -827,7 +826,7 @@ class _QuizScreenState extends State<QuizScreen> {
             'Looking good. Hit "Find My Wine!" when you\'re ready.',
             style: WwText.bodyMedium(),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 40),
           Center(
             child: SizedBox(
               height: 200,
@@ -840,7 +839,7 @@ class _QuizScreenState extends State<QuizScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 40),
           Container(
             decoration: WwDecorations.card(),
             padding: const EdgeInsets.all(16),

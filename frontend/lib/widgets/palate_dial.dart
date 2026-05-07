@@ -7,12 +7,15 @@ class PalateDial extends StatelessWidget {
   final int flavorIntensity;
   final int texture;
 
+  final bool compact;
+
   const PalateDial({
     super.key,
     required this.crispness,
     required this.weight,
     required this.flavorIntensity,
     required this.texture,
+    this.compact = false,
   });
 
   @override
@@ -57,17 +60,19 @@ class PalateDial extends StatelessWidget {
           ticksTextStyle: TextStyle(fontSize: 9, color: Colors.grey.shade500),
           tickBorderData: BorderSide(color: Colors.grey.shade300, width: 0.8),
           gridBorderData: BorderSide(color: Colors.grey.shade300, width: 0.8),
-          titleTextStyle: const TextStyle(
-            fontSize: 11,
+          titleTextStyle: TextStyle(
+            fontSize: compact ? 9 : 11,
             fontWeight: FontWeight.w600,
           ),
           getTitle: (index, angle) {
-            const titles = [
-              'Crispness\n(Acidity)',
-              'Weight\n(Body)',
-              'Flavor Intensity\n(Aromatics)',
-              'Texture\n(Tannin)',
-            ];
+            final titles = compact
+                ? const ['A', 'B', 'F', 'T']
+                : const [
+                    'Crispness\n(Acidity)',
+                    'Weight\n(Body)',
+                    'Flavor Intensity\n(Aromatics)',
+                    'Texture\n(Tannin)',
+                  ];
             return RadarChartTitle(text: titles[index], angle: 0);
           },
         ),
