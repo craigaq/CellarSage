@@ -434,15 +434,17 @@ def get_wine_picks(
             seen.add(r["name"])
             break
 
-    # Tier 4 — The Deal: cheapest wine that clears the quality floor.
-    # Quality floor: skip wines with a low rating (< 3.0) when there are enough
-    # reviews to trust the score (>= 3). This prevents a $10 one-star bottle
-    # from undermining the Sage persona.
-    # Dry guard: when pref_dry is set, skip overtly sweet styles.
+    # Tier 4 — The Deal: cheapest wine that clears the quality floor AND is
+    # genuinely cheaper than every pick already selected. If nothing is cheaper
+    # than the existing picks (e.g. the cheapest bottle already became T1),
+    # suppress T4 rather than showing a "deal" that costs more.
+    cheapest_picked = min((float(p["price"]) for p in picks), default=9999.0)
     deal_pool = sorted(all_rows, key=lambda r: float(r.get("price") or 9999))
     for r in deal_pool:
         if r["name"] in seen:
             continue
+        if float(r.get("price") or 9999) >= cheapest_picked:
+            break  # pool is price-sorted; nothing cheaper exists
         _rating  = r.get("rating")
         _reviews = int(r.get("review_count") or 0)
         if _rating is not None and _reviews >= 3 and float(_rating) < 3.0:
