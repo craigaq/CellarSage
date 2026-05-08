@@ -34,3 +34,24 @@ env/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# ─── Data files (large, not code) ───────────────────────────────────────────
+backend/sync/*.csv
+backend/sync/*.json
+
+# ─── WebDriver binaries ──────────────────────────────────────────────────────
+backend/chromedriver.exe
+backend/chromedriver
+
+# ─── Probe / scratch scripts ─────────────────────────────────────────────────
+backend/probe_*.py
+backend/download_chromedriver*.py
+
+# ─── Screenshots / temp files ────────────────────────────────────────────────
+backend/*.png
+backend/*.jpg
+export_logo.html
+landing/preview_fox.html
+
+# ─── Claude local settings ───────────────────────────────────────────────────
+**/.claude/settings.local.json

@@ -31,6 +31,7 @@ log = logging.getLogger(__name__)
 
 _YEAR_RE   = re.compile(r'\b(19[89]\d|20[012]\d)\b')
 _REGION_RE = re.compile(r'\s*\([^)]*\)')          # removes "(Etna)", "(Napa Valley)" etc.
+_SIZE_RE   = re.compile(r'\b\d+\s*m[lL]\b')       # removes "750mL", "750 ml" etc.
 _WS_RE     = re.compile(r'\s+')
 
 
@@ -47,6 +48,7 @@ def _clean_we_title(title: str) -> str:
 
 def _clean_db_name(name: str) -> str:
     """Normalise a wine name from our DB (vintage already stripped by scraper)."""
+    name = _SIZE_RE.sub('', name)   # strip "750mL" bottle size suffix
     return _WS_RE.sub(' ', name).strip().lower()
 
 
