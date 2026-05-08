@@ -34,6 +34,17 @@ _REGION_RE = re.compile(r'\s*\([^)]*\)')          # removes "(Etna)", "(Napa Val
 _SIZE_RE   = re.compile(r'\b\d+\s*m[lL]\b')       # removes "750mL", "750 ml" etc.
 _WS_RE     = re.compile(r'\s+')
 
+# Varietal synonyms: map our DB varietal → acceptable WE variety strings
+_VARIETAL_SYNONYMS: dict[str, list[str]] = {
+    'shiraz':        ['shiraz', 'syrah'],
+    'syrah':         ['shiraz', 'syrah'],
+    'pinot gris':    ['pinot gris', 'pinot grigio'],
+    'pinot grigio':  ['pinot gris', 'pinot grigio'],
+    'sparkling':     ['champagne', 'sparkling', 'prosecco', 'cava', 'brut'],
+    'rosé':          ['rosé', 'rose', 'ros'],
+    'rose':          ['rosé', 'rose', 'ros'],
+}
+
 
 def _clean_we_title(title: str) -> str:
     """Normalise a Wine Enthusiast title for comparison.
@@ -84,12 +95,37 @@ def _write_match(conn, wine_id: int, score: float, source: str, confidence: floa
         """, (score, source, confidence, wine_id))
 
 
+# ── Post-match validation guards ─────────────────────────────────────────────
+
+def _brand_matches(db_name: str, we_title: str) -> bool:
+    """First token of our wine name must appear somewhere in the WE title.
+
+    Prevents generic tokens like 'Estate Chardonnay' matching across brands.
+    Single-word stopwords are skipped so 'The Y Series' checks 'Y' not 'The'.
+    """
+    _STOPWORDS = {'the', 'a', 'an', 'de', 'le', 'la', 'les', 'du', 'van', 'von'}
+    tokens = db_name.lower().split()
+    brand_token = next((t for t in tokens if t not in _STOPWORDS), tokens[0] if tokens else '')
+    return brand_token in we_title.lower()
+
+
+def _variety_compatible(our_varietal: str | None, we_variety: str | None) -> bool:
+    """Our DB varietal must be semantically compatible with the WE variety field."""
+    if not our_varietal or not we_variety:
+        return True  # missing data — give benefit of the doubt
+    our = our_varietal.lower()
+    we  = we_variety.lower()
+    acceptable = _VARIETAL_SYNONYMS.get(our, [our])
+    return any(term in we for term in acceptable)
+
+
 # ── Index builder ─────────────────────────────────────────────────────────────
 
 def _build_index(df: pd.DataFrame) -> tuple[list[str], list[float], pd.DataFrame]:
     """Return (cleaned_titles, points, original_df) for the WE dataset."""
     df = df.copy()
     df['_key'] = df['title'].apply(_clean_we_title)
+    df['variety'] = df['variety'].fillna('').str.lower()
     return df['_key'].tolist(), df['points'].tolist(), df
 
 
@@ -137,6 +173,19 @@ def match_wines(
             _match_key, confidence, idx = result
             score  = float(we_points[idx])
             we_row = we_df.iloc[idx]
+
+            # Guard 1: brand/winery first token must appear in WE title
+            if not _brand_matches(wine['name'], we_row['title']):
+                skipped += 1
+                log.debug('BRAND MISMATCH  %r → %r', wine['name'], we_row['title'])
+                continue
+
+            # Guard 2: varietal must be compatible with WE variety
+            if not _variety_compatible(wine.get('varietal'), we_row.get('variety')):
+                skipped += 1
+                log.debug('VARIETY MISMATCH  %r  our=%r  we=%r',
+                          wine['name'], wine.get('varietal'), we_row.get('variety'))
+                continue
 
             log.info(
                 'MATCH  %-45s → %-45s  conf=%.0f%%  pts=%.1f',
