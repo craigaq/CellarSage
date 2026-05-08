@@ -68,6 +68,8 @@ flutter:
 
   assets:
     - assets/images/sage_fox.svg
+    - assets/images/sage_fox_nobg.svg
+    - assets/images/sage_fox_smallbg.svg
 
   # To add assets to your application, add an assets section, like this:
   # assets:
