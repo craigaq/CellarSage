@@ -365,7 +365,7 @@ def get_wine_picks(
             # well-reviewed $25 wine — the gap shrinks from 4x to ~1.6x.
             base  = (float(rating) * min(review_count, 30) / 30) / math.log1p(price)
             # Critic bonus: maps 85-100 pts → 0.0-0.15 additive boost
-            boost = max(0.0, (float(critic) - 85.0) / 100.0) if has_critic else 0.0
+            boost = max(0.0, (float(critic) - 85.0) / 15.0) if has_critic else 0.0
             return (0, -(base + boost))
 
         if has_critic:

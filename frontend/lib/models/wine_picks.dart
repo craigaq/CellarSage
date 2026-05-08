@@ -35,7 +35,7 @@ class WinePick {
 
   factory WinePick.fromJson(Map<String, dynamic> json) => WinePick(
         tier:           json['tier'] as int,
-        tierLabel:      json['tier_label'] as String,
+        tierLabel:      (json['tier_label'] as String?) ?? '',
         name:           json['name'] as String,
         varietal:       json['varietal'] as String?,
         country:        json['country'] as String?,
