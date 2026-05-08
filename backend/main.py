@@ -189,6 +189,7 @@ class WinePick(BaseModel):
     is_member_price: bool = False
     rating: Optional[float] = None
     review_count: int = 0
+    critic_score: Optional[float] = None
 
 
 class WinePicksResponse(BaseModel):

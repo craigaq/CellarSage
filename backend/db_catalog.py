@@ -325,6 +325,7 @@ def get_wine_picks(
                     ORDER BY wine_id, price ASC
                 )
                 SELECT w.name, w.country, w.state, w.region, w.varietal,
+                       w.critic_score,
                        c.price, c.url, c.retailer, c.rating, c.review_count,
                        c.is_member_price, c.last_updated
                 FROM cheapest c
@@ -354,11 +355,25 @@ def get_wine_picks(
         rating       = r.get("rating")
         review_count = int(r.get("review_count") or 0)
         price        = float(r.get("price") or 9999)
-        if rating is not None and review_count >= 3:
+        critic       = r.get("critic_score")
+
+        has_community = rating is not None and review_count >= 3
+        has_critic    = critic is not None
+
+        if has_community:
             # log1p dampens price so a $100 rated wine doesn't dominate a
             # well-reviewed $25 wine — the gap shrinks from 4x to ~1.6x.
-            score = (float(rating) * min(review_count, 30) / 30) / math.log1p(price)
-            return (0, -score)
+            base  = (float(rating) * min(review_count, 30) / 30) / math.log1p(price)
+            # Critic bonus: maps 85-100 pts → 0.0-0.15 additive boost
+            boost = max(0.0, (float(critic) - 85.0) / 100.0) if has_critic else 0.0
+            return (0, -(base + boost))
+
+        if has_critic:
+            # No community rating but we have a professional score —
+            # still rank ahead of completely unscored wines, dampened by price.
+            base = (float(critic) / 100.0) / math.log1p(price)
+            return (0, -base)
+
         return (1, price)
 
     au_rows  = sorted(
@@ -388,6 +403,7 @@ def get_wine_picks(
             "is_member_price": bool(r.get("is_member_price")),
             "rating": float(r["rating"]) if r.get("rating") is not None else None,
             "review_count": int(r.get("review_count") or 0),
+            "critic_score": float(r["critic_score"]) if r.get("critic_score") is not None else None,
         }
 
     # Tier 1 — best-value Australian, preferring wines from user's state when known.
