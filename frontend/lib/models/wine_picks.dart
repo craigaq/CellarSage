@@ -13,6 +13,7 @@ class WinePick {
   final bool isMemberPrice;
   final double? rating;
   final int reviewCount;
+  final double? criticScore;
 
   const WinePick({
     required this.tier,
@@ -29,6 +30,7 @@ class WinePick {
     this.isMemberPrice = false,
     this.rating,
     this.reviewCount = 0,
+    this.criticScore,
   });
 
   factory WinePick.fromJson(Map<String, dynamic> json) => WinePick(
@@ -46,6 +48,7 @@ class WinePick {
         isMemberPrice:  (json['is_member_price'] as bool?) ?? false,
         rating:         json['rating'] != null ? (json['rating'] as num).toDouble() : null,
         reviewCount:    (json['review_count'] as int?) ?? 0,
+        criticScore:    json['critic_score'] != null ? (json['critic_score'] as num).toDouble() : null,
       );
 }
 

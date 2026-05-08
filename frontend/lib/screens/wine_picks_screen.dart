@@ -235,6 +235,34 @@ class _PickCard extends StatelessWidget {
                     ],
                   ),
                 ],
+                if (pick.criticScore != null) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8B1A1A).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(
+                        color: const Color(0xFF8B1A1A).withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.verified_outlined, size: 11, color: Color(0xFFC0392B)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${pick.criticScore!.toStringAsFixed(0)} pts · Wine Enthusiast',
+                          style: WwText.badgeLabel().copyWith(
+                            fontSize: 10,
+                            color: const Color(0xFFC0392B),
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
