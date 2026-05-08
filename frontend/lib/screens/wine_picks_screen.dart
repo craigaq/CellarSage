@@ -41,6 +41,7 @@ class _WinePicksScreenState extends State<WinePicksScreen> {
   WinePicksResponse? _response;
   bool _loading = true;
   String? _error;
+  int _loadGeneration = 0;
 
   @override
   void initState() {
@@ -49,6 +50,7 @@ class _WinePicksScreenState extends State<WinePicksScreen> {
   }
 
   Future<void> _load() async {
+    final generation = ++_loadGeneration;
     setState(() {
       _loading = true;
       _error   = null;
@@ -60,9 +62,11 @@ class _WinePicksScreenState extends State<WinePicksScreen> {
         budgetMax: widget.budgetMax,
         prefDry: widget.prefDry,
       );
-      if (mounted) setState(() { _response = response; _loading = false; });
+      if (generation != _loadGeneration || !mounted) return;
+      setState(() { _response = response; _loading = false; });
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+      if (generation != _loadGeneration || !mounted) return;
+      setState(() { _error = e.toString(); _loading = false; });
     }
   }
 

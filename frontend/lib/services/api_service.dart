@@ -7,14 +7,20 @@ import '../models/merchant.dart';
 import '../models/wine_picks.dart';
 
 class ApiService {
+  // Singleton — one shared http.Client across all callers.
+  static final ApiService _instance = ApiService._internal();
+  factory ApiService() => _instance;
+  ApiService._internal();
+
+  final http.Client _client = http.Client();
+
   // Debug → Android emulator loopback. Release → production FastAPI host.
-  // Set CELLARSAGE_API_URL in your CI/CD environment to override the prod URL.
   static final String _baseUrl = kReleaseMode
       ? 'https://cellarsage-api.fly.dev'
       : 'http://10.0.2.2:8002';
 
   Future<String> fetchHello() async {
-    final response = await http.get(Uri.parse('$_baseUrl/hello'));
+    final response = await _client.get(Uri.parse('$_baseUrl/hello'));
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return data['message'] as String;
@@ -37,7 +43,7 @@ class ApiService {
     String overrideMode = 'use_pairing_logic',
     String pairingMode = 'congruent',
   }) async {
-    final response = await http.post(
+    final response = await _client.post(
       Uri.parse('$_baseUrl/recommend'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
@@ -85,7 +91,7 @@ class ApiService {
       'flavor_intensity': '$flavorIntensity',
       'pref_dry': '$prefDry',
     });
-    final response = await http.get(uri);
+    final response = await _client.get(uri);
     if (response.statusCode == 200) {
       final data        = jsonDecode(response.body) as Map<String, dynamic>;
       final clashJson   = data['gastro_clash']     as Map<String, dynamic>?;
@@ -108,7 +114,7 @@ class ApiService {
       'budget_min': '$budgetMin',
       'budget_max': '$budgetMax',
     });
-    final response = await http.get(uri);
+    final response = await _client.get(uri);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as List;
       return data
@@ -133,7 +139,7 @@ class ApiService {
     };
     if (userState != null) params['user_state'] = userState;
     final uri = Uri.parse('$_baseUrl/wine-picks').replace(queryParameters: params);
-    final response = await http.get(uri);
+    final response = await _client.get(uri);
     if (response.statusCode == 200) {
       return WinePicksResponse.fromJson(
         jsonDecode(response.body) as Map<String, dynamic>,
@@ -151,7 +157,7 @@ class ApiService {
     bool showGlobalTier = false,
     String currencyCode = 'AUD',
   }) async {
-    final response = await http.post(
+    final response = await _client.post(
       Uri.parse('$_baseUrl/nearby'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({

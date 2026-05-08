@@ -39,6 +39,7 @@ class _QuizScreenState extends State<QuizScreen> {
   bool _loading = false;
   String? _error;
   ConflictAlert? _conflictAlert;
+  int _fetchGeneration = 0;
 
   static const int _totalPages = 9;
 
@@ -275,6 +276,7 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   Future<void> _fetchResults() async {
+    final generation = ++_fetchGeneration;
     PalatePrefs.save(
       crispness:   _crispness,
       weight:      _weight,
@@ -301,6 +303,7 @@ class _QuizScreenState extends State<QuizScreen> {
         overrideMode: _overrideMode,
         pairingMode: _pairingMode,
       );
+      if (generation != _fetchGeneration || !mounted) return;
       setState(() {
         _results = result.recommendations;
         _conflictAlert = result.alert;
@@ -315,6 +318,7 @@ class _QuizScreenState extends State<QuizScreen> {
         );
       }
     } catch (e) {
+      if (generation != _fetchGeneration || !mounted) return;
       setState(() {
         _error = e.toString();
         _loading = false;

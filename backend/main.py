@@ -45,7 +45,12 @@ async def startup_event():
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://cellarsage.com.au",
+        "https://cellarsage.app",
+        "http://localhost:8080",   # local landing page dev
+        "http://localhost:3000",   # local web dev
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
