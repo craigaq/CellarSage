@@ -17,6 +17,10 @@ class WineRecord:
     varietal: Optional[str] = None
     country: Optional[str] = None
     state: Optional[str] = None
+    # Populated by matching.py after scraping — not set during normal sync
+    critic_score: Optional[float] = None
+    critic_source: Optional[str] = None
+    match_confidence: Optional[float] = None
 
 
 @dataclass
