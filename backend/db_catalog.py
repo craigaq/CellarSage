@@ -8,6 +8,7 @@ is not set (local dev) or the query fails.
 import json
 import os
 import math
+import re
 import pathlib
 import time
 import logging
@@ -180,9 +181,15 @@ def get_cheapest_by_varietal(retailer: str = "liquorland") -> dict[str, dict]:
     return result
 
 
+_SEARCH_STRIP_RE = re.compile(
+    r'\s*\b(\d+\s*m[lL]|[Bb]ottle[s]?|[Bb][Vv][Ss]?|[Cc][Ll][Rr])\b',
+    re.IGNORECASE,
+)
+
 def _cellarbrations_search_url(name: str) -> str:
     import urllib.parse
-    return f"https://www.cellarbrations.com.au/search?q={urllib.parse.quote(name)}"
+    query = _SEARCH_STRIP_RE.sub('', name).strip()
+    return f"https://www.cellarbrations.com.au/search?q={urllib.parse.quote(query)}"
 
 
 def get_buy_options(
