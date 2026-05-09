@@ -41,6 +41,9 @@ class _QuizScreenState extends State<QuizScreen> {
   ConflictAlert? _conflictAlert;
   int _fetchGeneration = 0;
 
+  // --- Saved profiles ---
+  List<PalateProfile> _savedProfiles = [];
+
   static const int _totalPages = 9;
 
   /// Each entry: label = UI text, id = backend key, emoji = grid icon,
@@ -275,6 +278,137 @@ class _QuizScreenState extends State<QuizScreen> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Saved profiles
+  // ---------------------------------------------------------------------------
+
+  Future<void> _refreshProfiles() async {
+    final profiles = await PalatePrefs.loadProfiles();
+    if (mounted) setState(() => _savedProfiles = profiles);
+  }
+
+  void _loadProfileAndJump(PalateProfile profile) {
+    setState(() {
+      _crispness   = profile.crispness;
+      _weight      = profile.weight;
+      _texture     = profile.texture;
+      _flavor      = profile.flavor;
+      _foodPairing = profile.foodPairing;
+      _budgetIndex = profile.budgetIndex;
+      _prefDry     = profile.prefDry;
+      _overrideMode = 'use_pairing_logic';
+      _pairingMode  = 'congruent';
+    });
+    _controller.animateToPage(
+      7, // summary page
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  String _suggestProfileName() {
+    final existing = _savedProfiles.map((p) => p.name).toSet();
+    if (!existing.contains('My Profile')) return 'My Profile';
+    int n = 2;
+    while (existing.contains('My Profile $n')) n++;
+    return 'My Profile $n';
+  }
+
+  Future<void> _showSaveProfileDialog() async {
+    String name = _suggestProfileName();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          backgroundColor: WwColors.bgElevated,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: WwColors.borderSubtle),
+          ),
+          title: Text('Save Profile', style: WwText.titleMedium()),
+          content: TextFormField(
+            initialValue: name,
+            autofocus: true,
+            maxLength: 24,
+            style: WwText.bodyMedium(),
+            decoration: const InputDecoration(
+              labelText: 'Profile name',
+              hintText: 'e.g. Friday Night Reds',
+            ),
+            onChanged: (v) => name = v,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true || name.trim().isEmpty || !mounted) return;
+
+    final snap = PalateSnapshot(
+      crispness:   _crispness,
+      weight:      _weight,
+      texture:     _texture,
+      flavor:      _flavor,
+      foodPairing: _foodPairing,
+      budgetIndex: _budgetIndex,
+      prefDry:     _prefDry,
+    );
+    final saved = await PalatePrefs.saveProfile(name.trim(), snap);
+    await _refreshProfiles();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(saved
+              ? 'Profile "${name.trim()}" saved'
+              : 'Profile limit reached — delete one first'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteProfile(PalateProfile profile) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: WwColors.bgElevated,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: WwColors.borderSubtle),
+        ),
+        title: Text('Delete Profile?', style: WwText.titleMedium()),
+        content: Text(
+          'Remove "${profile.name}"? This cannot be undone.',
+          style: WwText.bodyMedium(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: WwColors.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await PalatePrefs.deleteProfile(profile.id);
+      await _refreshProfiles();
+    }
+  }
+
   Future<void> _fetchResults() async {
     final generation = ++_fetchGeneration;
     PalatePrefs.save(
@@ -384,6 +518,7 @@ class _QuizScreenState extends State<QuizScreen> {
         });
       }
     });
+    _refreshProfiles();
   }
 
   @override
@@ -508,6 +643,20 @@ class _QuizScreenState extends State<QuizScreen> {
                 ),
               ),
             ],
+            if (_currentPage >= 4 && _currentPage < 7) ...[
+              const SizedBox(height: 4),
+              TextButton.icon(
+                onPressed: _savedProfiles.length < PalatePrefs.maxProfiles
+                    ? _showSaveProfileDialog
+                    : null,
+                icon: const Icon(Icons.bookmark_add_outlined, size: 14),
+                label: const Text('Save Profile'),
+                style: TextButton.styleFrom(
+                  foregroundColor: WwColors.violetMuted,
+                  textStyle: WwText.bodySmall(),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -537,11 +686,43 @@ class _QuizScreenState extends State<QuizScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
-          FilledButton.icon(
-            onPressed: _goNext,
-            label: const Text('Let\'s Begin'),
-            icon: const Icon(Icons.wine_bar),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _goNext,
+              label: const Text('Let\'s Begin'),
+              icon: const Icon(Icons.wine_bar),
+            ),
           ),
+          if (_savedProfiles.isNotEmpty) ...[
+            const SizedBox(height: 28),
+            Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'Saved Profiles',
+                    style: WwText.bodySmall(color: WwColors.textSecondary),
+                  ),
+                ),
+                const Expanded(child: Divider()),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ..._savedProfiles.map((p) {
+              final foodLabel = _foodOptions.firstWhere(
+                (f) => f['id'] == p.foodPairing,
+                orElse: () => {'label': p.foodPairing},
+              )['label'] ?? p.foodPairing;
+              return _ProfileCard(
+                profile: p,
+                foodLabel: foodLabel,
+                onTap: () => _loadProfileAndJump(p),
+                onDelete: () => _confirmDeleteProfile(p),
+              );
+            }),
+          ],
         ],
       ),
     );
@@ -888,6 +1069,22 @@ class _QuizScreenState extends State<QuizScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 16),
+          if (_savedProfiles.length < PalatePrefs.maxProfiles)
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _showSaveProfileDialog,
+                icon: const Icon(Icons.bookmark_add_outlined, size: 16),
+                label: const Text('Save Profile'),
+              ),
+            )
+          else
+            Text(
+              'Profile limit reached (${PalatePrefs.maxProfiles}/${PalatePrefs.maxProfiles}). Delete a profile to save a new one.',
+              style: WwText.bodySmall(color: WwColors.textDisabled),
+              textAlign: TextAlign.center,
+            ),
         ],
       ),
     );
@@ -1548,6 +1745,49 @@ class _PairingPhilosophyPicker extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Saved profile card (welcome screen)
+// ---------------------------------------------------------------------------
+
+class _ProfileCard extends StatelessWidget {
+  final PalateProfile profile;
+  final String foodLabel;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  const _ProfileCard({
+    required this.profile,
+    required this.foodLabel,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitle = profile.prefDry ? '$foodLabel · Dry' : foodLabel;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: WwDecorations.card(),
+      child: ListTile(
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: const Icon(Icons.account_circle_outlined, color: WwColors.violet),
+        title: Text(
+          profile.name,
+          style: WwText.bodyMedium(color: WwColors.textPrimary)
+              .copyWith(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(subtitle, style: WwText.bodySmall(color: WwColors.textSecondary)),
+        trailing: IconButton(
+          icon: const Icon(Icons.delete_outline, size: 18, color: WwColors.textDisabled),
+          tooltip: 'Delete profile',
+          onPressed: onDelete,
+        ),
+      ),
     );
   }
 }

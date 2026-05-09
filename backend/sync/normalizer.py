@@ -42,6 +42,53 @@ _COUNTRY_MARKERS: list[tuple[str, list[str]]] = [
     ("Chile", ["maipo", "colchagua", "casablanca valley", "aconcagua"]),
 ]
 
+# Brand-name → country for well-known imported brands that carry no
+# geographic marker in their product names and would otherwise default
+# to "Australia". Checked after region lookup, before the Australia fallback.
+_BRAND_COUNTRY: list[tuple[str, str]] = [
+    # New Zealand
+    ("oyster bay",    "New Zealand"),
+    ("villa maria",   "New Zealand"),
+    ("kim crawford",  "New Zealand"),
+    ("selaks",        "New Zealand"),
+    ("saint clair",   "New Zealand"),
+    ("babich",        "New Zealand"),
+    ("cloudy bay",    "New Zealand"),
+    ("spy valley",    "New Zealand"),
+    ("stoneleigh",    "New Zealand"),
+    ("catalina sounds", "New Zealand"),
+    ("counting sheep",  "New Zealand"),
+    ("giesen",          "New Zealand"),
+    ("kamana",          "New Zealand"),
+    ("lana's bike",     "New Zealand"),
+    ("matua",           "New Zealand"),
+    ("nanny goat",      "New Zealand"),
+    ("rapaura springs", "New Zealand"),
+    ("rochecombe",      "New Zealand"),
+    ("rock paper scissors", "New Zealand"),
+    ("secret stone",    "New Zealand"),
+    ("sheep shape",     "New Zealand"),
+    ("squealing pig",   "New Zealand"),
+    ("ta ku",           "New Zealand"),
+    ("upside down",     "New Zealand"),
+    # France
+    ("veuve clicquot",  "France"),
+    ("champteloup",     "France"),
+    ("b francois",      "France"),
+    ("tussock jumper",  "France"),
+    ("fat bastard",     "France"),
+    ("mouton cadet",    "France"),
+    # USA
+    ("wente",           "USA"),
+    ("beringer",        "USA"),
+    ("robert mondavi",  "USA"),
+    ("barefoot",        "USA"),
+    ("bota box",        "USA"),
+    # Argentina
+    ("alamos",          "Argentina"),
+    ("19 crimes",     "Australia"),  # keep as AU — made under licence in AU
+]
+
 # Unaccented → accented canonical spellings
 _VARIETAL_CANONICAL: dict[str, str] = {
     "gruner veltliner": "Grüner Veltliner",
@@ -85,6 +132,9 @@ def _infer_country_keywords(name: str) -> str:
     lower = name.lower()
     for country, markers in _COUNTRY_MARKERS:
         if any(m in lower for m in markers):
+            return country
+    for brand, country in _BRAND_COUNTRY:
+        if brand in lower:
             return country
     return "Australia"
 

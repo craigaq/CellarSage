@@ -49,7 +49,7 @@ class AgeGateScreen extends StatelessWidget {
                 const SizedBox(height: 20),
 
                 Text(
-                  'The cellar is reserved for adults.\nPlease confirm your age before entering.',
+                  'This service is reserved for adults.\nPlease confirm your age before entering.',
                   textAlign: TextAlign.center,
                   style: WwText.bodyLarge(color: WwColors.textSecondary),
                 ),

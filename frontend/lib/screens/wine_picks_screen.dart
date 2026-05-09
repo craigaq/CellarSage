@@ -157,7 +157,9 @@ class _WinePicksScreenState extends State<WinePicksScreen> {
         Padding(
           padding: const EdgeInsets.only(bottom: 16),
           child: Text(
-            'Four picks — one for every palate.',
+            picks.length == 1
+                ? 'One pick for your palate.'
+                : '${picks.length} picks — one for every palate.',
             style: WwText.bodyMedium(),
             textAlign: TextAlign.center,
           ),
@@ -316,7 +318,7 @@ class _PickCard extends StatelessWidget {
                           label: Text('Buy on ${_retailerLabel(pick.retailer)}'),
                         )
                       : OutlinedButton.icon(
-                          onPressed: () => _launch(_retailerUrl(pick.retailer)),
+                          onPressed: () => _launch(_retailerUrl(pick)),
                           icon: const Icon(Icons.search, size: 15),
                           label: Text('Browse ${_retailerLabel(pick.retailer)}'),
                         ),
@@ -360,11 +362,18 @@ class _PickCard extends StatelessWidget {
     _                => retailer.isNotEmpty ? retailer : 'retailer',
   };
 
-  String _retailerUrl(String retailer) => switch (retailer) {
-    'cellarbrations' => 'https://www.cellarbrations.com.au/wine',
-    'danmurphys'     => 'https://www.danmurphys.com.au',
-    _                => 'https://www.liquorland.com.au',
-  };
+  String _retailerUrl(WinePick pick) {
+    if (pick.retailer == 'cellarbrations') {
+      final term = Uri.encodeQueryComponent(
+        (pick.varietal ?? 'wine').toLowerCase(),
+      );
+      return 'https://www.cellarbrations.com.au/results?q=$term';
+    }
+    return switch (pick.retailer) {
+      'danmurphys' => 'https://www.danmurphys.com.au',
+      _            => 'https://www.liquorland.com.au',
+    };
+  }
 
   Future<void> _launch(String url) async {
     final uri = Uri.parse(url);

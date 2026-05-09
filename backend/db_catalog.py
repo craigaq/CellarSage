@@ -186,9 +186,17 @@ _SEARCH_STRIP_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Strip varietal keywords from Cellarbrations search queries — retailer search
+# returns "not found" when the varietal name is appended to the wine name.
+_VARIETAL_STRIP_RE = re.compile(
+    r'\b(' + '|'.join(re.escape(kw) for kw, _ in _VARIETAL_KEYWORDS) + r')\b',
+    re.IGNORECASE,
+)
+
 def _cellarbrations_search_url(name: str) -> str:
     import urllib.parse
-    query = _SEARCH_STRIP_RE.sub('', name).strip()
+    query = _SEARCH_STRIP_RE.sub('', name)
+    query = _VARIETAL_STRIP_RE.sub('', query).strip()
     return f"https://www.cellarbrations.com.au/search?q={urllib.parse.quote(query)}"
 
 
@@ -264,7 +272,10 @@ def get_buy_options(
         {
             "name": row["name"],
             "price": float(row["price"]),
-            "url": _cellarbrations_search_url(row["name"]) if (row.get("retailer") or "") == "cellarbrations" else (row["url"] or ""),
+            # Cellarbrations has no direct product URLs in the DB; search URLs
+            # fail when the user's browser has a local store set that doesn't
+            # stock the wine. Return empty so the app shows "Browse Cellarbrations".
+            "url": "" if (row.get("retailer") or "") == "cellarbrations" else (row["url"] or ""),
             "retailer": row["retailer"] or "",
             "price_is_stale": bool(row.get("last_updated") and row["last_updated"] < cutoff),
         }
@@ -404,7 +415,7 @@ def get_wine_picks(
             "state": r.get("state"), "region": r.get("region"),
             "varietal": r.get("varietal"),
             "price": float(r["price"]),
-            "url": _cellarbrations_search_url(r["name"]) if (r.get("retailer") or "") == "cellarbrations" else (r.get("url") or ""),
+            "url": "" if (r.get("retailer") or "") == "cellarbrations" else (r.get("url") or ""),
             "retailer": r.get("retailer") or "",
             "price_is_stale": stale,
             "is_member_price": bool(r.get("is_member_price")),
