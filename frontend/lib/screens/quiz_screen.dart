@@ -300,7 +300,7 @@ class _QuizScreenState extends State<QuizScreen> {
       _pairingMode  = 'congruent';
     });
     _controller.animateToPage(
-      7, // summary page
+      6, // budget page
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeInOut,
     );
@@ -1313,7 +1313,7 @@ class _WineResultCardState extends State<_WineResultCard> {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade500,
+                        color: Colors.white,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1341,34 +1341,14 @@ class _WineResultCardState extends State<_WineResultCard> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        _ScoreDots(value: userVal, color: WwColors.textDisabled),
+                        _ScoreDots(value: userVal, color: Colors.white),
                         const SizedBox(width: 8),
                         _ScoreDots(value: wineVal, color: WwColors.violet),
                       ],
                     ),
                   );
                 }),
-                const SizedBox(height: 14),
-                const Divider(height: 1),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Text('🛒', style: TextStyle(fontSize: 16)),
-                    const SizedBox(width: 6),
-                    Text('Where to Buy', style: WwText.titleMedium()),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                _WhereToBuySection(
-                  buyLoading: _buyLoading,
-                  buyError: _buyError,
-                  buyOptions: _buyOptions,
-                  varietal: widget.wine.varietal,
-                  onRetry: _loadBuyOptions,
-                ),
                 if (widget.wine.varietal.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  const Divider(height: 1),
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
@@ -1389,6 +1369,24 @@ class _WineResultCardState extends State<_WineResultCard> {
                     ),
                   ),
                 ],
+                const SizedBox(height: 14),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Text('🛒', style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 6),
+                    Text('Where to Buy', style: WwText.titleMedium()),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _WhereToBuySection(
+                  buyLoading: _buyLoading,
+                  buyError: _buyError,
+                  buyOptions: _buyOptions,
+                  varietal: widget.wine.varietal,
+                  onRetry: _loadBuyOptions,
+                ),
               ],
             ],
           ),
@@ -1476,60 +1474,60 @@ class _BuyOptionRow extends StatelessWidget {
   final BuyOption option;
   const _BuyOptionRow({required this.option});
 
+  Future<void> _launch() async {
+    if (option.url.isEmpty) return;
+    final uri = Uri.tryParse(option.url);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  option.name,
-                  style: WwText.bodySmall(),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Row(
-                  children: [
-                    Text(
-                      'A\$${option.price.toStringAsFixed(2)}',
-                      style: WwText.bodySmall(color: WwColors.violet)
-                          .copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    if (option.priceIsStale) ...[
-                      const SizedBox(width: 4),
-                      Tooltip(
-                        message: 'Price may be outdated',
-                        child: Icon(Icons.schedule, size: 12, color: WwColors.textDisabled),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _launch,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    option.name,
+                    style: WwText.bodySmall(),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        'A\$${option.price.toStringAsFixed(2)}',
+                        style: WwText.bodySmall(color: WwColors.violet)
+                            .copyWith(fontWeight: FontWeight.w600),
                       ),
+                      if (option.priceIsStale) ...[
+                        const SizedBox(width: 4),
+                        Tooltip(
+                          message: 'Price may be outdated',
+                          child: Icon(Icons.schedule, size: 12, color: WwColors.textDisabled),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-          if (option.url.isNotEmpty)
-            TextButton(
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              onPressed: () async {
-                final uri = Uri.tryParse(option.url);
-                if (uri != null && await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
-              },
-              child: Text(
-                _retailerShortName(option.retailer),
-                style: WwText.labelLarge(color: WwColors.violet),
+                  ),
+                ],
               ),
             ),
-        ],
+            Text(
+              _retailerShortName(option.retailer),
+              style: WwText.labelLarge(
+                color: option.url.isNotEmpty ? WwColors.violet : WwColors.textDisabled,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
