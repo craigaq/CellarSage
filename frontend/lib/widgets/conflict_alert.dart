@@ -167,75 +167,84 @@ Future<void> showGastroClashAlert(
     backgroundColor: Colors.transparent,
     isDismissible: false,
     enableDrag: false,
+    isScrollControlled: true,
     builder: (context) {
-      return Container(
-        decoration: const BoxDecoration(
-          color: WwColors.bgElevated,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          border: Border(
-            top: BorderSide(color: WwColors.borderMedium, width: 1),
-          ),
+      final bottomPad = MediaQuery.of(context).padding.bottom;
+      return ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
         ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Drag handle
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: WwColors.borderMedium,
-                borderRadius: BorderRadius.circular(2),
-              ),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: WwColors.bgElevated,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border(
+              top: BorderSide(color: WwColors.borderMedium, width: 1),
             ),
-
-            Text(
-              clash.title,
-              textAlign: TextAlign.center,
-              style: WwText.headlineMedium(color: WwColors.violet),
-            ),
-            const SizedBox(height: 12),
-
-            Text(
-              clash.message,
-              textAlign: TextAlign.center,
-              style: WwText.bodyMedium(),
-            ),
-            const SizedBox(height: 24),
-
-            Row(
+          ),
+          padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomPad),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text("I'll risk it!"),
+                // Drag handle
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: WwColors.borderMedium,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: WwDecorations.violetGlow(),
-                    ),
-                    child: FilledButton(
-                      onPressed: () {
-                        onApply(clash.newValues);
-                        Navigator.of(context).pop();
-                      },
-                      child: Text(
-                        'Trust the Cellar Fox',
-                        style: WwText.labelLarge(color: Colors.black),
+
+                Text(
+                  clash.title,
+                  textAlign: TextAlign.center,
+                  style: WwText.headlineMedium(color: WwColors.violet),
+                ),
+                const SizedBox(height: 12),
+
+                Text(
+                  clash.message,
+                  textAlign: TextAlign.center,
+                  style: WwText.bodyMedium(),
+                ),
+                const SizedBox(height: 24),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text("I'll risk it!"),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: WwDecorations.violetGlow(),
+                        ),
+                        child: FilledButton(
+                          onPressed: () {
+                            onApply(clash.newValues);
+                            Navigator.of(context).pop();
+                          },
+                          child: Text(
+                            'Trust the Cellar Fox',
+                            style: WwText.labelLarge(color: Colors.black),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 8),
               ],
             ),
-            const SizedBox(height: 8),
-          ],
+          ),
         ),
       );
     },

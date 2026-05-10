@@ -192,14 +192,12 @@ class _MagicPaletteStepState extends State<MagicPaletteStep>
             scale: _heroScale,
             child: SizedBox(
               width: 240,
-              height: 210,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   // Card background — deep surface with gold gradient hint
                   Container(
                     width: 240,
-                    height: 210,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         begin: Alignment.topLeft,
@@ -216,6 +214,7 @@ class _MagicPaletteStepState extends State<MagicPaletteStep>
                         ),
                       ],
                     ),
+                    padding: const EdgeInsets.symmetric(vertical: 20),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -261,7 +260,8 @@ class _MagicPaletteStepState extends State<MagicPaletteStep>
                   ),
 
                   // ── Wand swirl overlay ──────────────────────────────────
-                  AnimatedBuilder(
+                  Positioned.fill(
+                   child: AnimatedBuilder(
                     animation: _wandCtrl,
                     builder: (context, _) {
                       if (_overlayFade.value < 0.01) {
@@ -271,7 +271,6 @@ class _MagicPaletteStepState extends State<MagicPaletteStep>
                         opacity: _overlayFade.value,
                         child: SizedBox(
                           width: 240,
-                          height: 210,
                           child: Stack(
                             children: [
                               // Orbiting wand
@@ -318,7 +317,7 @@ class _MagicPaletteStepState extends State<MagicPaletteStep>
                         ),
                       );
                     },
-                  ),
+                   )),
                 ],
               ),
             ),
