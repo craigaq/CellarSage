@@ -503,19 +503,25 @@ def get_wine_picks(
             "critic_score": float(r["critic_score"]) if r.get("critic_score") is not None else None,
         }
 
-    # Tier 1 — best-value Australian, preferring wines from user's state when known.
-    # Falls back to any Australian wine if no state match exists.
-    tier1_pool = au_rows
+    # Tier 1 — best-value wine from the user's own state ("The Local Hero").
+    # Only awarded when the wine is genuinely from the user's state.
+    # Falls back to skipping Tier 1 (non-local wines are promoted to Tier 2 instead).
+    tier1_awarded = False
     if user_state:
         state_upper = user_state.upper()
         state_rows  = [r for r in au_rows if (r.get("state") or "").upper() == state_upper]
         if state_rows:
-            tier1_pool = state_rows + [r for r in au_rows if r not in state_rows]
-
-    if tier1_pool:
-        r = tier1_pool[0]
-        picks.append(_row_to_pick(r, 1, "The Local Hero"))
-        seen.add(r["name"])
+            r = state_rows[0]
+            picks.append(_row_to_pick(r, 1, "The Local Hero"))
+            seen.add(r["name"])
+            tier1_awarded = True
+    else:
+        # No location known — award Tier 1 to the best-value Australian wine.
+        if au_rows:
+            r = au_rows[0]
+            picks.append(_row_to_pick(r, 1, "The Local Hero"))
+            seen.add(r["name"])
+            tier1_awarded = True
 
     # Tier 2 — next best-value distinct Australian
     for r in au_rows:
