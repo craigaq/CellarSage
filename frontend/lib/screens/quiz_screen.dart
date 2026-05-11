@@ -1175,23 +1175,55 @@ class _QuizScreenState extends State<QuizScreen> {
             style: WwText.bodyMedium(),
           ),
           const SizedBox(height: 16),
-          ..._results!.asMap().entries.map((entry) {
-            final rank = entry.key + 1;
-            final wine = entry.value;
-            return _WineResultCard(
-              rank: rank,
-              wine: wine,
-              userPrefs: _userPrefs,
-              attrOrder: _attrOrder,
-              budgetMin: _selectedBracket.min,
-              budgetMax: _selectedBracket.max,
-              currencyCode: _currencyCode,
-              prefDry: _prefDry,
-            );
-          }),
+          ..._buildResultCards(_results!),
         ],
       ),
     );
+  }
+
+  static const double _greatMatchThreshold = 0.60;
+
+  List<Widget> _buildResultCards(List<WineRecommendation> results) {
+    final great  = results.where((w) => w.score >= _greatMatchThreshold).toList();
+    final weaker = results.where((w) => w.score <  _greatMatchThreshold).toList();
+
+    int rank = 0;
+    Widget card(WineRecommendation wine) {
+      rank++;
+      return _WineResultCard(
+        rank: rank,
+        wine: wine,
+        userPrefs: _userPrefs,
+        attrOrder: _attrOrder,
+        budgetMin: _selectedBracket.min,
+        budgetMax: _selectedBracket.max,
+        currencyCode: _currencyCode,
+        prefDry: _prefDry,
+      );
+    }
+
+    return [
+      for (final wine in great) card(wine),
+      if (weaker.isNotEmpty) ...[
+        Padding(
+          padding: const EdgeInsets.only(top: 8, bottom: 16),
+          child: Row(
+            children: [
+              Expanded(child: Divider(color: WwColors.textDisabled.withValues(alpha: 0.4))),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  'Weaker matches',
+                  style: WwText.bodySmall(color: WwColors.textDisabled),
+                ),
+              ),
+              Expanded(child: Divider(color: WwColors.textDisabled.withValues(alpha: 0.4))),
+            ],
+          ),
+        ),
+        for (final wine in weaker) card(wine),
+      ],
+    ];
   }
 
   Widget _stepShell({required Widget child}) {

@@ -11,7 +11,7 @@ MERCHANT_REGISTRY: dict = {
     "liquorland": {
         "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
         "max_items": 50,   # per-page cap; actor hard-limits to 50 per call
-        "pages": 3,        # try up to 3 pages; stops early if a page is short
+        "pages": 6,        # try up to 6 pages; stops early if a page is short
         "enabled": True,
         "actor_input": {
             "operation": "category",
@@ -27,7 +27,7 @@ MERCHANT_REGISTRY: dict = {
         "enabled": True,
         "actor_input": {
             "operation": "category",
-            "path": "/wine/fortified-wine",
+            "path": "/wine/fortified",
             "show": 50,
             "includeRaw": False,
         },
@@ -39,7 +39,7 @@ MERCHANT_REGISTRY: dict = {
         "enabled": True,
         "actor_input": {
             "operation": "category",
-            "path": "/wine/dessert-wine",
+            "path": "/wine/dessert",
             "show": 50,
             "includeRaw": False,
         },
