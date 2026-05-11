@@ -31,6 +31,15 @@ jobs:
 
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - name: Verify checkout
+        run: |
+          echo "=== Git SHA ==="
+          git rev-parse HEAD
+          echo "=== config.py pages/enabled ==="
+          grep -E "(pages|enabled|portersliquor|bottleo)" backend/sync/config.py
 
       - name: Set up Python
         uses: actions/setup-python@v5
