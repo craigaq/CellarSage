@@ -5,7 +5,11 @@ Add new merchants here; the scrape manager picks them up automatically.
 
 MERCHANT_REGISTRY: dict = {
     "cellarbrations": {
-        "scraper_type": "direct",          # uses scraper_cellarbrations, not Apify
+        "scraper_type": "direct",
+        "enabled": True,
+    },
+    "portersliquor": {
+        "scraper_type": "direct",
         "enabled": True,
     },
     "liquorland": {

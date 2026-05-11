@@ -27,7 +27,9 @@ _DIRECT_SCRAPERS: dict = {}
 
 def _load_direct_scrapers():
     from .scraper_cellarbrations import scrape_cellarbrations
-    _DIRECT_SCRAPERS["cellarbrations"] = scrape_cellarbrations
+    from .scraper_portersliquor import scrape_portersliquor
+    _DIRECT_SCRAPERS["cellarbrations"]  = scrape_cellarbrations
+    _DIRECT_SCRAPERS["portersliquor"]   = scrape_portersliquor
 
 logging.basicConfig(
     level=logging.INFO,

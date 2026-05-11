@@ -358,6 +358,7 @@ class _PickCard extends StatelessWidget {
   String _retailerLabel(String retailer) => switch (retailer) {
     'liquorland'     => 'Liquorland',
     'cellarbrations' => 'Cellarbrations',
+    'portersliquor'  => 'Porters Liquor',
     'danmurphys'     => 'Dan Murphy\'s',
     _                => retailer.isNotEmpty ? retailer : 'retailer',
   };
@@ -368,6 +369,12 @@ class _PickCard extends StatelessWidget {
         (pick.varietal ?? 'wine').toLowerCase(),
       );
       return 'https://www.cellarbrations.com.au/results?q=$term';
+    }
+    if (pick.retailer == 'portersliquor') {
+      final term = Uri.encodeQueryComponent(
+        (pick.varietal ?? 'wine').toLowerCase(),
+      );
+      return 'https://www.portersliquor.com.au/search?q=$term';
     }
     return switch (pick.retailer) {
       'danmurphys'  => 'https://www.danmurphys.com.au',

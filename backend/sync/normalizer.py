@@ -388,6 +388,7 @@ _NORMALIZERS = {
     "liquorland_fortified": _normalize_liquorland,
     "liquorland_dessert":   _normalize_liquorland,
     "cellarbrations":       _normalize_cellarbrations,
+    "portersliquor":        _normalize_cellarbrations,  # same WYNSHOP format
     "danmurphys":           _normalize_danmurphys,
 }
 
