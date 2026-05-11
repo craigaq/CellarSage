@@ -523,12 +523,20 @@ def get_wine_picks(
             seen.add(r["name"])
             tier1_awarded = True
 
-    # Tier 2 — next best-value distinct Australian
-    for r in au_rows:
-        if r["name"] not in seen:
-            picks.append(_row_to_pick(r, 2, "The National Contender"))
-            seen.add(r["name"])
-            break
+    # Tier 2 — best-value wine from a DIFFERENT Australian state ("The National Contender").
+    # Prefer cross-state wines so the label is always accurate.
+    # Falls back to a same-state wine only if no cross-state options exist,
+    # in which case the label changes to "The Local Alternative".
+    _state_upper = (user_state or "").upper()
+    _other_au = [r for r in au_rows if r["name"] not in seen
+                 and (_state_upper == "" or (r.get("state") or "").upper() != _state_upper)]
+    _same_au  = [r for r in au_rows if r["name"] not in seen and r not in _other_au]
+    _t2_pool  = _other_au or _same_au
+    if _t2_pool:
+        r  = _t2_pool[0]
+        t2_label = "The National Contender" if _other_au else "The Local Alternative"
+        picks.append(_row_to_pick(r, 2, t2_label))
+        seen.add(r["name"])
 
     # Tier 3 — best-value non-Australian
     for r in int_rows:
