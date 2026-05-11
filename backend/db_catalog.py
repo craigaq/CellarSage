@@ -288,8 +288,12 @@ def get_buy_options(
     if not conn:
         return _BUY_CACHE.get(cache_key, {}).get("data", [])
 
+    # Match on varietal column first; fall back to name only when varietal is
+    # NULL. This prevents blend wines (e.g. "Cabernet Merlot" stored as
+    # varietal="Cabernet Sauvignon") from leaking into the wrong category.
     like_clauses = " OR ".join(
-        f"LOWER(w.varietal) LIKE %s OR LOWER(w.name) LIKE %s"
+        f"(w.varietal IS NOT NULL AND LOWER(w.varietal) LIKE %s)"
+        f" OR (w.varietal IS NULL AND LOWER(w.name) LIKE %s)"
         for _ in keywords
     )
     params: list = [effective_min, budget_max_aud]
@@ -387,7 +391,8 @@ def get_wine_picks(
         return _PICKS_CACHE.get(cache_key, {}).get("data", [])
 
     like_clauses = " OR ".join(
-        f"LOWER(w.varietal) LIKE %s OR LOWER(w.name) LIKE %s"
+        f"(w.varietal IS NOT NULL AND LOWER(w.varietal) LIKE %s)"
+        f" OR (w.varietal IS NULL AND LOWER(w.name) LIKE %s)"
         for _ in keywords
     )
     params: list = [effective_min, budget_max]
