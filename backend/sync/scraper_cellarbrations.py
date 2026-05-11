@@ -97,19 +97,33 @@ def _get_stores() -> list[dict]:
     return stores
 
 
+# Additional search terms to capture dessert and fortified wines that the
+# generic "wine" query misses (Cellarbrations categorises them separately).
+_EXTRA_QUERIES = ["port", "sherry", "muscat", "botrytis", "fortified", "tokay", "topaque"]
+
+
 def _get_wines_for_store(store_id: str, lat: float = -33.8688, lng: float = 151.2093) -> list[dict]:
     """
     Return all wine products for a store using the /preview endpoint.
-    productsTake=500 covers any realistic wine catalogue; real catalogues
-    are typically 200–400 items per store.
+    Runs the generic "wine" query plus targeted dessert/fortified queries,
+    deduplicating by productId so no item appears twice.
     """
-    url = f"{GW_BASE}/api/stores/{store_id}/preview?q=wine&productsTake=1000"
-    data = _get(url, lat=lat, lng=lng)
-    if not data:
-        return []
-    products = data.get("products") or []
-    log.info("Store %s: %d wine products fetched", store_id, len(products))
-    return products
+    seen_ids: set[str] = set()
+    all_products: list[dict] = []
+
+    for term in ["wine"] + _EXTRA_QUERIES:
+        url = f"{GW_BASE}/api/stores/{store_id}/preview?q={term}&productsTake=1000"
+        data = _get(url, lat=lat, lng=lng)
+        if not data:
+            continue
+        for p in data.get("products") or []:
+            pid = str(p.get("productId", ""))
+            if pid and pid not in seen_ids:
+                seen_ids.add(pid)
+                all_products.append(p)
+
+    log.info("Store %s: %d unique products fetched (wine + fortified/dessert queries)", store_id, len(all_products))
+    return all_products
 
 
 def _product_url(product: dict, store_id: str) -> str:

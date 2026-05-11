@@ -73,7 +73,11 @@ class PalateDial extends StatelessWidget {
                     'Flavor Intensity\n(Aromatics)',
                     'Texture\n(Tannin)',
                   ];
-            return RadarChartTitle(text: titles[index], angle: 0);
+            return RadarChartTitle(
+              text: titles[index],
+              angle: 0,
+              positionPercentageOffset: compact ? 0.08 : 0.2,
+            );
           },
         ),
       ),

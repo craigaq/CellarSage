@@ -370,8 +370,9 @@ class _PickCard extends StatelessWidget {
       return 'https://www.cellarbrations.com.au/results?q=$term';
     }
     return switch (pick.retailer) {
-      'danmurphys' => 'https://www.danmurphys.com.au',
-      _            => 'https://www.liquorland.com.au',
+      'danmurphys'  => 'https://www.danmurphys.com.au',
+      'liquorland'  => 'https://www.liquorland.com.au/search?q=${Uri.encodeQueryComponent((pick.varietal ?? 'wine').toLowerCase())}',
+      _             => 'https://www.liquorland.com.au',
     };
   }
 

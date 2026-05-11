@@ -45,6 +45,10 @@ from recommendation_service import (
 # Priority 1 — Residual Sugar  < 5 g/L  → "dry on paper"
 _DRY_RS_MAX = 5.0
 
+# Fortified / digestif threshold — ABV >= 14% captures port, sherry, muscat
+# without needing an explicit is_fortified flag on WineProfile.
+_FORTIFIED_ABV_MIN = 14.0
+
 from dataclasses import dataclass, field
 
 from local_sourcing import (
@@ -124,6 +128,19 @@ def _filter_catalog(
                     wine.name, wine.varietal, wine.style,
                 )
         return eligible
+
+    # Dessert pairing — only surface genuinely sweet wines so the engine
+    # ranks Botrytis Semillon / Rutherglen Muscat / Port above still reds/whites.
+    if prefs.food_pairing == "dessert" and mode == "use_pairing_logic":
+        return [w for w in catalog if w.style == "Sweet"]
+
+    # After-dinner / digestif — sweet wines plus any fortified style (ABV ≥ 14%).
+    # Captures Fino Sherry (Dry but 15% ABV) alongside Port and Muscat.
+    if prefs.food_pairing == "after_dinner" and mode == "use_pairing_logic":
+        return [
+            w for w in catalog
+            if w.style == "Sweet" or w.abv_percentage >= _FORTIFIED_ABV_MIN
+        ]
 
     return catalog
 

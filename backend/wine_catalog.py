@@ -190,7 +190,7 @@ _REDS: list[WineProfile] = [
 ]
 
 #
-# ── Whites & Sparkling ───────────────────────────────────────────────────────
+# ── Whites ──────────────────────────────────────────────────────────────────
 #
 _WHITES: list[WineProfile] = [
 
@@ -329,7 +329,139 @@ _WHITES: list[WineProfile] = [
 
 
 # ---------------------------------------------------------------------------
-# Section 2 — Middle Ground Compromise Varietals
+# Section 2 — Sparkling Wines
+# ---------------------------------------------------------------------------
+# High acidity, zero tannin, light-to-medium body.  Surface naturally for
+# users who dial up crispness and dial down tannin.
+#
+_SPARKLING: list[WineProfile] = [
+
+    # The benchmark — traditional method, autolytic complexity, bone-dry
+    WineProfile(
+        "Champagne", sku_id="WW-CP01",
+        varietal="Champagne",
+        acidity_ph=3.05, body=2.0, tannin_structure=1, aromatic_intensity=7,
+        abv_percentage=12.0, residual_sugar_gl=1.5,
+        style="Dry",
+        location_tag="International",   # Champagne France (& traditional-method Australia)
+    ),
+
+    # Italy's crowd-pleaser — gently fizzy, pear/apple, slightly off-dry
+    WineProfile(
+        "Prosecco", sku_id="WW-PR01",
+        varietal="Prosecco",
+        acidity_ph=3.20, body=1.5, tannin_structure=1, aromatic_intensity=6,
+        abv_percentage=11.0, residual_sugar_gl=12.0,
+        style="Off-Dry",
+        location_tag="International",   # Veneto & Friuli Italy
+    ),
+
+    # Spain's traditional-method answer to Champagne — toasty, dry, value
+    WineProfile(
+        "Cava", sku_id="WW-CV01",
+        varietal="Cava",
+        acidity_ph=3.10, body=2.0, tannin_structure=1, aromatic_intensity=5,
+        abv_percentage=11.5, residual_sugar_gl=1.5,
+        style="Dry",
+        location_tag="International",   # Penedès, Catalonia Spain
+    ),
+
+    # Uniquely Australian — inky, fruit-forward, celebratory red fizz
+    WineProfile(
+        "Sparkling Shiraz", sku_id="WW-SS01",
+        varietal="Sparkling Shiraz",
+        acidity_ph=3.35, body=3.0, tannin_structure=2, aromatic_intensity=8,
+        abv_percentage=13.5, residual_sugar_gl=8.0,
+        style="Off-Dry",
+        location_tag="Local",           # Barossa Valley SA — the spiritual home of Sparkling Shiraz
+    ),
+]
+
+
+# ---------------------------------------------------------------------------
+# Section 3 — Dessert Wines
+# ---------------------------------------------------------------------------
+# High RS, high aromatics, mostly low-medium body.  Triggered by dessert
+# food pairing or naturally when user dials aromatics high and tannin low.
+# style="Sweet" means they are filtered out in filter_by_profile (dry) mode.
+#
+_DESSERT: list[WineProfile] = [
+
+    # Noble-rot Semillon — Australia's dessert-wine crown jewel (De Bortoli)
+    WineProfile(
+        "Botrytis Semillon", sku_id="WW-BS01",
+        varietal="Botrytis Semillon",
+        acidity_ph=3.20, body=3.5, tannin_structure=1, aromatic_intensity=9,
+        abv_percentage=10.5, residual_sugar_gl=160.0,
+        style="Sweet",
+        location_tag="National",        # Riverina NSW (De Bortoli Noble One) & Eden Valley SA
+    ),
+
+    # Off-dry to sweet Riesling — razor acid balances the residual sugar
+    WineProfile(
+        "Late Harvest Riesling", sku_id="WW-LR01",
+        varietal="Late Harvest Riesling",
+        acidity_ph=2.90, body=2.0, tannin_structure=1, aromatic_intensity=9,
+        abv_percentage=8.5, residual_sugar_gl=90.0,
+        style="Sweet",
+        location_tag="Local",           # Clare Valley & Eden Valley SA (world-class late harvest)
+    ),
+]
+
+
+# ---------------------------------------------------------------------------
+# Section 4 — Fortified Wines
+# ---------------------------------------------------------------------------
+# High ABV (15–20 %), wide RS range (bone-dry Fino to ultra-sweet Muscat).
+# Fino/Manzanilla surface for crisp-low-tannin users; Port/Muscat for
+# full-body high-aromatics users.
+#
+_FORTIFIED: list[WineProfile] = [
+
+    # Australia's greatest original — raisined, mahogany, ethereally complex
+    WineProfile(
+        "Rutherglen Muscat", sku_id="WW-RM01",
+        varietal="Rutherglen Muscat",
+        acidity_ph=3.60, body=5.0, tannin_structure=1, aromatic_intensity=10,
+        abv_percentage=18.0, residual_sugar_gl=200.0,
+        style="Sweet",
+        location_tag="National",        # Rutherglen VIC — Australia's most iconic fortified
+    ),
+
+    # Nutty, oxidative, dried-fruit — Portugal & Australian interpretations
+    WineProfile(
+        "Tawny Port", sku_id="WW-TP02",
+        varietal="Tawny Port",
+        acidity_ph=3.50, body=4.5, tannin_structure=3, aromatic_intensity=9,
+        abv_percentage=18.0, residual_sugar_gl=110.0,
+        style="Sweet",
+        location_tag="International",   # Douro Valley Portugal (& Barossa SA fortified tradition)
+    ),
+
+    # Inky, structured, long-lived — the classic after-dinner red
+    WineProfile(
+        "Vintage Port", sku_id="WW-VP01",
+        varietal="Vintage Port",
+        acidity_ph=3.55, body=5.0, tannin_structure=4, aromatic_intensity=9,
+        abv_percentage=20.0, residual_sugar_gl=90.0,
+        style="Sweet",
+        location_tag="International",   # Douro Valley Portugal
+    ),
+
+    # Bone-dry, saline, umami — the sommelier's digestif of choice
+    WineProfile(
+        "Fino Sherry", sku_id="WW-FS01",
+        varietal="Fino Sherry",
+        acidity_ph=3.00, body=1.5, tannin_structure=1, aromatic_intensity=4,
+        abv_percentage=15.0, residual_sugar_gl=1.0,
+        style="Dry",
+        location_tag="International",   # Jerez de la Frontera, Andalusia Spain
+    ),
+]
+
+
+# ---------------------------------------------------------------------------
+# Section 5 — Middle Ground Compromise Varietals
 # ---------------------------------------------------------------------------
 # Must satisfy:  varietal in COMPROMISE_VARIETALS  AND  style == "Dry"
 # These are technically dry but aromatically intense enough to sub for
@@ -381,7 +513,7 @@ _MIDDLE_GROUND: list[WineProfile] = [
 # Exported catalog
 # ---------------------------------------------------------------------------
 
-WINE_DATABASE: list[WineProfile] = _REDS + _WHITES + _MIDDLE_GROUND
+WINE_DATABASE: list[WineProfile] = _REDS + _WHITES + _SPARKLING + _DESSERT + _FORTIFIED + _MIDDLE_GROUND
 
 # Lookup by wine name — useful for sourcing layer and tests
 WINE_BY_NAME: dict[str, WineProfile] = {w.name: w for w in WINE_DATABASE}

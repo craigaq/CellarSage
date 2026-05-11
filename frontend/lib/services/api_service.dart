@@ -91,7 +91,9 @@ class ApiService {
       'flavor_intensity': '$flavorIntensity',
       'pref_dry': '$prefDry',
     });
-    final response = await _client.get(uri);
+    final response = await _client
+        .get(uri)
+        .timeout(const Duration(seconds: 8));
     if (response.statusCode == 200) {
       final data        = jsonDecode(response.body) as Map<String, dynamic>;
       final clashJson   = data['gastro_clash']     as Map<String, dynamic>?;

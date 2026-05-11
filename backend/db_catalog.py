@@ -34,6 +34,12 @@ _PRODUCER_STATE: list[tuple[str, str]] = sorted(
 # Sweet varietal/style keywords used to filter Tier 4 when pref_dry=True.
 _SWEET_KEYWORDS = frozenset({"moscato", "muscat", "dessert", "sweet", "demi-sec", "doux"})
 
+# Canonical names that ARE sparkling — excluded from the sparkling bleed filter.
+_SPARKLING_CANONICALS = frozenset({
+    "champagne", "prosecco", "cava", "sparkling shiraz",
+    "crémant", "cremant", "pétillant naturel", "petillant naturel",
+})
+
 
 def _producer_state(name: str) -> str | None:
     lower = name.lower()
@@ -48,6 +54,7 @@ _CACHE: dict[str, dict] = {}
 # Maps lowercase keywords (longest first) → canonical catalog varietal name.
 # Must stay sorted longest-first so "cabernet sauvignon" wins over "cabernet".
 _VARIETAL_KEYWORDS: list[tuple[str, str]] = sorted([
+    # ── Still reds & whites ─────────────────────────────────────────────────
     ("cabernet sauvignon",  "Cabernet Sauvignon"),
     ("cabernet franc",      "Cabernet Franc"),
     ("sauvignon blanc",     "Sauvignon Blanc"),
@@ -92,7 +99,55 @@ _VARIETAL_KEYWORDS: list[tuple[str, str]] = sorted([
     ("torrontés",           "Torrontés"),
     ("torrontes",           "Torrontés"),
     ("friulano",            "Sauvignonasse/Friulano"),
-    ("cabernet",            "Cabernet Sauvignon"),  # catch-all — keep last
+    ("cabernet",            "Cabernet Sauvignon"),  # catch-all — keep after specific Cab entries
+
+    # ── Sparkling ───────────────────────────────────────────────────────────
+    # Multi-word compound entries MUST appear before their component keywords
+    # (sorted longest-first guarantees this) so "sparkling pinot noir" is
+    # matched before "pinot noir" can steal the result.
+    ("trockenbeerenauslese","Botrytis Semillon"),   # 20 chars — longest; checked first
+    ("sparkling pinot noir", "Champagne"),           # 20 — prevents bleed into Pinot Noir
+    ("sparkling chardonnay", "Champagne"),           # 20 — prevents bleed into Chardonnay
+    ("methode champenoise",  "Champagne"),           # 19
+    ("méthode champenoise",  "Champagne"),           # 19
+    ("late harvest riesling","Late Harvest Riesling"), # 21
+    ("sparkling shiraz",     "Sparkling Shiraz"),    # 16 — before bare "shiraz"
+    ("sparkling rosé",       "Champagne"),           # 14
+    ("sparkling rose",       "Champagne"),           # 13
+    ("sparkling white",      "Champagne"),           # 14
+    ("sparkling red",        "Sparkling Shiraz"),    # 13
+    ("rutherglen muscat",    "Rutherglen Muscat"),   # 17 — before bare "muscat"
+    ("botrytis semillon",    "Botrytis Semillon"),   # 17 — before bare "semillon"
+    ("muscat liqueur",       "Rutherglen Muscat"),   # 14
+    ("pétillant naturel",    "Champagne"),           # 17
+    ("petillant naturel",    "Champagne"),           # 17
+    ("vintage port",         "Vintage Port"),        # 12 — before bare "port"
+    ("fino sherry",          "Fino Sherry"),         # 11 — before bare "sherry"
+    ("amontillado",          "Fino Sherry"),         # 11
+    ("manzanilla",           "Fino Sherry"),         # 10
+    ("beerenauslese",        "Botrytis Semillon"),   # 13
+    ("late harvest",         "Late Harvest Riesling"), # 12 — generic late harvest
+    ("tawny port",           "Tawny Port"),          # 10 — before bare "port"
+    ("noble rot",            "Botrytis Semillon"),   # 9
+    ("sauternes",            "Botrytis Semillon"),   # 9
+    ("champagne",            "Champagne"),           # 9
+    ("prosecco",             "Prosecco"),            # 8
+    ("crémant",              "Champagne"),           # 7 (accented)
+    ("cremant",              "Champagne"),           # 7
+    ("botrytis",             "Botrytis Semillon"),   # 8
+    ("ice wine",             "Late Harvest Riesling"), # 8
+    ("icewine",              "Late Harvest Riesling"), # 7
+    ("auslese",              "Late Harvest Riesling"), # 7
+    ("topaque",              "Rutherglen Muscat"),   # 7
+    ("madeira",              "Tawny Port"),          # 7
+    ("oloroso",              "Tawny Port"),          # 7
+    ("sparkling",            "Champagne"),           # 8 — generic catch-all (checked after compounds)
+    ("sherry",               "Fino Sherry"),         # 6
+    ("tawny",                "Tawny Port"),          # 5
+    ("tokay",                "Rutherglen Muscat"),   # 5
+    ("port",                 "Tawny Port"),          # 4
+    ("cava",                 "Cava"),                # 4
+    ("fino",                 "Fino Sherry"),         # 4
 ], key=lambda x: -len(x[0]))
 
 
@@ -198,6 +253,11 @@ def _cellarbrations_search_url(varietal: str) -> str:
     return f"https://www.cellarbrations.com.au/results?q={urllib.parse.quote(varietal.lower())}"
 
 
+def _liquorland_search_url(wine_name: str) -> str:
+    import urllib.parse
+    return f"https://www.liquorland.com.au/search?q={urllib.parse.quote(wine_name)}"
+
+
 def get_buy_options(
     varietal: str,
     budget_min_aud: float = 0.0,
@@ -270,12 +330,24 @@ def get_buy_options(
         {
             "name": row["name"],
             "price": float(row["price"]),
-            "url": _cellarbrations_search_url(varietal) if (row.get("retailer") or "") == "cellarbrations" else (row["url"] or ""),
+            "url": (
+                _cellarbrations_search_url(varietal) if (row.get("retailer") or "") == "cellarbrations"
+                else _liquorland_search_url(row["name"]) if (row.get("retailer") or "") == "liquorland" and not (row["url"] or "")
+                else (row["url"] or "")
+            ),
             "retailer": row["retailer"] or "",
             "price_is_stale": bool(row.get("last_updated") and row["last_updated"] < cutoff),
         }
         for row in rows
     ]
+    # Exclude sparkling wines when the requested varietal is not a sparkling type.
+    if varietal.lower() not in _SPARKLING_CANONICALS:
+        result = [
+            r for r in result
+            if "sparkling" not in r["name"].lower()
+            and "sparkling" not in (r.get("varietal") or "").lower()
+        ]
+
     _BUY_CACHE[cache_key] = {"data": result, "ts": time.time()}
     log.info("db_catalog: get_buy_options varietal='%s' → %d results", varietal, len(result))
     return result
@@ -364,6 +436,14 @@ def get_wine_picks(
         if not r.get("state") and (r.get("country") or "").lower() == "australia":
             r["state"] = _producer_state(r["name"])
 
+    # Exclude sparkling wines when the requested varietal is not a sparkling type.
+    if varietal.lower() not in _SPARKLING_CANONICALS:
+        all_rows = [
+            r for r in all_rows
+            if "sparkling" not in r.get("name", "").lower()
+            and "sparkling" not in (r.get("varietal") or "").lower()
+        ]
+
     def _sort_key(r):
         rating       = r.get("rating")
         review_count = int(r.get("review_count") or 0)
@@ -410,7 +490,11 @@ def get_wine_picks(
             "state": r.get("state"), "region": r.get("region"),
             "varietal": r.get("varietal"),
             "price": float(r["price"]),
-            "url": _cellarbrations_search_url(r.get("varietal") or "wine") if (r.get("retailer") or "") == "cellarbrations" else (r.get("url") or ""),
+            "url": (
+                _cellarbrations_search_url(r.get("varietal") or "wine") if (r.get("retailer") or "") == "cellarbrations"
+                else _liquorland_search_url(r["name"]) if (r.get("retailer") or "") == "liquorland" and not (r.get("url") or "")
+                else (r.get("url") or "")
+            ),
             "retailer": r.get("retailer") or "",
             "price_is_stale": stale,
             "is_member_price": bool(r.get("is_member_price")),

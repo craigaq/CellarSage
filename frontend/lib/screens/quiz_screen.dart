@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/wine_recommendation.dart';
@@ -129,6 +130,24 @@ class _QuizScreenState extends State<QuizScreen> {
           "The ultimate snack pack! We'll find a crowd-pleaser that can handle everything from creamy brie to salty salami.",
       'contrast_comment':
           "We'll go lean and punchy — high acid to cut aggressively through all that fat and salt. A wine with something to say.",
+    },
+    {
+      'label': 'Dessert or Sweet Treats',
+      'id': 'dessert',
+      'emoji': '🍰',
+      'comment':
+          "Sweet finish! The Cellar Fox will hunt for something luscious and aromatic to mirror the magic — think Botrytis Semillon or Rutherglen Muscat.",
+      'contrast_comment':
+          "Bold move — we'll find a razor-sharp, high-acid wine to slice through all that sweetness instead. Bright and cleansing.",
+    },
+    {
+      'label': 'After Dinner / Digestif',
+      'id': 'after_dinner',
+      'emoji': '🥃',
+      'comment':
+          "The nightcap hour! We'll look for something expressive and contemplative — port, muscat, or a fine sherry to close the evening.",
+      'contrast_comment':
+          "Rather than settling in, we'll find something bright and cleansing to refresh the palate after a big meal. Fino sherry energy.",
     },
     {
       'label': 'Just sipping (No food)',
@@ -625,11 +644,14 @@ class _QuizScreenState extends State<QuizScreen> {
                     label: const Text('Start Over'),
                   )
                 else
-                  FilledButton.icon(
-                    onPressed: _goNext,
-                    label: Text(_currentPage == 7 ? 'Find My Wine!' : 'Next'),
-                    icon: const Icon(Icons.arrow_forward),
-                    iconAlignment: IconAlignment.end,
+                  SizedBox(
+                    width: _currentPage == 7 ? 170 : null,
+                    child: FilledButton.icon(
+                      onPressed: _goNext,
+                      label: Text(_currentPage == 7 ? 'Find My Wine!' : 'Next'),
+                      icon: const Icon(Icons.arrow_forward),
+                      iconAlignment: IconAlignment.end,
+                    ),
                   ),
               ],
             ),
@@ -686,14 +708,6 @@ class _QuizScreenState extends State<QuizScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _goNext,
-              label: const Text('Let\'s Begin'),
-              icon: const Icon(Icons.wine_bar),
-            ),
-          ),
           if (_savedProfiles.isNotEmpty) ...[
             const SizedBox(height: 28),
             Row(
@@ -973,7 +987,7 @@ class _QuizScreenState extends State<QuizScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🦊', style: TextStyle(fontSize: 20)),
+                          SvgPicture.asset('assets/images/sage_fox_nobg.svg', width: 28, height: 28),
                           const SizedBox(height: 4),
                           Text(
                             'That\'s a spiky palate —\nthe Cellar Fox has a few thoughts.',
@@ -1035,8 +1049,15 @@ class _QuizScreenState extends State<QuizScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(r.$1, style: WwText.bodyMedium(color: WwColors.textPrimary)),
+                        Flexible(
+                          child: Text(
+                            r.$1,
+                            style: WwText.bodyMedium(color: WwColors.textPrimary),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         _ScoreDots(value: r.$2),
                       ],
                     ),
@@ -1045,12 +1066,17 @@ class _QuizScreenState extends State<QuizScreen> {
                 const Divider(height: 24, color: WwColors.borderSubtle),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Food Pairing', style: WwText.bodyMedium(color: WwColors.textPrimary)),
-                    Text(
-                      _foodLabel,
-                      style: WwText.bodyMedium(color: WwColors.violet)
-                          .copyWith(fontWeight: FontWeight.w600),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        _foodLabel,
+                        style: WwText.bodyMedium(color: WwColors.violet)
+                            .copyWith(fontWeight: FontWeight.w600),
+                        textAlign: TextAlign.right,
+                      ),
                     ),
                   ],
                 ),
@@ -1058,7 +1084,13 @@ class _QuizScreenState extends State<QuizScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Budget (per bottle)', style: WwText.bodyMedium(color: WwColors.textPrimary)),
+                    Flexible(
+                      child: Text(
+                        'Budget (per bottle)',
+                        style: WwText.bodyMedium(color: WwColors.textPrimary),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Text(
                       _selectedBracket.label,
                       style: WwText.bodyMedium(color: WwColors.violet)
@@ -1474,9 +1506,19 @@ class _BuyOptionRow extends StatelessWidget {
   final BuyOption option;
   const _BuyOptionRow({required this.option});
 
+  String get _effectiveUrl {
+    if (option.url.isNotEmpty) return option.url;
+    return switch (option.retailer) {
+      'liquorland'     => 'https://www.liquorland.com.au/search?q=${Uri.encodeQueryComponent(option.name)}',
+      'cellarbrations' => 'https://www.cellarbrations.com.au/results?q=wine',
+      _                => '',
+    };
+  }
+
   Future<void> _launch() async {
-    if (option.url.isEmpty) return;
-    final uri = Uri.tryParse(option.url);
+    final url = _effectiveUrl;
+    if (url.isEmpty) return;
+    final uri = Uri.tryParse(url);
     if (uri != null && await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -1484,6 +1526,7 @@ class _BuyOptionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canLaunch = _effectiveUrl.isNotEmpty;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: _launch,
@@ -1523,7 +1566,7 @@ class _BuyOptionRow extends StatelessWidget {
             Text(
               _retailerShortName(option.retailer),
               style: WwText.labelLarge(
-                color: option.url.isNotEmpty ? WwColors.violet : WwColors.textDisabled,
+                color: canLaunch ? WwColors.violet : WwColors.textDisabled,
               ),
             ),
           ],
@@ -1557,7 +1600,7 @@ class _FoxComment extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('🦊', style: TextStyle(fontSize: 22)),
+          SvgPicture.asset('assets/images/sage_fox_nobg.svg', width: 32, height: 32),
           const SizedBox(width: 10),
           Expanded(
             child: Text(text, style: WwText.witQuote()),

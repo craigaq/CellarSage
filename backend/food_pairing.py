@@ -249,6 +249,57 @@ FOOD_PAIRING: dict[str, dict] = {
         },
     },
 
+    # Dessert / Sweet Treats — residual sugar in wine echoes sweetness in food
+    # is_sweet_pairing=True triggers Palate Paradox for dry-preferring users.
+    "dessert": {
+        "is_sweet_pairing": True,
+        "congruent": {
+            # Match sweetness with sweetness — aromatic, luscious styles
+            "multipliers": {
+                "tannin":  0.0,   # Tannin makes sweet foods taste bitter — eliminate it
+                "acidity": 0.5,   # Some crispness prevents cloying; not the focus
+            },
+            "boosts": {
+                "aromatics": 1.5, # Fruit-forward and honeyed notes echo the dessert
+                "body":      0.5, # A little weight carries the sweetness gracefully
+            },
+        },
+        "contrast": {
+            # Bright, high-acid counterpoint cuts through sugar — Sauternes-with-cheese style
+            "multipliers": {
+                "tannin":  0.0,   # Still kills sweet flavours — no exceptions
+                "body":    0.5,   # Lighter style lets the acidity lead
+            },
+            "boosts": {
+                "acidity": 1.5,   # Razor crispness slices through richness and sugar
+            },
+        },
+    },
+
+    # After Dinner / Digestif — fortified, aromatic; the nightcap wines
+    # is_sweet_pairing=False — sherry, dry port styles sit outside the paradox check.
+    "after_dinner": {
+        "is_sweet_pairing": False,
+        "congruent": {
+            # Match the contemplative, complex after-dinner mood
+            "multipliers": {},
+            "boosts": {
+                "aromatics": 1.2, # Expressive, complex nose — port, muscat, sherry territory
+                "body":      0.5, # Weight and warmth suits the end of a meal
+            },
+        },
+        "contrast": {
+            # Bright and cleansing after a rich meal — fino sherry style
+            "multipliers": {
+                "body":   0.5,    # Lighter style refreshes rather than adds weight
+                "tannin": 0.3,    # Minimal grip — the palate is tired after dinner
+            },
+            "boosts": {
+                "acidity": 0.8,   # Crispness cuts through richness and refreshes
+            },
+        },
+    },
+
     # No food — palate dial stays exactly where the user set it
     "none": {
         "is_sweet_pairing": False,

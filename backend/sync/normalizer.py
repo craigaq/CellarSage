@@ -177,6 +177,7 @@ def _infer_varietal(name: str) -> Optional[str]:
 # wines in our known catalog land in the database.
 # Sorted longest-first so "cabernet sauvignon" matches before "cabernet".
 _CATALOG_KEYWORDS: list[str] = sorted([
+    # ── Still reds & whites ──────────────────────────────────────────────────
     "cabernet sauvignon", "cabernet franc", "sauvignon blanc",
     "pinot noir", "pinot grigio", "pinot gris",
     "grüner veltliner", "gruner veltliner",
@@ -191,6 +192,16 @@ _CATALOG_KEYWORDS: list[str] = sorted([
     "airén", "airen", "albariño", "albarino",
     "torrontés", "torrontes", "friulano",
     "cabernet",   # catch-all — must stay after more specific entries
+    # ── Sparkling ────────────────────────────────────────────────────────────
+    "sparkling shiraz", "champagne", "prosecco", "cava",
+    # ── Dessert ──────────────────────────────────────────────────────────────
+    "botrytis semillon", "late harvest riesling",
+    "botrytis", "late harvest", "sauternes", "trockenbeerenauslese",
+    # ── Fortified ────────────────────────────────────────────────────────────
+    "rutherglen muscat", "tawny port", "vintage port", "fino sherry",
+    "topaque", "tokay",    # alternative names for Rutherglen Muscat
+    "amontillado", "oloroso", "manzanilla",  # sherry styles
+    "tawny", "sherry", "port",
 ], key=lambda s: -len(s))
 
 
@@ -373,9 +384,20 @@ def _normalize_danmurphys(item: dict, retailer: str) -> Optional[tuple[WineRecor
 # ── Dispatch ──────────────────────────────────────────────────────────────────
 
 _NORMALIZERS = {
-    "liquorland": _normalize_liquorland,
-    "cellarbrations": _normalize_cellarbrations,
-    "danmurphys": _normalize_danmurphys,
+    "liquorland":           _normalize_liquorland,
+    "liquorland_fortified": _normalize_liquorland,
+    "liquorland_dessert":   _normalize_liquorland,
+    "cellarbrations":       _normalize_cellarbrations,
+    "danmurphys":           _normalize_danmurphys,
+}
+
+
+# Maps composite merchant keys → the canonical retailer name stored in the DB.
+# Keeps DB retailer values consistent regardless of how many scrape configs
+# a single retailer has (e.g. liquorland + liquorland_fortified → "liquorland").
+_MERCHANT_TO_RETAILER: dict[str, str] = {
+    "liquorland_fortified": "liquorland",
+    "liquorland_dessert":   "liquorland",
 }
 
 
@@ -387,11 +409,12 @@ def normalize(items: list[dict], merchant: str) -> list[tuple[WineRecord, Mercha
     fn = _NORMALIZERS.get(merchant)
     if not fn:
         raise ValueError(f"No normalizer registered for merchant: {merchant!r}")
+    retailer = _MERCHANT_TO_RETAILER.get(merchant, merchant)
 
     results = []
     for item in items:
         try:
-            pair = fn(item, merchant)
+            pair = fn(item, retailer)
             if pair:
                 results.append(pair)
         except Exception as exc:
