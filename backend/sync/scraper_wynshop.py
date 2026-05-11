@@ -6,10 +6,9 @@ unauthenticated /preview endpoint. Pass the gateway base URL and the
 retailer's public site URL to scrape_wynshop().
 
 Confirmed retailers:
-  - Cellarbrations  (storefrontgateway.cellarbrations.com.au)
-  - Porters Liquor  (storefrontgateway.portersliquor.com.au)
-  - The Bottle-O    (storefrontgateway.thebottle-o.com.au) — store discovery
-                    needs regional coordinates; pending verification
+  - Cellarbrations  (storefrontgateway.cellarbrations.com.au)  delivery  /api/delivery/stores
+  - Porters Liquor  (storefrontgateway.portersliquor.com.au)   delivery  /api/delivery/stores
+  - The Bottle-O    (storefrontgateway.thebottle-o.com.au)     C&C       /api/stores (283 stores)
 """
 
 import json
@@ -78,10 +77,32 @@ def _get(url: str, lat: float, lng: float, site_base: str) -> Optional[dict]:
     return None
 
 
-def _get_stores(gateway_base: str, site_base: str) -> list[dict]:
-    """Return one representative store per Australian state."""
+def _get_stores(gateway_base: str, site_base: str, all_stores: bool = False) -> list[dict]:
+    """Return unique stores.
+
+    all_stores=False (default): queries /api/delivery/stores per capital city
+      — used by chains with delivery coverage (Cellarbrations, Porters).
+    all_stores=True: queries /api/stores once for the full network listing
+      — used by click-and-collect chains like The Bottle-O.
+    """
     seen: set[str] = set()
     stores: list[dict] = []
+
+    if all_stores:
+        url  = f"{gateway_base}/api/stores"
+        data = _get(url, _CITY_COORDS[0][0], _CITY_COORDS[0][1], site_base)
+        raw  = data.get("items", []) if data else []
+        for s in raw:
+            sid = s.get("retailerStoreId")
+            if sid and sid not in seen:
+                seen.add(sid)
+                stores.append(s)
+                log.info(
+                    "Found store %s — %s (%s)",
+                    sid, s.get("name"), s.get("countyProvinceState"),
+                )
+        log.info("Total unique stores: %d", len(stores))
+        return stores
 
     for lat, lng, label in _CITY_COORDS:
         url = f"{gateway_base}/api/delivery/stores"
@@ -135,14 +156,18 @@ def scrape_wynshop(
     gateway_base: str,
     site_base: str,
     retailer: str,
+    all_stores: bool = False,
 ) -> list[dict]:
     """
     Scrape all unique wine products across all stores for a WYNSHOP retailer.
 
+    all_stores=True for click-and-collect chains (e.g. The Bottle-O) that expose
+    all stores via /api/stores rather than /api/delivery/stores.
+
     Returns a flat list of raw product dicts, each enriched with
     'retailer', 'url', and 'store_id' keys for the normalizer.
     """
-    stores = _get_stores(gateway_base, site_base)
+    stores = _get_stores(gateway_base, site_base, all_stores=all_stores)
     if not stores:
         log.error("No stores found for %s — aborting scrape", retailer)
         return []
