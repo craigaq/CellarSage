@@ -32,7 +32,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          ref: master
+          ref: ${{ github.sha }}
 
       - name: Verify checkout
         run: |
