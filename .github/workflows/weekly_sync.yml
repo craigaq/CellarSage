@@ -33,13 +33,19 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Ensure latest master
+        run: |
+          git fetch origin master --depth=1
+          git reset --hard FETCH_HEAD
 
       - name: Verify checkout
         run: |
           echo "=== Git SHA ==="
           git rev-parse HEAD
           echo "=== config.py pages/enabled ==="
-          grep -E "(pages|enabled|portersliquor|bottleo)" backend/sync/config.py
+          grep -E "(pages|enabled|portersliquor|bottleo|laithwaites)" backend/sync/config.py
 
       - name: Set up Python
         uses: actions/setup-python@v5
