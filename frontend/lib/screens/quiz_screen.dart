@@ -1346,7 +1346,7 @@ class _WineResultCardState extends State<_WineResultCard> {
                               ),
                             ),
                             if (widget.rank == 1)
-                              const Text('🍷', style: TextStyle(fontSize: 18)),
+                              const Text('🎯', style: TextStyle(fontSize: 18)),
                           ],
                         ),
                         Text(
