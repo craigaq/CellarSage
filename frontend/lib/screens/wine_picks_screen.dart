@@ -228,16 +228,23 @@ class _PickCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(origin, style: WwText.bodySmall()),
                 ],
-                if (pick.rating != null) ...[
+                if (pick.vivinoRating != null || pick.rating != null) ...[
                   const SizedBox(height: 6),
                   Row(
                     children: [
                       const Icon(Icons.star_rounded, size: 14, color: Color(0xFFFFCC00)),
                       const SizedBox(width: 4),
-                      Text(
-                        '${pick.rating!.toStringAsFixed(1)}  ·  ${pick.reviewCount} review${pick.reviewCount == 1 ? '' : 's'}',
-                        style: WwText.bodySmall(),
-                      ),
+                      if (pick.vivinoRating != null) ...[
+                        Text(
+                          '${pick.vivinoRating!.toStringAsFixed(1)}  ·  ${pick.vivinoReviewCount} Vivino',
+                          style: WwText.bodySmall(),
+                        ),
+                      ] else ...[
+                        Text(
+                          '${pick.rating!.toStringAsFixed(1)}  ·  ${pick.reviewCount} review${pick.reviewCount == 1 ? '' : 's'}',
+                          style: WwText.bodySmall(),
+                        ),
+                      ],
                     ],
                   ),
                 ],

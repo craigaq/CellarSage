@@ -195,6 +195,14 @@ class WinePick(BaseModel):
     rating: Optional[float] = None
     review_count: int = 0
     critic_score: Optional[float] = None
+    vivino_rating: Optional[float] = None
+    vivino_review_count: int = 0
+    body: Optional[float] = None
+    acidity: Optional[float] = None
+    tannin: Optional[float] = None
+    sweetness: Optional[float] = None
+    fruit_intensity: Optional[float] = None
+    flavor_notes: list[str] = []
 
 
 class WinePicksResponse(BaseModel):

@@ -416,6 +416,9 @@ def get_wine_picks(
                 )
                 SELECT w.name, w.country, w.state, w.region, w.varietal,
                        w.critic_score,
+                       w.vivino_rating, w.vivino_review_count,
+                       w.body, w.acidity, w.tannin, w.sweetness,
+                       w.fruit_intensity, w.flavor_notes,
                        c.price, c.url, c.retailer, c.rating, c.review_count,
                        c.is_member_price, c.last_updated
                 FROM cheapest c
@@ -450,25 +453,28 @@ def get_wine_picks(
         ]
 
     def _sort_key(r):
-        rating       = r.get("rating")
-        review_count = int(r.get("review_count") or 0)
-        price        = float(r.get("price") or 9999)
-        critic       = r.get("critic_score")
+        vivino_rating = r.get("vivino_rating")
+        vivino_count  = int(r.get("vivino_review_count") or 0)
+        ret_rating    = r.get("rating")
+        ret_count     = int(r.get("review_count") or 0)
+        critic        = r.get("critic_score")
+        price         = float(r.get("price") or 9999)
 
-        has_community = rating is not None and review_count >= 3
-        has_critic    = critic is not None
-
-        if has_community:
-            # log1p dampens price so a $100 rated wine doesn't dominate a
-            # well-reviewed $25 wine — the gap shrinks from 4x to ~1.6x.
-            base  = (float(rating) * min(review_count, 30) / 30) / math.log1p(price)
-            # Critic bonus: maps 85-100 pts → 0.0-0.15 additive boost
-            boost = max(0.0, (float(critic) - 85.0) / 15.0) if has_critic else 0.0
+        # Tier 0: Vivino community data (global, high-volume signal)
+        # Cap at 500 reviews so a 15k-review wine doesn't dominate a 200-review wine.
+        if vivino_rating is not None and vivino_count >= 10:
+            base  = (float(vivino_rating) * min(vivino_count, 500) / 500) / math.log1p(price)
+            boost = max(0.0, (float(critic) - 85.0) / 15.0) if critic else 0.0
             return (0, -(base + boost))
 
-        if has_critic:
-            # No community rating but we have a professional score —
-            # still rank ahead of completely unscored wines, dampened by price.
+        # Tier 0 fallback: retailer rating (low volume — cap at 30)
+        if ret_rating is not None and ret_count >= 3:
+            base  = (float(ret_rating) * min(ret_count, 30) / 30) / math.log1p(price)
+            boost = max(0.0, (float(critic) - 85.0) / 15.0) if critic else 0.0
+            return (0, -(base + boost))
+
+        # Tier 0 fallback: critic score only, no community signal
+        if critic is not None:
             base = (float(critic) / 100.0) / math.log1p(price)
             return (0, -base)
 
@@ -489,6 +495,7 @@ def get_wine_picks(
     def _row_to_pick(r, tier: int, label: str) -> dict:
         lu = r.get("last_updated")
         stale = bool(lu and lu < datetime.now(timezone.utc) - timedelta(days=_STALE_DAYS))
+        flavor = r.get("flavor_notes")
         return {
             "tier": tier, "tier_label": label,
             "name": r["name"], "country": r.get("country"),
@@ -506,6 +513,14 @@ def get_wine_picks(
             "rating": float(r["rating"]) if r.get("rating") is not None else None,
             "review_count": int(r.get("review_count") or 0),
             "critic_score": float(r["critic_score"]) if r.get("critic_score") is not None else None,
+            "vivino_rating": float(r["vivino_rating"]) if r.get("vivino_rating") is not None else None,
+            "vivino_review_count": int(r.get("vivino_review_count") or 0),
+            "body": float(r["body"]) if r.get("body") is not None else None,
+            "acidity": float(r["acidity"]) if r.get("acidity") is not None else None,
+            "tannin": float(r["tannin"]) if r.get("tannin") is not None else None,
+            "sweetness": float(r["sweetness"]) if r.get("sweetness") is not None else None,
+            "fruit_intensity": float(r["fruit_intensity"]) if r.get("fruit_intensity") is not None else None,
+            "flavor_notes": list(flavor) if flavor else [],
         }
 
     # Tier 1 — best-value wine from the user's own state ("The Local Hero").

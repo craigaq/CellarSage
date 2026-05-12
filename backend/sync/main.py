@@ -35,6 +35,12 @@ def _load_direct_scrapers():
     _DIRECT_SCRAPERS["bottleo"]         = scrape_bottleo
     _DIRECT_SCRAPERS["laithwaites"]     = scrape_laithwaites
 
+
+# Max wines enriched with Vivino per weekly sync run.
+# Caps run time at ~5 min for incremental enrichment.
+# Run `python -m sync.enrich_vivino` manually for initial full enrichment.
+_VIVINO_WEEKLY_LIMIT = 100
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
@@ -121,6 +127,15 @@ def main() -> int:
 
         if result.errors:
             any_error = True
+
+    # Vivino enrichment — runs after all merchants so new wines are in the DB.
+    log.info("--- Vivino enrichment (limit=%d) ---", _VIVINO_WEEKLY_LIMIT)
+    try:
+        from .enrich_vivino import enrich_vivino
+        enriched = enrich_vivino(limit=_VIVINO_WEEKLY_LIMIT)
+        log.info("Vivino enrichment complete — %d wines enriched", enriched)
+    except Exception as exc:
+        log.warning("Vivino enrichment failed (non-fatal): %s", exc)
 
     # Summary
     log.info("=== Sync complete ===")
