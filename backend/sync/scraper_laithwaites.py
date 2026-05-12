@@ -34,8 +34,16 @@ _SKIP_SLUG_RE = re.compile(
     re.IGNORECASE,
 )
 
-_H1_RE    = re.compile(r'<h1[^>]*>(.*?)</h1>', re.IGNORECASE | re.DOTALL)
-_PRICE_RE = re.compile(r'\$([\d,]+(?:\.\d{2})?)\s+per\s+bottle', re.IGNORECASE)
+_COMMENT_RE = re.compile(r'<!--.*?-->', re.DOTALL)
+_H1_RE      = re.compile(r'<h1[^>]*>(.*?)</h1>', re.IGNORECASE | re.DOTALL)
+# Next.js renders prices as: $<!-- -->25.00</span> per bottle
+# After stripping comments: $25.00</span> per bottle
+# (?:</[^>]+>)? handles the closing </span> between price and "per bottle"
+# Negative lookahead excludes the "mix 12 or more" bulk-discount price
+_PRICE_RE   = re.compile(
+    r'\$([\d,]+(?:\.\d{2})?)(?:</[^>]+>)?\s+per\s+bottle(?!\s+when)',
+    re.IGNORECASE,
+)
 
 
 def _fetch(url: str, delay: bool = True) -> Optional[str]:
@@ -68,6 +76,9 @@ def _product_urls(xml_text: str) -> list[str]:
 
 
 def _parse_page(html: str, url: str) -> Optional[dict]:
+    # Strip Next.js hydration comments — they appear mid-token (e.g. $<!-- -->25.00)
+    html = _COMMENT_RE.sub('', html)
+
     h1 = _H1_RE.search(html)
     if not h1:
         return None
@@ -75,7 +86,7 @@ def _parse_page(html: str, url: str) -> Optional[dict]:
     if not name:
         return None
 
-    # First "$X.XX per bottle" match = standard single-bottle price
+    # First single-bottle price match (bulk "when you mix" price excluded by regex)
     prices = _PRICE_RE.findall(html)
     if not prices:
         return None
@@ -84,7 +95,8 @@ def _parse_page(html: str, url: str) -> Optional[dict]:
     except ValueError:
         return None
 
-    if not re.search(r'add.to.cart', html, re.IGNORECASE):
+    # Check for the add-to-cart button by its data-testid (more reliable than CSS class names)
+    if not re.search(r'data-testid="add-to-cart-button"', html, re.IGNORECASE):
         log.debug("Out of stock, skipping: %s", name)
         return None
 
