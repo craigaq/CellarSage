@@ -6,15 +6,15 @@ Add new merchants here; the scrape manager picks them up automatically.
 MERCHANT_REGISTRY: dict = {
     "cellarbrations": {
         "scraper_type": "direct",
-        "enabled": True,
+        "enabled": False,  # store-specific URLs cause "wine not found" errors — poor UX
     },
     "portersliquor": {
         "scraper_type": "direct",
-        "enabled": True,
+        "enabled": False,  # store-specific URLs cause "wine not found" errors — poor UX
     },
     "bottleo": {
         "scraper_type": "direct",
-        "enabled": True,
+        "enabled": False,  # store-specific URLs cause "wine not found" errors — poor UX
     },
     "liquorland": {
         "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
