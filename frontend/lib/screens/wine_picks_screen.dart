@@ -361,6 +361,7 @@ class _PickCard extends StatelessWidget {
     'portersliquor'  => 'Porters Liquor',
     'bottleo'        => 'The Bottle-O',
     'danmurphys'     => 'Dan Murphy\'s',
+    'laithwaites'    => 'Laithwaites',
     _                => retailer.isNotEmpty ? retailer : 'retailer',
   };
 
@@ -384,9 +385,10 @@ class _PickCard extends StatelessWidget {
       return 'https://www.thebottle-o.com.au/search?q=$term';
     }
     return switch (pick.retailer) {
-      'danmurphys'  => 'https://www.danmurphys.com.au',
-      'liquorland'  => 'https://www.liquorland.com.au/search?q=${Uri.encodeQueryComponent((pick.varietal ?? 'wine').toLowerCase())}',
-      _             => 'https://www.liquorland.com.au',
+      'danmurphys'   => 'https://www.danmurphys.com.au',
+      'laithwaites'  => 'https://www.laithwaites.com.au/wine',
+      'liquorland'   => 'https://www.liquorland.com.au/search?q=${Uri.encodeQueryComponent((pick.varietal ?? 'wine').toLowerCase())}',
+      _              => 'https://www.liquorland.com.au',
     };
   }
 

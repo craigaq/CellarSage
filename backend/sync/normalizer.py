@@ -352,6 +352,36 @@ def _normalize_cellarbrations(item: dict, retailer: str) -> Optional[tuple[WineR
     return wine, offer
 
 
+def _normalize_laithwaites(item: dict, retailer: str) -> Optional[tuple[WineRecord, MerchantOffer]]:
+    name = (item.get("name") or "").strip()
+    if not name:
+        return None
+
+    price = _coerce_price(item.get("price"))
+    if price is None or price <= 0:
+        return None
+
+    if not _is_standard_bottle(name, item):
+        log.debug("laithwaites item skipped — non-standard size: %r", name)
+        return None
+
+    if not _matches_catalog(None, name):
+        log.debug("laithwaites item skipped — not in catalog: %r", name)
+        return None
+
+    vintage    = _extract_vintage(name)
+    clean_name = re.sub(r'\s*\b(19[89]\d|20[012]\d)\b\s*', ' ', name).strip()
+    varietal   = _infer_varietal(clean_name)
+    country, state = _infer_origin(clean_name)
+    url        = item.get("url", "")
+
+    wine  = WineRecord(name=clean_name, vintage=vintage, varietal=varietal,
+                       country=country, state=state)
+    offer = MerchantOffer(wine_name=clean_name, vintage=vintage,
+                          retailer=retailer, price=price, url=url)
+    return wine, offer
+
+
 def _normalize_danmurphys(item: dict, retailer: str) -> Optional[tuple[WineRecord, MerchantOffer]]:
     name = _first('name', 'title', 'productName', src=item)
     if not name:
@@ -390,6 +420,7 @@ _NORMALIZERS = {
     "cellarbrations":       _normalize_cellarbrations,
     "portersliquor":        _normalize_cellarbrations,  # same WYNSHOP format
     "bottleo":              _normalize_cellarbrations,  # same WYNSHOP format
+    "laithwaites":          _normalize_laithwaites,
     "danmurphys":           _normalize_danmurphys,
 }
 

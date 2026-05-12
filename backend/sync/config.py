@@ -16,6 +16,10 @@ MERCHANT_REGISTRY: dict = {
         "scraper_type": "direct",
         "enabled": False,  # store-specific URLs cause "wine not found" errors — poor UX
     },
+    "laithwaites": {
+        "scraper_type": "direct",
+        "enabled": True,
+    },
     "liquorland": {
         "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
         "max_items": 50,   # per-page cap; actor hard-limits to 50 per call
