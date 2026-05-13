@@ -120,9 +120,8 @@ def main():
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, SIZE, SIZE)
     ctx     = cairo.Context(surface)
 
-    # Dark background
-    bg = hex_to_rgb("#1a1b26")
-    ctx.set_source_rgb(*bg)
+    # White background
+    ctx.set_source_rgb(1, 1, 1)
     ctx.paint()
 
     # Apply the viewBox transform: scale + centre
@@ -130,12 +129,9 @@ def main():
     ctx.scale(SCALE, SCALE)
 
     for elem in elems:
-        fill = elem.get("fill", "")
-        # The main fox body fill is the same dark as bg — render it white instead
-        if fill.lower() in ("#1a1b26", ""):
-            draw_element(ctx, elem, fill_override="#ffffff")
-        else:
-            draw_element(ctx, elem)
+        # Keep original fills — dark fox on white bg, purple accents as-is.
+        # White stroke is invisible on white bg; that's intentional.
+        draw_element(ctx, elem)
 
     surface.write_to_png(str(PNG_OUT))
     print(f"Written: {PNG_OUT}  ({PNG_OUT.stat().st_size // 1024} KB)")
