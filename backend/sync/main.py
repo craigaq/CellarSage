@@ -128,6 +128,21 @@ def main() -> int:
         if result.errors:
             any_error = True
 
+    # Backfill state for any Australian wines with NULL state.
+    # Runs before Vivino so new wines are already state-resolved in the DB.
+    log.info("--- Producer state backfill ---")
+    try:
+        from .backfill_producer_state import backfill_producer_state
+        updated, gaps = backfill_producer_state()
+        if gaps:
+            log.warning(
+                "Producer state backfill: %d wine(s) still unresolved — "
+                "add producers to sync/producer_state.json",
+                len(gaps),
+            )
+    except Exception as exc:
+        log.warning("Producer state backfill failed (non-fatal): %s", exc)
+
     # Vivino enrichment — runs after all merchants so new wines are in the DB.
     log.info("--- Vivino enrichment (limit=%d) ---", _VIVINO_WEEKLY_LIMIT)
     try:

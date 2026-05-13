@@ -183,5 +183,36 @@
   ["ponting milestone","TAS"],
   ["split rock",       "TAS"],
   ["russell & suitor", "TAS"],
-  ["cradle bay",       "TAS"]
+  ["cradle bay",       "TAS"],
+
+  ["19 crimes",        "VIC"],
+  ["chandon",          "VIC"],
+  ["coldstream hills", "VIC"],
+  ["innocent bystander","VIC"],
+  ["fluette",          "VIC"],
+  ["five vineyard estate","VIC"],
+
+  ["30 mile",          "SA"],
+  ["y series",         "SA"],
+  ["caravan",          "SA"],
+  ["trimboli",         "SA"],
+  ["woolundry road",   "SA"],
+  ["pinball",          "SA"],
+  ["fossilbed",        "SA"],
+  ["hayrick",          "SA"],
+  ["beklyn",           "SA"],
+  ["wild daisy",       "SA"],
+  ["whispers",         "SA"],
+  ["hidden gem",       "SA"],
+  ["steeple block",    "SA"],
+  ["boscwood",         "SA"],
+  ["the people's",     "SA"],
+  ["story bay",        "SA"],
+  ["white duck",       "SA"],
+  ["choosy beggars",   "SA"],
+  ["parson's paddock", "SA"],
+  ["friends of friends","SA"],
+
+  ["red rattler",      "NSW"],
+  ["vinaceous",        "WA"]
 ]
