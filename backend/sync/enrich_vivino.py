@@ -9,9 +9,9 @@ sweetness, fruit_intensity, and flavor_notes back to the wines table.
 Initial full enrichment (run once after migrate_vivino.py):
     DATABASE_URL=... APIFY_API_TOKEN=... python -m sync.enrich_vivino
 
-The weekly sync calls enrich_vivino(limit=100) so only newly-upserted
-wines are enriched each run. After 8 weeks all 790 existing wines will
-have been enriched; subsequent runs take ~2-5 minutes.
+The weekly sync calls enrich_vivino(limit=100) to enrich newly-upserted
+wines and incrementally refresh records older than 3 months, ensuring
+community ratings stay current over time.
 """
 
 import json
@@ -83,9 +83,18 @@ def _connect():
     return psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
 
 
+_STALE_MONTHS = 3  # re-enrich wines whose Vivino data is older than this
+
+
 def _load_wines_to_enrich(conn, limit: int | None) -> list[dict]:
     with conn.cursor() as cur:
-        sql = "SELECT id, name, vintage FROM wines WHERE vivino_rating IS NULL ORDER BY id"
+        sql = """
+            SELECT id, name, vintage FROM wines
+            WHERE vivino_rating IS NULL
+               OR vivino_enriched_at IS NULL
+               OR vivino_enriched_at < NOW() - INTERVAL '%s months'
+            ORDER BY vivino_enriched_at ASC NULLS FIRST, id
+        """ % _STALE_MONTHS
         if limit:
             sql += f" LIMIT {limit}"
         cur.execute(sql)
@@ -104,7 +113,8 @@ def _write_vivino(conn, wine_id: int, data: dict) -> None:
                    tannin              = %s,
                    sweetness           = %s,
                    fruit_intensity     = %s,
-                   flavor_notes        = %s
+                   flavor_notes        = %s,
+                   vivino_enriched_at  = NOW()
              WHERE id = %s
             """,
             (

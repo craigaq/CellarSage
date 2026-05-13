@@ -452,6 +452,15 @@ def get_wine_picks(
             and "sparkling" not in (r.get("varietal") or "").lower()
         ]
 
+    # Only surface wines with a meaningful rating signal — keeps "where to buy"
+    # focused and avoids flooding users with unvetted listings.
+    # Vivino requires ≥10 reviews to filter out noise; critic score alone is enough.
+    all_rows = [
+        r for r in all_rows
+        if (r.get("vivino_rating") is not None and int(r.get("vivino_review_count") or 0) >= 10)
+        or r.get("critic_score") is not None
+    ]
+
     def _sort_key(r):
         vivino_rating = r.get("vivino_rating")
         vivino_count  = int(r.get("vivino_review_count") or 0)
