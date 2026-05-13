@@ -256,13 +256,28 @@ class _PickCard extends StatelessWidget {
                 ] else if (pick.vivinoRating != null || pick.rating != null) ...[
                   const SizedBox(height: 6),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const Icon(Icons.star_rounded, size: 14, color: Color(0xFFFFCC00)),
                       const SizedBox(width: 4),
                       if (pick.vivinoRating != null) ...[
-                        Text(
-                          '${pick.vivinoRating!.toStringAsFixed(1)}  ·  ${pick.vivinoReviewCount} · Community data via Vivino',
-                          style: WwText.bodySmall(),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${pick.vivinoRating!.toStringAsFixed(1)}  ·  ${pick.vivinoReviewCount} reviews',
+                                style: WwText.bodySmall(),
+                              ),
+                              Text(
+                                'Community data via Vivino',
+                                style: WwText.bodySmall().copyWith(
+                                  color: WwColors.textDisabled,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ] else ...[
                         Text(
