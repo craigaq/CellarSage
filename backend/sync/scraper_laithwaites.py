@@ -6,6 +6,7 @@ Fetches the PDP sitemap (~1,010 product URLs), then fetches each page with a
 so no headless browser is required.
 """
 
+import html
 import re
 import time
 import logging
@@ -82,7 +83,7 @@ def _parse_page(html: str, url: str) -> Optional[dict]:
     h1 = _H1_RE.search(html)
     if not h1:
         return None
-    name = re.sub(r'<[^>]+>', '', h1.group(1)).strip()
+    name = html.unescape(re.sub(r'<[^>]+>', '', h1.group(1))).strip()
     if not name:
         return None
 
@@ -126,5 +127,17 @@ def scrape_laithwaites() -> list[dict]:
                 i, len(urls), len(products),
             )
 
-    log.info("laithwaites: scrape complete — %d products from %d pages", len(products), len(urls))
-    return products
+    # Deduplicate by name — same wine can appear under multiple category URLs.
+    # Keep the lowest price seen so users always get the best rate.
+    seen: dict[str, dict] = {}
+    for p in products:
+        key = p["name"].lower()
+        if key not in seen or p["price"] < seen[key]["price"]:
+            seen[key] = p
+    deduped = list(seen.values())
+
+    log.info(
+        "laithwaites: scrape complete — %d products (%d dupes removed) from %d pages",
+        len(deduped), len(products) - len(deduped), len(urls),
+    )
+    return deduped
