@@ -329,7 +329,9 @@ class _QuizScreenState extends State<QuizScreen> {
     final existing = _savedProfiles.map((p) => p.name).toSet();
     if (!existing.contains('My Profile')) return 'My Profile';
     int n = 2;
-    while (existing.contains('My Profile $n')) n++;
+    while (existing.contains('My Profile $n')) {
+      n++;
+    }
     return 'My Profile $n';
   }
 
@@ -1611,6 +1613,9 @@ class _BuyOptionRow extends StatelessWidget {
     'liquorland'     => 'Liquorland',
     'cellarbrations' => 'Cellarbrations',
     'danmurphys'     => "Dan Murphy's",
+    'laithwaites'    => 'Laithwaites',
+    'portersliquor'  => 'Porters Liquor',
+    'bottleo'        => 'The Bottle-O',
     _                => 'Buy',
   };
 }
