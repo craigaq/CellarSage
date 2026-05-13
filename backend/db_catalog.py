@@ -537,6 +537,12 @@ def get_wine_picks(
             "vivino_review_count": int(r.get("vivino_review_count") or 0),
             "vivino_url": r.get("vivino_url") or None,
             "is_sage_pick": bool(r.get("is_sage_pick", False)),
+            "is_highly_verified": (
+                r.get("vivino_rating") is not None
+                and float(r["vivino_rating"]) >= 4.0
+                and int(r.get("vivino_review_count") or 0) >= 10
+                and r.get("critic_score") is not None
+            ),
             "body": float(r["body"]) if r.get("body") is not None else None,
             "acidity": float(r["acidity"]) if r.get("acidity") is not None else None,
             "tannin": float(r["tannin"]) if r.get("tannin") is not None else None,

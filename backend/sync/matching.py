@@ -133,7 +133,7 @@ def _build_index(df: pd.DataFrame) -> tuple[list[str], list[float], pd.DataFrame
 
 def match_wines(
     csv_path: str,
-    threshold: float = 85.0,
+    threshold: float = 95.0,
     dry_run: bool = False,
     limit: int | None = None,
 ) -> None:
@@ -171,6 +171,7 @@ def match_wines(
                 continue
 
             _match_key, confidence, idx = result
+
             score  = float(we_points[idx])
             we_row = we_df.iloc[idx]
 
@@ -224,8 +225,8 @@ if __name__ == '__main__':
         help='Path to winemag-data-130k-v2.csv (download from Kaggle)',
     )
     parser.add_argument(
-        '--threshold', type=float, default=85.0,
-        help='Minimum RapidFuzz similarity to accept a match (default: 85)',
+        '--threshold', type=float, default=95.0,
+        help='Minimum RapidFuzz similarity to accept a match (default: 95)',
     )
     parser.add_argument(
         '--dry-run', action='store_true',

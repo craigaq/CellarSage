@@ -273,6 +273,34 @@ class _PickCard extends StatelessWidget {
                     ],
                   ),
                 ],
+                if (pick.isHighlyVerified) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A5C2A).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(
+                        color: const Color(0xFF1A5C2A).withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.workspace_premium, size: 11, color: Color(0xFF2E7D32)),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Expert + Community Verified',
+                          style: WwText.badgeLabel().copyWith(
+                            fontSize: 10,
+                            color: const Color(0xFF2E7D32),
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 if (pick.criticScore != null) ...[
                   const SizedBox(height: 6),
                   Container(
