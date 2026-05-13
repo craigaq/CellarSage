@@ -18,6 +18,9 @@ jobs:
     name: Scrape - Normalise - Upsert
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      contents: read
+      issues: write
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -68,3 +71,53 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python sync/audit_countries.py --fix
+
+      - name: Check for new producer state gaps
+        id: gap_check
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set +e
+          python -m sync.backfill_producer_state --new-only > /tmp/gap_report.txt 2>&1
+          EXIT=$?
+          cat /tmp/gap_report.txt
+          echo "exit_code=$EXIT" >> $GITHUB_OUTPUT
+
+      - name: Open issue for unresolved producers
+        if: steps.gap_check.outputs.exit_code == '2'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const raw = fs.readFileSync('/tmp/gap_report.txt', 'utf8');
+
+            // Extract the deduplicated producer lines printed after the summary
+            const lines = raw.split('\n');
+            const startIdx = lines.findIndex(l => l.includes('Producers not yet'));
+            const gapLines = startIdx >= 0
+              ? lines.slice(startIdx + 1).filter(l => l.trim()).join('\n')
+              : '(see workflow log for details)';
+
+            const today = new Date().toISOString().split('T')[0];
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              title: `[Producer State] New wines need state mapping — ${today}`,
+              body: [
+                '## New producers need state mapping',
+                '',
+                'This week\'s scrape added Australian wines whose producer is not yet in',
+                '`backend/sync/producer_state.json`. Without an entry, these wines will',
+                'appear as **National Contender** instead of **The Local Hero**.',
+                '',
+                '**Fix:** add the producer(s) below to `producer_state.json` and push.',
+                'The next sync will resolve them automatically.',
+                '',
+                '```',
+                gapLines.trim(),
+                '```',
+                '',
+                '_Auto-created by the weekly sync workflow. Close when resolved._',
+              ].join('\n'),
+            });

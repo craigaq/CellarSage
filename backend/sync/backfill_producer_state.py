@@ -7,9 +7,11 @@ before the next weekly sync — no wine will silently fall back to
 "National Contender" without it appearing in the sync log first.
 
 Runs automatically at the end of the weekly sync pipeline, or manually:
-    python -m sync.backfill_producer_state
+    python -m sync.backfill_producer_state          # full backfill + gap report
+    python -m sync.backfill_producer_state --new-only  # gaps from this week's scrape only
 """
 
+import argparse
 import html
 import json
 import logging
@@ -38,13 +40,18 @@ def _resolve_state(name: str, mapping: list[tuple[str, str]]) -> str | None:
     return None
 
 
-def backfill_producer_state(conn=None) -> tuple[int, list[str]]:
+def backfill_producer_state(conn=None, new_only: bool = False) -> tuple[int, list[str]]:
     """
     Resolves state for Australian wines with state IS NULL.
 
+    Args:
+        new_only: when True, only consider wines whose merchant offer was
+                  updated in the last 9 days (i.e. touched by this week's
+                  scrape). Keeps the gap report free of persistent noise
+                  from international wines / bundles that will never resolve.
+
     Returns (updated_count, gap_wine_names).
-    gap_wine_names are wines still unresolved after the backfill —
-    these need a new entry in producer_state.json.
+    gap_wine_names are wines still unresolved after the backfill.
     """
     mapping  = _load_mapping()
     own_conn = conn is None
@@ -58,9 +65,19 @@ def backfill_producer_state(conn=None) -> tuple[int, list[str]]:
 
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                "SELECT id, name FROM wines WHERE state IS NULL AND country = 'Australia'"
-            )
+            if new_only:
+                cur.execute("""
+                    SELECT DISTINCT w.id, w.name
+                    FROM wines w
+                    JOIN merchant_offers mo ON mo.wine_id = w.id
+                    WHERE w.state IS NULL
+                      AND w.country = 'Australia'
+                      AND mo.last_updated > NOW() - INTERVAL '9 days'
+                """)
+            else:
+                cur.execute(
+                    "SELECT id, name FROM wines WHERE state IS NULL AND country = 'Australia'"
+                )
             rows = cur.fetchall()
 
         if not rows:
@@ -83,15 +100,15 @@ def backfill_producer_state(conn=None) -> tuple[int, list[str]]:
             conn.commit()
 
         log.info(
-            "Producer state backfill: %d updated, %d unresolved",
+            "Producer state backfill: %d updated, %d unresolved%s",
             len(updates), len(gaps),
+            " (new wines only)" if new_only else "",
         )
 
         if gaps:
             log.warning("Producer state gaps — add these producers to producer_state.json:")
             seen: set[str] = set()
             for name in gaps:
-                # Deduplicate by first two words (approximate producer key)
                 key = " ".join(name.lower().split()[:2])
                 if key not in seen:
                     seen.add(key)
@@ -105,6 +122,13 @@ def backfill_producer_state(conn=None) -> tuple[int, list[str]]:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--new-only", action="store_true",
+        help="Only report gaps for wines touched by this week's scrape",
+    )
+    args = parser.parse_args()
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s  %(levelname)-8s  %(message)s",
@@ -112,7 +136,7 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
 
-    updated, gaps = backfill_producer_state()
+    updated, gaps = backfill_producer_state(new_only=args.new_only)
 
     print(f"\nUpdated : {updated}")
     print(f"Gaps    : {len(gaps)}")
@@ -125,5 +149,4 @@ if __name__ == "__main__":
             if key not in seen:
                 seen.add(key)
                 print(f"  {name}")
-        # Exit 2 signals gaps exist without failing CI
         sys.exit(2)
