@@ -197,6 +197,8 @@ class WinePick(BaseModel):
     critic_score: Optional[float] = None
     vivino_rating: Optional[float] = None
     vivino_review_count: int = 0
+    vivino_url: Optional[str] = None
+    is_sage_pick: bool = False
     body: Optional[float] = None
     acidity: Optional[float] = None
     tannin: Optional[float] = None

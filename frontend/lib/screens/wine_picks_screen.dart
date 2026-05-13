@@ -228,7 +228,32 @@ class _PickCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(origin, style: WwText.bodySmall()),
                 ],
-                if (pick.vivinoRating != null || pick.rating != null) ...[
+                if (pick.isSagePick) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: WwColors.violetMuted.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(color: WwColors.violetMuted.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.auto_awesome, size: 11, color: WwColors.violetMuted),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Cellar Sage Pick',
+                          style: WwText.badgeLabel().copyWith(
+                            fontSize: 10,
+                            color: WwColors.violetMuted,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else if (pick.vivinoRating != null || pick.rating != null) ...[
                   const SizedBox(height: 6),
                   Row(
                     children: [
@@ -236,7 +261,7 @@ class _PickCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       if (pick.vivinoRating != null) ...[
                         Text(
-                          '${pick.vivinoRating!.toStringAsFixed(1)}  ·  ${pick.vivinoReviewCount} Vivino',
+                          '${pick.vivinoRating!.toStringAsFixed(1)}  ·  ${pick.vivinoReviewCount} · Community data via Vivino',
                           style: WwText.bodySmall(),
                         ),
                       ] else ...[
@@ -330,6 +355,21 @@ class _PickCard extends StatelessWidget {
                           label: Text('Browse ${_retailerLabel(pick.retailer)}'),
                         ),
                 ),
+                if (pick.vivinoUrl != null) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _launchVivino(pick.vivinoUrl!),
+                      icon: const Icon(Icons.star_outline_rounded, size: 15),
+                      label: const Text('View on Vivino'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: WwColors.violetMuted,
+                        side: BorderSide(color: WwColors.violetMuted.withValues(alpha: 0.5)),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -403,6 +443,15 @@ class _PickCard extends StatelessWidget {
     final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       debugPrint('Could not launch $url');
+    }
+  }
+
+  Future<void> _launchVivino(String url) async {
+    final uri = Uri.parse(url);
+    // In-app browser keeps the user in the Cellar Sage ecosystem while
+    // giving Vivino their page view — opens Vivino app if installed.
+    if (!await launchUrl(uri, mode: LaunchMode.inAppBrowserView)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 }

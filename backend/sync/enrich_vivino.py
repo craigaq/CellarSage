@@ -108,6 +108,7 @@ def _write_vivino(conn, wine_id: int, data: dict) -> None:
             UPDATE wines
                SET vivino_rating       = %s,
                    vivino_review_count = %s,
+                   vivino_url          = %s,
                    body                = %s,
                    acidity             = %s,
                    tannin              = %s,
@@ -120,6 +121,7 @@ def _write_vivino(conn, wine_id: int, data: dict) -> None:
             (
                 data.get('vivino_rating'),
                 data.get('vivino_review_count'),
+                data.get('vivino_url'),
                 data.get('body'),
                 data.get('acidity'),
                 data.get('tannin'),
@@ -172,6 +174,17 @@ def _match_wine(db_wine: dict, candidates: list[dict]) -> dict | None:
     return None
 
 
+def _vivino_url(item: dict) -> str | None:
+    """Build the canonical Vivino wine page URL from actor result fields."""
+    if item.get('url'):
+        return item['url']
+    seo  = item.get('seoName') or item.get('seo_name')
+    wid  = item.get('wineId')  or item.get('wine_id')
+    if seo and wid:
+        return f"https://www.vivino.com/{seo}/w/{wid}"
+    return None
+
+
 def _extract(item: dict) -> dict:
     """Pull fields we need from a raw Vivino actor result item."""
     tp           = item.get('taste_profile') or {}
@@ -180,6 +193,7 @@ def _extract(item: dict) -> dict:
     return {
         'vivino_rating':       item.get('average_rating'),
         'vivino_review_count': item.get('ratings_count'),
+        'vivino_url':          _vivino_url(item),
         'body':                tp.get('body'),
         'acidity':             tp.get('acidity'),
         'tannin':              tp.get('tannins'),   # Vivino spells it "tannins"

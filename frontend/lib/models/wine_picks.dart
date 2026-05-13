@@ -16,6 +16,8 @@ class WinePick {
   final double? criticScore;
   final double? vivinoRating;
   final int vivinoReviewCount;
+  final String? vivinoUrl;
+  final bool isSagePick;
   final double? body;
   final double? acidity;
   final double? tannin;
@@ -41,6 +43,8 @@ class WinePick {
     this.criticScore,
     this.vivinoRating,
     this.vivinoReviewCount = 0,
+    this.vivinoUrl,
+    this.isSagePick = false,
     this.body,
     this.acidity,
     this.tannin,
@@ -67,6 +71,8 @@ class WinePick {
         criticScore:        json['critic_score'] != null ? (json['critic_score'] as num).toDouble() : null,
         vivinoRating:       json['vivino_rating'] != null ? (json['vivino_rating'] as num).toDouble() : null,
         vivinoReviewCount:  (json['vivino_review_count'] as int?) ?? 0,
+        vivinoUrl:          json['vivino_url'] as String?,
+        isSagePick:         (json['is_sage_pick'] as bool?) ?? false,
         body:               json['body'] != null ? (json['body'] as num).toDouble() : null,
         acidity:            json['acidity'] != null ? (json['acidity'] as num).toDouble() : null,
         tannin:             json['tannin'] != null ? (json['tannin'] as num).toDouble() : null,

@@ -416,7 +416,7 @@ def get_wine_picks(
                 )
                 SELECT w.name, w.country, w.state, w.region, w.varietal,
                        w.critic_score,
-                       w.vivino_rating, w.vivino_review_count,
+                       w.vivino_rating, w.vivino_review_count, w.vivino_url,
                        w.body, w.acidity, w.tannin, w.sweetness,
                        w.fruit_intensity, w.flavor_notes,
                        c.price, c.url, c.retailer, c.rating, c.review_count,
@@ -452,14 +452,25 @@ def get_wine_picks(
             and "sparkling" not in (r.get("varietal") or "").lower()
         ]
 
-    # Only surface wines with a meaningful rating signal — keeps "where to buy"
-    # focused and avoids flooding users with unvetted listings.
-    # Vivino requires ≥10 reviews to filter out noise; critic score alone is enough.
-    all_rows = [
-        r for r in all_rows
-        if (r.get("vivino_rating") is not None and int(r.get("vivino_review_count") or 0) >= 10)
-        or r.get("critic_score") is not None
-    ]
+    # Prefer wines with a meaningful rating signal (Vivino ≥10 reviews or critic score).
+    # If fewer than 2 rated wines exist (e.g. Vivino enrichment down), fall back to
+    # unrated wines so the screen stays useful — marked as Sage Picks in the UI.
+    def _has_rating(r) -> bool:
+        return (
+            (r.get("vivino_rating") is not None and int(r.get("vivino_review_count") or 0) >= 10)
+            or r.get("critic_score") is not None
+        )
+
+    rated_rows   = [r for r in all_rows if _has_rating(r)]
+    unrated_rows = [r for r in all_rows if not _has_rating(r)]
+
+    if len(rated_rows) >= 2:
+        all_rows = rated_rows
+    else:
+        # Vivino likely unavailable — surface everything, flagged for UI fallback label
+        for r in unrated_rows:
+            r["is_sage_pick"] = True
+        all_rows = rated_rows + unrated_rows
 
     def _sort_key(r):
         vivino_rating = r.get("vivino_rating")
@@ -524,6 +535,8 @@ def get_wine_picks(
             "critic_score": float(r["critic_score"]) if r.get("critic_score") is not None else None,
             "vivino_rating": float(r["vivino_rating"]) if r.get("vivino_rating") is not None else None,
             "vivino_review_count": int(r.get("vivino_review_count") or 0),
+            "vivino_url": r.get("vivino_url") or None,
+            "is_sage_pick": bool(r.get("is_sage_pick", False)),
             "body": float(r["body"]) if r.get("body") is not None else None,
             "acidity": float(r["acidity"]) if r.get("acidity") is not None else None,
             "tannin": float(r["tannin"]) if r.get("tannin") is not None else None,
