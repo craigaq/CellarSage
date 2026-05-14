@@ -76,11 +76,11 @@ def _product_urls(xml_text: str) -> list[str]:
     return urls
 
 
-def _parse_page(html: str, url: str) -> Optional[dict]:
+def _parse_page(page: str, url: str) -> Optional[dict]:
     # Strip Next.js hydration comments — they appear mid-token (e.g. $<!-- -->25.00)
-    html = _COMMENT_RE.sub('', html)
+    page = _COMMENT_RE.sub('', page)
 
-    h1 = _H1_RE.search(html)
+    h1 = _H1_RE.search(page)
     if not h1:
         return None
     name = html.unescape(re.sub(r'<[^>]+>', '', h1.group(1))).strip()
@@ -88,7 +88,7 @@ def _parse_page(html: str, url: str) -> Optional[dict]:
         return None
 
     # First single-bottle price match (bulk "when you mix" price excluded by regex)
-    prices = _PRICE_RE.findall(html)
+    prices = _PRICE_RE.findall(page)
     if not prices:
         return None
     try:
@@ -97,7 +97,7 @@ def _parse_page(html: str, url: str) -> Optional[dict]:
         return None
 
     # Check for the add-to-cart button by its data-testid (more reliable than CSS class names)
-    if not re.search(r'data-testid="add-to-cart-button"', html, re.IGNORECASE):
+    if not re.search(r'data-testid="add-to-cart-button"', page, re.IGNORECASE):
         log.debug("Out of stock, skipping: %s", name)
         return None
 
@@ -116,9 +116,9 @@ def scrape_laithwaites() -> list[dict]:
 
     products: list[dict] = []
     for i, url in enumerate(urls, 1):
-        html = _fetch(url)
-        if html:
-            item = _parse_page(html, url)
+        page = _fetch(url)
+        if page:
+            item = _parse_page(page, url)
             if item:
                 products.append(item)
         if i % 100 == 0:
