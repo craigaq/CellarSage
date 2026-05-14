@@ -111,6 +111,49 @@ class CurrencyService {
     ],
   };
 
+  // Australian state bounding boxes — checked top-to-bottom; first match wins.
+  // Smaller/more specific regions (TAS, ACT) are listed before larger ones
+  // that overlap them (NSW, VIC) to ensure correct assignment.
+  static const _auStateBoxes = <(double, double, double, double, String)>[
+    (-43.7, -39.5, 143.8, 148.5, 'TAS'),
+    (-35.9, -35.1, 148.8, 149.4, 'ACT'),
+    (-39.2, -34.0, 140.9, 150.0, 'VIC'),
+    (-37.5, -28.1, 140.9, 153.7, 'NSW'),
+    (-38.2, -25.9, 129.0, 141.1, 'SA'),
+    (-35.2, -13.7, 112.9, 129.1, 'WA'),
+    (-29.2, -10.4, 138.0, 153.7, 'QLD'),
+    (-26.1, -10.4, 129.0, 138.1, 'NT'),
+  ];
+
+  /// Return the two-letter Australian state code for a given position,
+  /// or null when outside Australia.
+  static String? detectAustralianState(double lat, double lng) {
+    for (final box in _auStateBoxes) {
+      if (lat >= box.$1 && lat <= box.$2 && lng >= box.$3 && lng <= box.$4) {
+        return box.$5;
+      }
+    }
+    return null;
+  }
+
+  /// Detect the user's Australian state from GPS.
+  /// Returns null if outside Australia or location is unavailable.
+  static Future<String?> detectAustralianStateFromGps() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) { return null; }
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) { return null; }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.low),
+      );
+      return detectAustralianState(pos.latitude, pos.longitude);
+    } catch (_) {
+      return null;
+    }
+  }
+
   // Bounding boxes: (latMin, latMax, lngMin, lngMax, countryCode)
   static const _boxes = [
     (-44.0, -10.0,  113.0,  154.0, 'AU'),

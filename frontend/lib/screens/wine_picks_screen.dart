@@ -24,6 +24,7 @@ class WinePicksScreen extends StatefulWidget {
   final double budgetMin;
   final double budgetMax;
   final bool prefDry;
+  final String? userState;
 
   const WinePicksScreen({
     super.key,
@@ -31,6 +32,7 @@ class WinePicksScreen extends StatefulWidget {
     this.budgetMin = 0.0,
     this.budgetMax = 9999.0,
     this.prefDry = false,
+    this.userState,
   });
 
   @override
@@ -61,6 +63,7 @@ class _WinePicksScreenState extends State<WinePicksScreen> {
         budgetMin: widget.budgetMin,
         budgetMax: widget.budgetMax,
         prefDry: widget.prefDry,
+        userState: widget.userState,
       );
       if (generation != _loadGeneration || !mounted) return;
       setState(() { _response = response; _loading = false; });

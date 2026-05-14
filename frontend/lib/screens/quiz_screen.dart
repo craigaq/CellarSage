@@ -31,6 +31,7 @@ class _QuizScreenState extends State<QuizScreen> {
   String _foodPairing = 'none'; // stores the backend ID
   int _budgetIndex = 1; // index into CurrencyService.getBrackets()
   String _currencyCode = 'AUD'; // resolved from GPS in initState
+  String? _userState; // AU state code resolved from GPS in initState
   bool _prefDry = false;
   String _overrideMode = 'use_pairing_logic';
   String _pairingMode = 'congruent'; // 'congruent' | 'contrast'
@@ -525,6 +526,10 @@ class _QuizScreenState extends State<QuizScreen> {
     super.initState();
     CurrencyService.detectCodeFromGps().then((code) {
       if (mounted) setState(() => _currencyCode = code);
+      // State detection runs after currency so permission is already granted.
+      CurrencyService.detectAustralianStateFromGps().then((state) {
+        if (mounted) setState(() => _userState = state);
+      });
     });
     PalatePrefs.load().then((snap) {
       if (snap != null && mounted) {
@@ -1201,6 +1206,7 @@ class _QuizScreenState extends State<QuizScreen> {
         budgetMax: _selectedBracket.max,
         currencyCode: _currencyCode,
         prefDry: _prefDry,
+        userState: _userState,
       );
     }
 
@@ -1249,6 +1255,7 @@ class _WineResultCard extends StatefulWidget {
   final double budgetMax;
   final String currencyCode;
   final bool prefDry;
+  final String? userState;
 
   const _WineResultCard({
     required this.rank,
@@ -1259,6 +1266,7 @@ class _WineResultCard extends StatefulWidget {
     required this.budgetMax,
     this.currencyCode = 'AUD',
     this.prefDry = false,
+    this.userState,
   });
 
   @override
@@ -1427,6 +1435,7 @@ class _WineResultCardState extends State<_WineResultCard> {
                             budgetMin: widget.budgetMin,
                             budgetMax: widget.budgetMax,
                             prefDry: widget.prefDry,
+                            userState: widget.userState,
                           ),
                         ),
                       ),
