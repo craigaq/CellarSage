@@ -68,11 +68,29 @@ class PalatePrefs {
   /// Saves a named profile. If a profile with the same name already exists
   /// it is replaced in-place; otherwise it is appended (up to maxProfiles).
   /// Returns false if the list is already full and no match by name exists.
-  static Future<bool> saveProfile(String name, PalateSnapshot snap) async {
+  static Future<bool> saveProfile(
+    String name,
+    PalateSnapshot snap, {
+    String? savedWineName,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final profiles = await loadProfiles();
+    final existing = profiles.firstWhere(
+      (p) => p.name == name,
+      orElse: () => PalateProfile(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: name,
+        crispness: snap.crispness,
+        weight: snap.weight,
+        texture: snap.texture,
+        flavor: snap.flavor,
+        foodPairing: snap.foodPairing,
+        budgetIndex: snap.budgetIndex,
+        prefDry: snap.prefDry,
+      ),
+    );
     final profile = PalateProfile(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: existing.id,
       name: name,
       crispness:   snap.crispness,
       weight:      snap.weight,
@@ -81,6 +99,7 @@ class PalatePrefs {
       foodPairing: snap.foodPairing,
       budgetIndex: snap.budgetIndex,
       prefDry:     snap.prefDry,
+      savedWineName: savedWineName ?? existing.savedWineName,
     );
     final idx = profiles.indexWhere((p) => p.name == name);
     if (idx >= 0) {
@@ -138,6 +157,7 @@ class PalateProfile {
   final String foodPairing;
   final int budgetIndex;
   final bool prefDry;
+  final String? savedWineName;
 
   const PalateProfile({
     required this.id,
@@ -149,30 +169,33 @@ class PalateProfile {
     required this.foodPairing,
     required this.budgetIndex,
     required this.prefDry,
+    this.savedWineName,
   });
 
   factory PalateProfile.fromJson(Map<String, dynamic> json) => PalateProfile(
-        id:          json['id']           as String,
-        name:        json['name']         as String,
-        crispness:   json['crispness']    as int,
-        weight:      json['weight']       as int,
-        texture:     json['texture']      as int,
-        flavor:      json['flavor']       as int,
-        foodPairing: json['food_pairing'] as String,
-        budgetIndex: json['budget_index'] as int,
-        prefDry:     json['pref_dry']     as bool,
+        id:            json['id']             as String,
+        name:          json['name']           as String,
+        crispness:     json['crispness']      as int,
+        weight:        json['weight']         as int,
+        texture:       json['texture']        as int,
+        flavor:        json['flavor']         as int,
+        foodPairing:   json['food_pairing']   as String,
+        budgetIndex:   json['budget_index']   as int,
+        prefDry:       json['pref_dry']       as bool,
+        savedWineName: json['saved_wine_name'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
-        'id':           id,
-        'name':         name,
-        'crispness':    crispness,
-        'weight':       weight,
-        'texture':      texture,
-        'flavor':       flavor,
-        'food_pairing': foodPairing,
-        'budget_index': budgetIndex,
-        'pref_dry':     prefDry,
+        'id':              id,
+        'name':            name,
+        'crispness':       crispness,
+        'weight':          weight,
+        'texture':         texture,
+        'flavor':          flavor,
+        'food_pairing':    foodPairing,
+        'budget_index':    budgetIndex,
+        'pref_dry':        prefDry,
+        if (savedWineName != null) 'saved_wine_name': savedWineName,
       };
 
   PalateSnapshot toSnapshot() => PalateSnapshot(

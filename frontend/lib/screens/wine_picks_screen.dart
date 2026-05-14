@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/wine_picks.dart';
 import '../services/api_service.dart';
+import '../services/palate_prefs.dart';
 import '../theme/app_theme.dart';
 
 const _tierColors = {
@@ -25,6 +26,7 @@ class WinePicksScreen extends StatefulWidget {
   final double budgetMax;
   final bool prefDry;
   final String? userState;
+  final PalateSnapshot? snapshot;
 
   const WinePicksScreen({
     super.key,
@@ -33,6 +35,7 @@ class WinePicksScreen extends StatefulWidget {
     this.budgetMax = 9999.0,
     this.prefDry = false,
     this.userState,
+    this.snapshot,
   });
 
   @override
@@ -44,11 +47,62 @@ class _WinePicksScreenState extends State<WinePicksScreen> {
   bool _loading = true;
   String? _error;
   int _loadGeneration = 0;
+  List<PalateProfile> _profiles = [];
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadProfiles();
+  }
+
+  Future<void> _loadProfiles() async {
+    final profiles = await PalatePrefs.loadProfiles();
+    if (mounted) setState(() => _profiles = profiles);
+  }
+
+  void _showSaveSheet(WinePick pick) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SaveToProfileSheet(
+        pick: pick,
+        profiles: _profiles,
+        snapshot: widget.snapshot,
+        onSaveToProfile: (profile) async {
+          Navigator.of(context).pop();
+          await PalatePrefs.saveProfile(
+            profile.name,
+            profile.toSnapshot(),
+            savedWineName: pick.name,
+          );
+          await _loadProfiles();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('"${pick.name}" saved to ${profile.name}'),
+            ));
+          }
+        },
+        onCreateProfile: (name) async {
+          Navigator.of(context).pop();
+          if (widget.snapshot == null) return;
+          final ok = await PalatePrefs.saveProfile(
+            name,
+            widget.snapshot!,
+            savedWineName: pick.name,
+          );
+          await _loadProfiles();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(ok
+                  ? '"${pick.name}" saved to new profile "$name"'
+                  : 'Profile limit reached — delete a profile first'),
+            ));
+          }
+        },
+      ),
+    );
   }
 
   Future<void> _load() async {
@@ -167,7 +221,11 @@ class _WinePicksScreenState extends State<WinePicksScreen> {
             textAlign: TextAlign.center,
           ),
         ),
-        for (final pick in picks) _PickCard(pick: pick),
+        for (final pick in picks)
+          _PickCard(
+            pick: pick,
+            onSave: () => _showSaveSheet(pick),
+          ),
       ],
     );
   }
@@ -175,7 +233,8 @@ class _WinePicksScreenState extends State<WinePicksScreen> {
 
 class _PickCard extends StatelessWidget {
   final WinePick pick;
-  const _PickCard({required this.pick});
+  final VoidCallback onSave;
+  const _PickCard({required this.pick, required this.onSave});
 
   @override
   Widget build(BuildContext context) {
@@ -401,6 +460,19 @@ class _PickCard extends StatelessWidget {
                           label: Text('Browse ${_retailerLabel(pick.retailer)}'),
                         ),
                 ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: onSave,
+                    icon: const Icon(Icons.bookmark_add_outlined, size: 15),
+                    label: const Text('Save to Profile'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: WwColors.violetMuted,
+                      side: BorderSide(color: WwColors.violetMuted.withValues(alpha: 0.5)),
+                    ),
+                  ),
+                ),
                 if (pick.vivinoUrl != null) ...[
                   const SizedBox(height: 8),
                   SizedBox(
@@ -499,5 +571,146 @@ class _PickCard extends StatelessWidget {
     if (!await launchUrl(uri, mode: LaunchMode.inAppBrowserView)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Save-to-profile bottom sheet
+// ---------------------------------------------------------------------------
+
+class _SaveToProfileSheet extends StatefulWidget {
+  final WinePick pick;
+  final List<PalateProfile> profiles;
+  final PalateSnapshot? snapshot;
+  final void Function(PalateProfile) onSaveToProfile;
+  final void Function(String name) onCreateProfile;
+
+  const _SaveToProfileSheet({
+    required this.pick,
+    required this.profiles,
+    required this.snapshot,
+    required this.onSaveToProfile,
+    required this.onCreateProfile,
+  });
+
+  @override
+  State<_SaveToProfileSheet> createState() => _SaveToProfileSheetState();
+}
+
+class _SaveToProfileSheetState extends State<_SaveToProfileSheet> {
+  bool _showCreate = false;
+  final _nameCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+    final canCreate = widget.snapshot != null &&
+        widget.profiles.length < PalatePrefs.maxProfiles;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: WwColors.bgElevated,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(top: BorderSide(color: WwColors.borderMedium)),
+      ),
+      padding: EdgeInsets.fromLTRB(24, 20, 24, 24 + bottomPad),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: WwColors.borderMedium,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text('Save to Profile', style: WwText.headlineMedium()),
+          const SizedBox(height: 4),
+          Text(
+            widget.pick.name,
+            style: WwText.bodySmall(color: WwColors.textSecondary),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 20),
+
+          if (widget.profiles.isEmpty || _showCreate) ...[
+            if (widget.profiles.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(
+                  "You don't have any profiles yet. Create one to save your picks.",
+                  style: WwText.bodyMedium(),
+                ),
+              ),
+            TextField(
+              controller: _nameCtrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Profile name',
+                hintText: 'e.g. Friday Night',
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () {
+                  final name = _nameCtrl.text.trim();
+                  if (name.isNotEmpty) widget.onCreateProfile(name);
+                },
+                child: const Text('Create & Save'),
+              ),
+            ),
+            if (_showCreate) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => setState(() => _showCreate = false),
+                  child: const Text('Back to profiles'),
+                ),
+              ),
+            ],
+          ] else ...[
+            ...widget.profiles.map(
+              (p) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(p.name, style: WwText.bodyMedium(color: WwColors.textPrimary)),
+                subtitle: p.savedWineName != null
+                    ? Text('Saved: ${p.savedWineName}', style: WwText.bodySmall())
+                    : null,
+                trailing: FilledButton(
+                  onPressed: () => widget.onSaveToProfile(p),
+                  child: const Text('Save'),
+                ),
+              ),
+            ),
+            if (canCreate) ...[
+              const Divider(height: 24, color: WwColors.borderSubtle),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => setState(() => _showCreate = true),
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Create new profile'),
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
   }
 }

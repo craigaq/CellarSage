@@ -1222,6 +1222,15 @@ class _QuizScreenState extends State<QuizScreen> {
         currencyCode: _currencyCode,
         prefDry: _prefDry,
         userState: _userState,
+        snapshot: PalateSnapshot(
+          crispness:   _crispness,
+          weight:      _weight,
+          texture:     _texture,
+          flavor:      _flavor,
+          foodPairing: _foodPairing,
+          budgetIndex: _budgetIndex,
+          prefDry:     _prefDry,
+        ),
       );
     }
 
@@ -1266,6 +1275,7 @@ class _WineResultCard extends StatefulWidget {
   final WineRecommendation wine;
   final Map<String, int> userPrefs;
   final List<String> attrOrder;
+  final PalateSnapshot? snapshot;
   final double budgetMin;
   final double budgetMax;
   final String currencyCode;
@@ -1282,6 +1292,7 @@ class _WineResultCard extends StatefulWidget {
     this.currencyCode = 'AUD',
     this.prefDry = false,
     this.userState,
+    this.snapshot,
   });
 
   @override
@@ -1451,6 +1462,7 @@ class _WineResultCardState extends State<_WineResultCard> {
                             budgetMax: widget.budgetMax,
                             prefDry: widget.prefDry,
                             userState: widget.userState,
+                            snapshot: widget.snapshot,
                           ),
                         ),
                       ),
