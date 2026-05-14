@@ -1015,13 +1015,42 @@ class _QuizScreenState extends State<QuizScreen> {
   // Step 7 — Summary (was Step 8; standalone Palate Dial step removed)
   // ---------------------------------------------------------------------------
 
+  void _jumpToPage(int page) {
+    _controller.animateToPage(
+      page,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  Widget _summaryRow({
+    required String label,
+    required Widget trailing,
+    required int targetPage,
+  }) {
+    return InkWell(
+      onTap: () => _jumpToPage(targetPage),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Flexible(
+              child: Text(label, style: WwText.bodyMedium(color: WwColors.textPrimary)),
+            ),
+            const SizedBox(width: 8),
+            trailing,
+            const SizedBox(width: 6),
+            const Icon(Icons.edit_outlined, size: 14, color: WwColors.textDisabled),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSummaryStep() {
-    final rows = [
-      ('Crispness (Acidity)', _crispness),
-      ('Weight (Body)', _weight),
-      ('Texture (Tannin)', _texture),
-      ('Flavor Intensity (Aromatics)', _flavor),
-    ];
     return _stepShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1048,62 +1077,48 @@ class _QuizScreenState extends State<QuizScreen> {
           const SizedBox(height: 40),
           Container(
             decoration: WwDecorations.card(),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Column(
               children: [
-                ...rows.map(
-                  (r) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            r.$1,
-                            style: WwText.bodyMedium(color: WwColors.textPrimary),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        _ScoreDots(value: r.$2),
-                      ],
-                    ),
+                _summaryRow(
+                  label: 'Crispness (Acidity)',
+                  trailing: _ScoreDots(value: _crispness),
+                  targetPage: 1,
+                ),
+                _summaryRow(
+                  label: 'Weight (Body)',
+                  trailing: _ScoreDots(value: _weight),
+                  targetPage: 2,
+                ),
+                _summaryRow(
+                  label: 'Texture (Tannin)',
+                  trailing: _ScoreDots(value: _texture),
+                  targetPage: 3,
+                ),
+                _summaryRow(
+                  label: 'Flavor Intensity (Aromatics)',
+                  trailing: _ScoreDots(value: _flavor),
+                  targetPage: 4,
+                ),
+                const Divider(height: 16, color: WwColors.borderSubtle),
+                _summaryRow(
+                  label: 'Food Pairing',
+                  trailing: Text(
+                    _foodLabel,
+                    style: WwText.bodyMedium(color: WwColors.violet)
+                        .copyWith(fontWeight: FontWeight.w600),
+                    textAlign: TextAlign.right,
                   ),
+                  targetPage: 5,
                 ),
-                const Divider(height: 24, color: WwColors.borderSubtle),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Food Pairing', style: WwText.bodyMedium(color: WwColors.textPrimary)),
-                    const SizedBox(width: 12),
-                    Flexible(
-                      child: Text(
-                        _foodLabel,
-                        style: WwText.bodyMedium(color: WwColors.violet)
-                            .copyWith(fontWeight: FontWeight.w600),
-                        textAlign: TextAlign.right,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        'Budget (per bottle)',
-                        style: WwText.bodyMedium(color: WwColors.textPrimary),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      _selectedBracket.label,
-                      style: WwText.bodyMedium(color: WwColors.violet)
-                          .copyWith(fontWeight: FontWeight.w600),
-                    ),
-                  ],
+                _summaryRow(
+                  label: 'Budget (per bottle)',
+                  trailing: Text(
+                    _selectedBracket.label,
+                    style: WwText.bodyMedium(color: WwColors.violet)
+                        .copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  targetPage: 6,
                 ),
               ],
             ),
