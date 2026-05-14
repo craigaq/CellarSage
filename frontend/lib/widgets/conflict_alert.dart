@@ -117,17 +117,19 @@ Future<void> showConflictAlert(
           side: const BorderSide(color: WwColors.borderMedium),
         ),
         title: Text(alert.title, style: WwText.titleLarge()),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('🦊', style: TextStyle(fontSize: 56)),
-            const SizedBox(height: 15),
-            Text(
-              alert.message,
-              textAlign: TextAlign.center,
-              style: WwText.bodyMedium(),
-            ),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('🦊', style: TextStyle(fontSize: 56)),
+              const SizedBox(height: 15),
+              Text(
+                alert.message,
+                textAlign: TextAlign.center,
+                style: WwText.bodyMedium(),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
