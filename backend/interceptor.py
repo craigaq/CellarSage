@@ -142,6 +142,13 @@ def _filter_catalog(
             if w.style == "Sweet" or w.abv_percentage >= _FORTIFIED_ABV_MIN
         ]
 
+    # Dry preference — filter out Sweet wines when user has indicated pref_dry.
+    # This handles neutral or savoury food pairings where no Palate Paradox fires.
+    # When the user explicitly resolves a Paradox via use_pairing_logic (dessert/
+    # after_dinner pairings above), the sweet filter is intentionally bypassed.
+    if prefs.pref_dry and mode == "use_pairing_logic":
+        return [w for w in catalog if w.style != "Sweet"]
+
     return catalog
 
 

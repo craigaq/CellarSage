@@ -34,6 +34,9 @@ _PRODUCER_STATE: list[tuple[str, str]] = sorted(
 # Sweet varietal/style keywords used to filter Tier 4 when pref_dry=True.
 _SWEET_KEYWORDS = frozenset({"moscato", "muscat", "dessert", "sweet", "demi-sec", "doux"})
 
+# Bundle product filter — applied at query time to hide already-ingested bundles.
+_BUNDLE_NAME_RE = re.compile(r'\b(dozen|add[- ]?on)\b', re.IGNORECASE)
+
 # Canonical names that ARE sparkling — excluded from the sparkling bleed filter.
 _SPARKLING_CANONICALS = frozenset({
     "champagne", "prosecco", "cava", "sparkling shiraz",
@@ -344,6 +347,9 @@ def get_buy_options(
         }
         for row in rows
     ]
+    # Exclude bundle products (dozens, add-ons) from buy-options.
+    result = [r for r in result if not _BUNDLE_NAME_RE.search(r.get("name", ""))]
+
     # Exclude sparkling wines when the requested varietal is not a sparkling type.
     if varietal.lower() not in _SPARKLING_CANONICALS:
         result = [
@@ -443,6 +449,9 @@ def get_wine_picks(
     for r in all_rows:
         if not r.get("state") and (r.get("country") or "").lower() == "australia":
             r["state"] = _producer_state(r["name"])
+
+    # Exclude bundle products (dozens, add-ons).
+    all_rows = [r for r in all_rows if not _BUNDLE_NAME_RE.search(r.get("name", ""))]
 
     # Exclude sparkling wines when the requested varietal is not a sparkling type.
     if varietal.lower() not in _SPARKLING_CANONICALS:

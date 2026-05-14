@@ -61,6 +61,7 @@ _BRAND_COUNTRY: list[tuple[str, str]] = [
     ("giesen",          "New Zealand"),
     ("kamana",          "New Zealand"),
     ("lana's bike",     "New Zealand"),
+    ("split rock",      "New Zealand"),
     ("matua",           "New Zealand"),
     ("nanny goat",      "New Zealand"),
     ("rapaura springs", "New Zealand"),
@@ -88,6 +89,35 @@ _BRAND_COUNTRY: list[tuple[str, str]] = [
     ("alamos",          "Argentina"),
     ("19 crimes",     "Australia"),  # keep as AU — made under licence in AU
 ]
+
+# Bundle product name patterns — reject cases, dozens, add-ons, etc.
+_BUNDLE_NAME_RE = re.compile(
+    r'\b(dozen|add[- ]?on)\b',
+    re.IGNORECASE,
+)
+
+# Compound varietal overrides: when the API gives a simple varietal (e.g. "Shiraz")
+# but the product name clearly indicates a compound style (e.g. "Sparkling Shiraz"),
+# use the compound form so the DB keyword matching works correctly.
+_COMPOUND_OVERRIDES: list[tuple[re.Pattern, str]] = [
+    (re.compile(r'sparkling\s+shiraz', re.IGNORECASE), 'Sparkling Shiraz'),
+    (re.compile(r'sparkling\s+red\b',  re.IGNORECASE), 'Sparkling Shiraz'),
+    (re.compile(r'late\s+harvest\s+riesling', re.IGNORECASE), 'Late Harvest Riesling'),
+    (re.compile(r'\bbotrytis\s+semillon', re.IGNORECASE), 'Botrytis Semillon'),
+    (re.compile(r'rutherglen\s+muscat',  re.IGNORECASE), 'Rutherglen Muscat'),
+    (re.compile(r'tawny\s+port',         re.IGNORECASE), 'Tawny Port'),
+    (re.compile(r'vintage\s+port',       re.IGNORECASE), 'Vintage Port'),
+    (re.compile(r'fino\s+sherry',        re.IGNORECASE), 'Fino Sherry'),
+]
+
+
+def _refine_compound_varietal(varietal: str, name: str) -> str:
+    """Override a simple varietal with its compound form when the product name demands it."""
+    for pattern, compound in _COMPOUND_OVERRIDES:
+        if pattern.search(name):
+            return compound
+    return varietal
+
 
 # Unaccented → accented canonical spellings
 _VARIETAL_CANONICAL: dict[str, str] = {
@@ -298,7 +328,13 @@ def _normalize_liquorland(item: dict, retailer: str) -> Optional[tuple[WineRecor
         log.debug("liquorland item skipped — non-standard bottle size: %r", name)
         return None
 
-    if varietal is None:
+    if _BUNDLE_NAME_RE.search(name):
+        log.debug("liquorland item skipped — bundle product: %r", name)
+        return None
+
+    if varietal is not None:
+        varietal = _refine_compound_varietal(varietal, name)
+    else:
         varietal = _infer_varietal(name)
 
     country, state = _infer_origin(name)
@@ -337,6 +373,10 @@ def _normalize_cellarbrations(item: dict, retailer: str) -> Optional[tuple[WineR
         log.debug("cellarbrations item skipped — not in known catalog: %r", name)
         return None
 
+    if _BUNDLE_NAME_RE.search(name):
+        log.debug("cellarbrations item skipped — bundle product: %r", name)
+        return None
+
     vintage    = _extract_vintage(name)
     clean_name = re.sub(r'\s*\b(19[89]\d|20[012]\d)\b\s*', ' ', name).strip()
     url        = item.get("url")
@@ -367,6 +407,10 @@ def _normalize_laithwaites(item: dict, retailer: str) -> Optional[tuple[WineReco
 
     if not _matches_catalog(None, name):
         log.debug("laithwaites item skipped — not in catalog: %r", name)
+        return None
+
+    if _BUNDLE_NAME_RE.search(name):
+        log.debug("laithwaites item skipped — bundle product: %r", name)
         return None
 
     vintage    = _extract_vintage(name)
