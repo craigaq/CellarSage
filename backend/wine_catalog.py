@@ -67,7 +67,7 @@ _REDS: list[WineProfile] = [
     # Rank 5 — Universal premium appeal; strong planting footprint
     WineProfile(
         "Pinot Noir", sku_id="WW-PN01",
-        acidity_ph=3.25, body=2.5, tannin_structure=3, aromatic_intensity=8,
+        acidity_ph=3.25, body=2.5, tannin_structure=2, aromatic_intensity=8,
         abv_percentage=13.0, residual_sugar_gl=2.0,
         location_tag="National",        # Australian identity centred in Yarra Valley VIC & Mornington Peninsula
     ),
@@ -99,7 +99,7 @@ _REDS: list[WineProfile] = [
     # Rank 13 — Italy's most planted grape; global respect for Chianti
     WineProfile(
         "Sangiovese", sku_id="WW-SG01",
-        acidity_ph=3.10, body=3.0, tannin_structure=4, aromatic_intensity=7,
+        acidity_ph=3.25, body=3.0, tannin_structure=4, aromatic_intensity=7,
         abv_percentage=13.5, residual_sugar_gl=2.0,
         location_tag="International",   # Tuscany Italy (Chianti, Brunello)
     ),
@@ -107,7 +107,7 @@ _REDS: list[WineProfile] = [
     # Rank 14 — Argentina's flagship; international fame in red wine
     WineProfile(
         "Malbec", sku_id="WW-MB01",
-        acidity_ph=3.40, body=4.0, tannin_structure=4, aromatic_intensity=7,
+        acidity_ph=3.60, body=4.0, tannin_structure=4, aromatic_intensity=7,
         abv_percentage=14.5, residual_sugar_gl=3.0,
         location_tag="International",   # Mendoza Argentina is the global benchmark
     ),
@@ -159,7 +159,7 @@ _REDS: list[WineProfile] = [
     # Sicily's flagship red; fruit-forward with moderate tannin
     WineProfile(
         "Nero d'Avola", sku_id="WW-NA01",
-        acidity_ph=3.45, body=4.0, tannin_structure=3, aromatic_intensity=8,
+        acidity_ph=3.58, body=4.0, tannin_structure=3, aromatic_intensity=8,
         abv_percentage=14.0, residual_sugar_gl=3.0,
         location_tag="International",   # Sicily Italy
     ),
@@ -175,7 +175,7 @@ _REDS: list[WineProfile] = [
     # Beaujolais grape; ultra-light, juicy, low tannin
     WineProfile(
         "Gamay", sku_id="WW-GM01",
-        acidity_ph=3.40, body=2.0, tannin_structure=2, aromatic_intensity=7,
+        acidity_ph=3.25, body=2.0, tannin_structure=2, aromatic_intensity=7,
         abv_percentage=12.5, residual_sugar_gl=2.0,
         location_tag="International",   # Beaujolais France
     ),
@@ -205,7 +205,7 @@ _WHITES: list[WineProfile] = [
     # Rank 4 — Number one in Australia, UK, NZ; fast global growth
     WineProfile(
         "Sauvignon Blanc", sku_id="WW-SB01",
-        acidity_ph=2.95, body=2.0, tannin_structure=1, aromatic_intensity=8,
+        acidity_ph=3.10, body=2.0, tannin_structure=1, aromatic_intensity=8,
         abv_percentage=12.5, residual_sugar_gl=2.0,
         location_tag="National",        # Margaret River WA is the leading Australian expression
     ),
@@ -235,6 +235,16 @@ _WHITES: list[WineProfile] = [
         acidity_ph=2.95, body=1.5, tannin_structure=1, aromatic_intensity=9,
         abv_percentage=9.5, residual_sugar_gl=3.5,
         location_tag="Local",           # Clare Valley & Eden Valley SA are world-class Riesling regions
+    ),
+
+    # Mosel/Rhine Spätlese style — petrol, floral, honeyed; RS balances laser acidity
+    WineProfile(
+        "Riesling (Off-Dry)", sku_id="WW-RI02",
+        varietal="Riesling",
+        acidity_ph=3.00, body=1.5, tannin_structure=1, aromatic_intensity=9,
+        abv_percentage=10.5, residual_sugar_gl=20.0,
+        style="Off-Dry",
+        location_tag="International",   # Mosel & Rhine Germany, Alsace France
     ),
 
     # Rank 12 — Huge volume via Italian whites, Cognac, Armagnac
@@ -452,7 +462,7 @@ _FORTIFIED: list[WineProfile] = [
     WineProfile(
         "Fino Sherry", sku_id="WW-FS01",
         varietal="Fino Sherry",
-        acidity_ph=3.00, body=1.5, tannin_structure=1, aromatic_intensity=4,
+        acidity_ph=3.00, body=1.5, tannin_structure=1, aromatic_intensity=7,
         abv_percentage=15.0, residual_sugar_gl=1.0,
         style="Dry",
         location_tag="International",   # Jerez de la Frontera, Andalusia Spain
@@ -473,7 +483,7 @@ _MIDDLE_GROUND: list[WineProfile] = [
     WineProfile(
         "Gewürztraminer (Dry)", sku_id="WW-GD01",
         varietal="Gewürztraminer", style="Dry",
-        acidity_ph=3.25, body=2.5, tannin_structure=1, aromatic_intensity=10,
+        acidity_ph=3.48, body=2.5, tannin_structure=1, aromatic_intensity=10,
         abv_percentage=12.5, residual_sugar_gl=2.5,
         location_tag="International",   # Alsace France
     ),
