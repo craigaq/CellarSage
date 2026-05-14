@@ -18,7 +18,7 @@ from typing import Optional
 log = logging.getLogger(__name__)
 
 _SITEMAP_URL = "https://www.laithwaites.com.au/pdp-sitemap.xml"
-_CRAWL_DELAY = 1.0  # seconds between requests (robots.txt says 5s; 1s is fine for a weekly batch)
+_CRAWL_DELAY = 0.5  # seconds between requests (robots.txt says 5s; 0.5s is fine for a weekly batch)
 
 _HEADERS = {
     "User-Agent": (
