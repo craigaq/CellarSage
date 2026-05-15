@@ -24,10 +24,10 @@ class _QuizScreenState extends State<QuizScreen> {
   int _currentPage = 0;
 
   // --- Quiz state ---
-  int _crispness = 3;
-  int _weight = 3;
-  int _texture = 3;
-  int _flavor = 3;
+  int _crispness = 1;
+  int _weight = 1;
+  int _texture = 1;
+  int _flavor = 1;
   String _foodPairing = 'none'; // stores the backend ID
   int _budgetIndex = 1; // index into CurrencyService.getBrackets()
   String _currencyCode = 'AUD'; // resolved from GPS in initState
@@ -277,10 +277,10 @@ class _QuizScreenState extends State<QuizScreen> {
 
   void _startOver() {
     setState(() {
-      _crispness = 3;
-      _weight = 3;
-      _texture = 3;
-      _flavor = 3;
+      _crispness = 1;
+      _weight = 1;
+      _texture = 1;
+      _flavor = 1;
       _foodPairing = 'none';
       _budgetIndex = 1;
       _prefDry = false;
@@ -433,15 +433,6 @@ class _QuizScreenState extends State<QuizScreen> {
 
   Future<void> _fetchResults() async {
     final generation = ++_fetchGeneration;
-    PalatePrefs.save(
-      crispness:   _crispness,
-      weight:      _weight,
-      texture:     _texture,
-      flavor:      _flavor,
-      foodPairing: _foodPairing,
-      budgetIndex: _budgetIndex,
-      prefDry:     _prefDry,
-    );
     setState(() {
       _loading = true;
       _error = null;
@@ -530,19 +521,6 @@ class _QuizScreenState extends State<QuizScreen> {
       CurrencyService.detectAustralianStateFromGps().then((state) {
         if (mounted) setState(() => _userState = state);
       });
-    });
-    PalatePrefs.load().then((snap) {
-      if (snap != null && mounted) {
-        setState(() {
-          _crispness   = snap.crispness;
-          _weight      = snap.weight;
-          _texture     = snap.texture;
-          _flavor      = snap.flavor;
-          _foodPairing = snap.foodPairing;
-          _budgetIndex = snap.budgetIndex;
-          _prefDry     = snap.prefDry;
-        });
-      }
     });
     _refreshProfiles();
   }
@@ -960,51 +938,116 @@ class _QuizScreenState extends State<QuizScreen> {
   // ---------------------------------------------------------------------------
 
   Widget _buildLivingPalate() {
+    // Rows in quiz-step order: Acidity→Body→Tannin→Flavour
+    // activeAxis index into axisNames/axisValues below
+    final activeAxis = const {1: 0, 2: 1, 3: 2, 4: 3}[_currentPage];
+    const axisNames = ['Acidity', 'Body', 'Tannin', 'Flavour'];
+    final axisValues = [_crispness, _weight, _texture, _flavor];
+
     return Container(
       decoration: BoxDecoration(
         color: WwColors.bgDeep,
         border: Border(bottom: BorderSide(color: WwColors.borderSubtle, width: 1)),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SizedBox(
-            width: 144,
-            height: 144,
-            child: PalateDial(
-              crispness: _crispness,
-              weight: _weight,
-              flavorIntensity: _flavor,
-              texture: _texture,
-              compact: true,
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(4, (i) {
+                final isActive = activeAxis == i;
+                final val = axisValues[i];
+                final barColor = isActive ? WwColors.violet : WwColors.textSecondary;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 80,
+                        child: Text(
+                          axisNames[i],
+                          maxLines: 1,
+                          overflow: TextOverflow.clip,
+                          style: WwText.bodySmall(
+                            color: isActive ? WwColors.violet : WwColors.textSecondary,
+                          ).copyWith(
+                            fontWeight: isActive ? FontWeight.w700 : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Row(
+                          children: List.generate(5, (j) {
+                            final filled = j < val;
+                            return Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                                child: Container(
+                                  height: 7,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(4),
+                                    color: filled
+                                        ? barColor.withValues(alpha: isActive ? 1.0 : 0.5)
+                                        : WwColors.borderSubtle,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 14,
+                        child: Text(
+                          '$val',
+                          textAlign: TextAlign.right,
+                          style: WwText.bodySmall(
+                            color: isActive ? WwColors.violet : WwColors.textSecondary,
+                          ).copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
             ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: _hasConflict
-                  ? Container(
-                      key: const ValueKey('conflict'),
-                      padding: const EdgeInsets.all(10),
-                      margin: const EdgeInsets.only(left: 36),
-                      decoration: WwDecorations.witCallout(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SvgPicture.asset('assets/images/sage_fox_nobg.svg', width: 28, height: 28),
-                          const SizedBox(height: 4),
-                          Text(
-                            'That\'s a spiky palate —\nthe Cellar Fox has a few thoughts.',
-                            style: WwText.bodySmall(),
-                          ),
-                        ],
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: _hasConflict
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(width: 12),
+                      Container(
+                        width: 110,
+                        padding: const EdgeInsets.all(10),
+                        decoration: WwDecorations.witCallout(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SvgPicture.asset(
+                              'assets/images/sage_fox_nobg.svg',
+                              width: 24,
+                              height: 24,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Spiky palate — the Cellar Fox has thoughts.',
+                              style: WwText.bodySmall(),
+                            ),
+                          ],
+                        ),
                       ),
-                    )
-                  : const SizedBox.shrink(key: ValueKey('ok')),
-            ),
+                    ],
+                  )
+                : const SizedBox.shrink(),
           ),
         ],
       ),
@@ -1034,14 +1077,16 @@ class _QuizScreenState extends State<QuizScreen> {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Flexible(
+            Expanded(
               child: Text(label, style: WwText.bodyMedium(color: WwColors.textPrimary)),
             ),
             const SizedBox(width: 8),
-            trailing,
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 180),
+              child: trailing,
+            ),
             const SizedBox(width: 6),
             const Icon(Icons.edit_outlined, size: 14, color: WwColors.textDisabled),
           ],
@@ -1386,7 +1431,7 @@ class _WineResultCardState extends State<_WineResultCard> {
                           ],
                         ),
                         Text(
-                          'Match: ${(widget.wine.score * 100).toStringAsFixed(1)}%',
+                          'Match: ${(widget.wine.score.clamp(0.0, 1.0) * 100).toStringAsFixed(1)}%',
                           style: WwText.bodySmall(color: WwColors.violetMuted),
                         ),
                       ],

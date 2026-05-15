@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../models/wine_recommendation.dart';
 import '../theme/app_theme.dart';
 
@@ -41,7 +42,7 @@ Future<void> showPalateParadoxSheet(
               ),
             ),
 
-            const Text('🦊', style: TextStyle(fontSize: 40)),
+            SvgPicture.asset('assets/images/sage_fox_nobg.svg', height: 72),
             const SizedBox(height: 10),
 
             Text(
@@ -121,7 +122,7 @@ Future<void> showConflictAlert(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('🦊', style: TextStyle(fontSize: 56)),
+              SvgPicture.asset('assets/images/sage_fox_nobg.svg', height: 80),
               const SizedBox(height: 15),
               Text(
                 alert.message,

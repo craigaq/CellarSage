@@ -610,6 +610,7 @@ class _SaveToProfileSheetState extends State<_SaveToProfileSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomPad = MediaQuery.of(context).padding.bottom;
+    final keyboardPad = MediaQuery.of(context).viewInsets.bottom;
     final canCreate = widget.snapshot != null &&
         widget.profiles.length < PalatePrefs.maxProfiles;
 
@@ -619,7 +620,7 @@ class _SaveToProfileSheetState extends State<_SaveToProfileSheet> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         border: Border(top: BorderSide(color: WwColors.borderMedium)),
       ),
-      padding: EdgeInsets.fromLTRB(24, 20, 24, 24 + bottomPad),
+      padding: EdgeInsets.fromLTRB(24, 20, 24, 24 + bottomPad + keyboardPad),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

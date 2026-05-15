@@ -26,8 +26,22 @@ class PalateDial extends StatelessWidget {
       child: RadarChart(
         RadarChartData(
           dataSets: [
-            // Invisible anchor — forces the radar scale to always top out at 5,
-            // matching the quiz slider range regardless of actual user values.
+            // Zero anchor — forces the chart minimum to 0 so the scale is always 0–5.
+            // Without this, fl_chart sets the minimum from the lowest data value,
+            // causing the rings to show e.g. 2.0–4.4 instead of 1–5.
+            RadarDataSet(
+              dataEntries: const [
+                RadarEntry(value: 0),
+                RadarEntry(value: 0),
+                RadarEntry(value: 0),
+                RadarEntry(value: 0),
+              ],
+              fillColor: Colors.transparent,
+              borderColor: Colors.transparent,
+              borderWidth: 0,
+              entryRadius: 0,
+            ),
+            // Five anchor — forces the chart maximum to 5.
             RadarDataSet(
               dataEntries: const [
                 RadarEntry(value: 5),
@@ -55,9 +69,12 @@ class PalateDial extends StatelessWidget {
           ],
           radarBackgroundColor: Colors.transparent,
           borderData: FlBorderData(show: false),
-          radarBorderData: const BorderSide(color: Colors.transparent),
+          // Make the outer boundary ring visible — it sits at max value (5),
+          // so a score of 5 lands exactly on this ring instead of outside it.
+          radarBorderData: BorderSide(color: Colors.grey.shade300, width: 0.8),
           tickCount: 5,
-          ticksTextStyle: TextStyle(fontSize: 9, color: Colors.grey.shade500),
+          // Hide tick number labels — they show 0–4 (not 1–5) and mislead.
+          ticksTextStyle: const TextStyle(fontSize: 0, color: Colors.transparent),
           tickBorderData: BorderSide(color: Colors.grey.shade300, width: 0.8),
           gridBorderData: BorderSide(color: Colors.grey.shade300, width: 0.8),
           titleTextStyle: TextStyle(

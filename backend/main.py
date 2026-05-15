@@ -262,7 +262,7 @@ def _build_conflict_alert(prefs: UserPreferences) -> dict | None:
     # Light body + high tannin — the classic contradiction
     if prefs.weight_body <= 2 and prefs.texture_tannin >= 4:
         return {
-            "title": "🦊 The Cellar Fox Senses a Disturbance",
+            "title": "The Cellar Fox Senses a Disturbance",
             "message": (
                 "Ah — Light Weight with High Texture. Bold. Rare. "
                 "Like a featherweight boxer with an iron grip.\n\n"
@@ -275,7 +275,7 @@ def _build_conflict_alert(prefs: UserPreferences) -> dict | None:
     # Low flavor + high acidity — sharp without expression
     if prefs.flavor_intensity <= 1 and prefs.crispness_acidity >= 4:
         return {
-            "title": "🦊 The Cellar Fox Raises an Eyebrow",
+            "title": "The Cellar Fox Raises an Eyebrow",
             "message": (
                 "Maximum Crispness with barely any Flavor Intensity — "
                 "you're asking for a razor edge with nothing behind it.\n\n"
@@ -288,7 +288,7 @@ def _build_conflict_alert(prefs: UserPreferences) -> dict | None:
     # Maximum tannin + maximum acidity — very aggressive palate
     if prefs.texture_tannin >= 5 and prefs.crispness_acidity >= 5:
         return {
-            "title": "🦊 The Cellar Fox Is Impressed (and Concerned)",
+            "title": "The Cellar Fox Is Impressed (and Concerned)",
             "message": (
                 "Maximum Texture AND Maximum Crispness. "
                 "You want every molecule of that wine to fight back.\n\n"
