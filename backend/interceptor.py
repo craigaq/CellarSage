@@ -49,6 +49,12 @@ _DRY_RS_MAX = 5.0
 # without needing an explicit is_fortified flag on WineProfile.
 _FORTIFIED_ABV_MIN = 14.0
 
+# Savory food pairings — Sweet and fortified wines are excluded from these.
+_SAVORY_FOOD_PAIRINGS = frozenset({
+    "red_meat", "poultry", "white_fish", "rich_fish",
+    "spicy_food", "tomato_sauce", "creamy_sauce", "greens", "charcuterie",
+})
+
 from dataclasses import dataclass, field
 
 from local_sourcing import (
@@ -130,16 +136,17 @@ def _filter_catalog(
         return eligible
 
     # Dessert pairing — only surface genuinely sweet wines so the engine
-    # ranks Botrytis Semillon / Rutherglen Muscat / Port above still reds/whites.
+    # ranks Botrytis Semillon / Muscat Liqueur / Port above still reds/whites.
     if prefs.food_pairing == "dessert" and mode == "use_pairing_logic":
         return [w for w in catalog if w.style == "Sweet"]
 
-    # After-dinner / digestif — sweet wines plus any fortified style (ABV ≥ 14%).
-    # Captures Fino Sherry (Dry but 15% ABV) alongside Port and Muscat.
-    if prefs.food_pairing == "after_dinner" and mode == "use_pairing_logic":
+    # Savory food pairings — exclude Sweet and fortified wines entirely.
+    # Muscat Liqueur, Vintage Port, Tawny Port, Botrytis Semillon etc. have no
+    # business appearing in red-meat or creamy-pasta recommendations.
+    if prefs.food_pairing in _SAVORY_FOOD_PAIRINGS:
         return [
             w for w in catalog
-            if w.style == "Sweet" or w.abv_percentage >= _FORTIFIED_ABV_MIN
+            if w.style != "Sweet" and w.abv_percentage < _FORTIFIED_ABV_MIN
         ]
 
     # Dry preference — filter out Sweet wines when user has indicated pref_dry.

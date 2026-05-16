@@ -142,15 +142,6 @@ class _QuizScreenState extends State<QuizScreen> {
           "Bold move — we'll find a razor-sharp, high-acid wine to slice through all that sweetness instead. Bright and cleansing.",
     },
     {
-      'label': 'After Dinner / Digestif',
-      'id': 'after_dinner',
-      'emoji': '🥃',
-      'comment':
-          "The nightcap hour! We'll look for something expressive and contemplative — port, muscat, or a fine sherry to close the evening.",
-      'contrast_comment':
-          "Rather than settling in, we'll find something bright and cleansing to refresh the palate after a big meal. Fino sherry energy.",
-    },
-    {
       'label': 'Just sipping (No food)',
       'id': 'none',
       'emoji': '🍷',
@@ -1267,6 +1258,8 @@ class _QuizScreenState extends State<QuizScreen> {
         currencyCode: _currencyCode,
         prefDry: _prefDry,
         userState: _userState,
+        foodPairing: _foodPairing,
+        pairingMode: _pairingMode,
         snapshot: PalateSnapshot(
           crispness:   _crispness,
           weight:      _weight,
@@ -1326,6 +1319,8 @@ class _WineResultCard extends StatefulWidget {
   final String currencyCode;
   final bool prefDry;
   final String? userState;
+  final String foodPairing;
+  final String pairingMode;
 
   const _WineResultCard({
     required this.rank,
@@ -1338,7 +1333,83 @@ class _WineResultCard extends StatefulWidget {
     this.prefDry = false,
     this.userState,
     this.snapshot,
+    this.foodPairing = 'none',
+    this.pairingMode = 'congruent',
   });
+
+  static String _foodLabel(String id) => switch (id) {
+    'red_meat'     => 'red meat',
+    'poultry'      => 'chicken',
+    'white_fish'   => 'white fish',
+    'rich_fish'    => 'salmon',
+    'spicy_food'   => 'spicy food',
+    'tomato_sauce' => 'tomato pasta',
+    'creamy_sauce' => 'creamy pasta',
+    'greens'       => 'salad',
+    'charcuterie'  => 'the cheese board',
+    'dessert'      => 'dessert',
+    _              => 'the dish',
+  };
+
+  static String whyThisPick({
+    required WineRecommendation wine,
+    required Map<String, int> userPrefs,
+    required String foodPairing,
+    required String pairingMode,
+  }) {
+    if (wine.attributeScores.isEmpty) return '';
+
+    final topAttr = wine.attributeScores.entries
+        .reduce((a, b) => a.value > b.value ? a : b)
+        .key;
+
+    final wineVal = (wine.wineProfile[topAttr] ?? 3.0).round().clamp(1, 5);
+    final bool high    = wineVal >= 4;
+    final bool low     = wineVal <= 2;
+    final bool hasFood = foodPairing != 'none';
+    final bool contrast = pairingMode == 'contrast';
+    final String food  = _foodLabel(foodPairing);
+
+    return switch (topAttr) {
+      'Crispness (Acidity)' => hasFood && contrast
+          ? "Its bright acidity cuts right through the $food — a classic sommelier move."
+          : hasFood && high
+              ? "Its crisp, zesty finish is exactly what the $food needs."
+              : hasFood && low
+                  ? "Its soft, rounded finish sits gently alongside the $food."
+                  : high
+                      ? "Its lively, mouth-watering crispness lines up perfectly with your palate."
+                      : "Its gentle, rounded finish matches your preference for a softer style.",
+
+      'Weight (Body)' => hasFood && contrast && !high
+          ? "Its lighter frame creates a refreshing contrast against the richness of $food."
+          : hasFood && high
+              ? "Its rich, full weight is built to match the heartiness of $food."
+              : hasFood && low
+                  ? "Its delicate body won't overwhelm the $food."
+                  : high
+                      ? "Its full, generous body matches exactly how you like your wine to feel."
+                      : "Its light, elegant weight lines up with your preference for a delicate style.",
+
+      'Texture (Tannin)' => hasFood && high
+          ? "Its firm, structured texture is built to cut through the fat of $food."
+          : hasFood && low
+              ? "Its silky-smooth texture won't get in the way of the $food."
+              : high
+                  ? "Its firm grip matches your taste for a wine with real structure."
+                  : "Its silky-smooth texture matches your preference for a soft, easy-drinking style.",
+
+      _ => hasFood && contrast
+          ? "Its bold, expressive character creates a beautiful counterpoint to the $food."
+          : hasFood && high
+              ? "Its bold, aromatic personality mirrors the big flavours of $food."
+              : hasFood && low
+                  ? "Its subtle character lets the $food do the talking."
+                  : high
+                      ? "Its bold, expressive character matches your love of wines that make a statement."
+                      : "Its subtle, refined character matches your preference for understated elegance.",
+    };
+  }
 
   @override
   State<_WineResultCard> createState() => _WineResultCardState();
@@ -1490,6 +1561,49 @@ class _WineResultCardState extends State<_WineResultCard> {
                         const SizedBox(width: 8),
                         _ScoreDots(value: wineVal, color: WwColors.violet),
                       ],
+                    ),
+                  );
+                }),
+                // Why this pick callout
+                Builder(builder: (_) {
+                  final why = _WineResultCard.whyThisPick(
+                    wine: widget.wine,
+                    userPrefs: widget.userPrefs,
+                    foodPairing: widget.foodPairing,
+                    pairingMode: widget.pairingMode,
+                  );
+                  if (why.isEmpty) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: WwColors.violet.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: WwColors.violet.withValues(alpha: 0.22),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SvgPicture.asset(
+                            'assets/images/sage_fox_nobg.svg',
+                            width: 18,
+                            height: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              why,
+                              style: WwText.bodySmall(
+                                color: WwColors.textSecondary,
+                              ).copyWith(fontStyle: FontStyle.italic),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }),

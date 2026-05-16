@@ -276,30 +276,6 @@ FOOD_PAIRING: dict[str, dict] = {
         },
     },
 
-    # After Dinner / Digestif — fortified, aromatic; the nightcap wines
-    # is_sweet_pairing=False — sherry, dry port styles sit outside the paradox check.
-    "after_dinner": {
-        "is_sweet_pairing": False,
-        "congruent": {
-            # Match the contemplative, complex after-dinner mood
-            "multipliers": {},
-            "boosts": {
-                "aromatics": 1.2, # Expressive, complex nose — port, muscat, sherry territory
-                "body":      0.5, # Weight and warmth suits the end of a meal
-            },
-        },
-        "contrast": {
-            # Bright and cleansing after a rich meal — fino sherry style
-            "multipliers": {
-                "body":   0.5,    # Lighter style refreshes rather than adds weight
-                "tannin": 0.3,    # Minimal grip — the palate is tired after dinner
-            },
-            "boosts": {
-                "acidity": 0.8,   # Crispness cuts through richness and refreshes
-            },
-        },
-    },
-
     # No food — palate dial stays exactly where the user set it
     "none": {
         "is_sweet_pairing": False,

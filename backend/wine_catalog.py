@@ -49,9 +49,11 @@ _REDS: list[WineProfile] = [
     # Rank 1 — Most planted; consistently top-ranked by consumers
     WineProfile(
         "Cabernet Sauvignon", sku_id="WW-CS01",
-        acidity_ph=3.40, body=4.5, tannin_structure=5, aromatic_intensity=9,
+        acidity_ph=3.25, body=4.5, tannin_structure=5, aromatic_intensity=9,
         abv_percentage=14.0, residual_sugar_gl=2.0,
         location_tag="Local",           # Coonawarra & Barossa are world-benchmark SA regions
+        # Wine Australia: "high acidity, heavy structured fine-grained tannin."
+        # pH 3.25 → acidity score 3.5 (medium-high). Coonawarra terra rossa = bright acid.
     ),
 
     # Rank 3 — Strong preference in US, UK, Germany; massive plantings
@@ -75,9 +77,11 @@ _REDS: list[WineProfile] = [
     # Rank 6 — Key player in Australia and globally
     WineProfile(
         "Syrah/Shiraz", sku_id="WW-SH01",
-        acidity_ph=3.40, body=4.5, tannin_structure=4, aromatic_intensity=9,
+        acidity_ph=3.50, body=5.0, tannin_structure=4, aromatic_intensity=9,
         abv_percentage=14.5, residual_sugar_gl=2.0,
         location_tag="Local",           # Barossa Valley SA is THE global benchmark for Shiraz
+        # Wine Australia: "plush, velvety, full-bodied — lower relative acid than Clare Valley."
+        # pH 3.50 → lower acidity score (≈ 1.67); body 5.0 = truly full-bodied Barossa profile.
     ),
 
     # Rank 7 — Dominates Spain; moderate global market presence
@@ -197,9 +201,11 @@ _WHITES: list[WineProfile] = [
     # Rank 2 — Top international white; leading in US, Japan, UK
     WineProfile(
         "Chardonnay", sku_id="WW-CH01",
-        acidity_ph=3.40, body=3.5, tannin_structure=1, aromatic_intensity=7,
+        acidity_ph=3.25, body=3.0, tannin_structure=1, aromatic_intensity=7,
         abv_percentage=13.5, residual_sugar_gl=2.0,
         location_tag="Local",           # Adelaide Hills SA is a globally regarded Chardonnay region
+        # Wine Australia: "Adelaide Hills = medium body, high crisp acidity — cooler-climate restraint."
+        # pH 3.25 → acidity score ≈ 3.5 (medium-high); body 3.0 (was 3.5) reflects cooler-climate style.
     ),
 
     # Rank 4 — Number one in Australia, UK, NZ; fast global growth
@@ -233,8 +239,10 @@ _WHITES: list[WineProfile] = [
     WineProfile(
         "Riesling", sku_id="WW-RI01",
         acidity_ph=2.95, body=1.5, tannin_structure=1, aromatic_intensity=9,
-        abv_percentage=9.5, residual_sugar_gl=3.5,
+        abv_percentage=11.5, residual_sugar_gl=2.0,
         location_tag="Local",           # Clare Valley & Eden Valley SA are world-class Riesling regions
+        # Wine Australia: "bone-dry, ultra-crisp Australian style — higher ABV than German Riesling."
+        # abv 11.5% (was 9.5% — German/Mosel style); RS 2.0 g/L = bone-dry Clare Valley standard.
     ),
 
     # Mosel/Rhine Spätlese style — petrol, floral, honeyed; RS balances laser acidity
@@ -430,8 +438,8 @@ _FORTIFIED: list[WineProfile] = [
 
     # Australia's greatest original — raisined, mahogany, ethereally complex
     WineProfile(
-        "Rutherglen Muscat", sku_id="WW-RM01",
-        varietal="Rutherglen Muscat",
+        "Muscat Liqueur", sku_id="WW-RM01",
+        varietal="Muscat Liqueur",
         acidity_ph=3.60, body=5.0, tannin_structure=1, aromatic_intensity=10,
         abv_percentage=18.0, residual_sugar_gl=200.0,
         style="Sweet",

@@ -104,7 +104,8 @@ _COMPOUND_OVERRIDES: list[tuple[re.Pattern, str]] = [
     (re.compile(r'sparkling\s+red\b',  re.IGNORECASE), 'Sparkling Shiraz'),
     (re.compile(r'late\s+harvest\s+riesling', re.IGNORECASE), 'Late Harvest Riesling'),
     (re.compile(r'\bbotrytis\s+semillon', re.IGNORECASE), 'Botrytis Semillon'),
-    (re.compile(r'rutherglen\s+muscat',  re.IGNORECASE), 'Rutherglen Muscat'),
+    (re.compile(r'rutherglen\s+muscat',  re.IGNORECASE), 'Muscat Liqueur'),
+    (re.compile(r'muscat\s+liqueur',     re.IGNORECASE), 'Muscat Liqueur'),
     (re.compile(r'tawny\s+port',         re.IGNORECASE), 'Tawny Port'),
     (re.compile(r'vintage\s+port',       re.IGNORECASE), 'Vintage Port'),
     (re.compile(r'fino\s+sherry',        re.IGNORECASE), 'Fino Sherry'),
@@ -228,8 +229,8 @@ _CATALOG_KEYWORDS: list[str] = sorted([
     "botrytis semillon", "late harvest riesling",
     "botrytis", "late harvest", "sauternes", "trockenbeerenauslese",
     # ── Fortified ────────────────────────────────────────────────────────────
-    "rutherglen muscat", "tawny port", "vintage port", "fino sherry",
-    "topaque", "tokay",    # alternative names for Rutherglen Muscat
+    "muscat liqueur", "rutherglen muscat", "tawny port", "vintage port", "fino sherry",
+    "topaque", "tokay",    # alternative names for Muscat Liqueur
     "amontillado", "oloroso", "manzanilla",  # sherry styles
     "tawny", "sherry", "port",
 ], key=lambda s: -len(s))

@@ -119,9 +119,9 @@ _VARIETAL_KEYWORDS: list[tuple[str, str]] = sorted([
     ("sparkling rose",       "Champagne"),           # 13
     ("sparkling white",      "Champagne"),           # 14
     ("sparkling red",        "Sparkling Shiraz"),    # 13
-    ("rutherglen muscat",    "Rutherglen Muscat"),   # 17 — before bare "muscat"
+    ("rutherglen muscat",    "Muscat Liqueur"),   # 17 — before bare "muscat"
     ("botrytis semillon",    "Botrytis Semillon"),   # 17 — before bare "semillon"
-    ("muscat liqueur",       "Rutherglen Muscat"),   # 14
+    ("muscat liqueur",       "Muscat Liqueur"),   # 14
     ("pétillant naturel",    "Champagne"),           # 17
     ("petillant naturel",    "Champagne"),           # 17
     ("vintage port",         "Vintage Port"),        # 12 — before bare "port"
@@ -141,13 +141,13 @@ _VARIETAL_KEYWORDS: list[tuple[str, str]] = sorted([
     ("ice wine",             "Late Harvest Riesling"), # 8
     ("icewine",              "Late Harvest Riesling"), # 7
     ("auslese",              "Late Harvest Riesling"), # 7
-    ("topaque",              "Rutherglen Muscat"),   # 7
+    ("topaque",              "Muscat Liqueur"),   # 7
     ("madeira",              "Tawny Port"),          # 7
     ("oloroso",              "Tawny Port"),          # 7
     ("sparkling",            "Champagne"),           # 8 — generic catch-all (checked after compounds)
     ("sherry",               "Fino Sherry"),         # 6
     ("tawny",                "Tawny Port"),          # 5
-    ("tokay",                "Rutherglen Muscat"),   # 5
+    ("tokay",                "Muscat Liqueur"),   # 5
     ("port",                 "Tawny Port"),          # 4
     ("cava",                 "Cava"),                # 4
     ("fino",                 "Fino Sherry"),         # 4

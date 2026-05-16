@@ -11,7 +11,11 @@ Where:
     M_S  = match score        → how closely the wine's profile matches W_P (0.0-1.0)
 
 Food pairing modifiers are applied on top of W_Final:
-    adjusted(a) = (W_Final(a) * food_multiplier(a)) + food_boost(a)
+    adjusted(a) = (W_Final(a) * food_multiplier(a)) + (food_boost(a) * wine_value(a) / 5.0)
+
+    The boost is proportional to the wine's attribute value so that a
+    high-acidity boost in contrast mode rewards genuinely acidic wines
+    rather than shifting all wines identically.
 
 The overall wine score is the mean of all adjusted attribute scores.
 """
@@ -212,12 +216,17 @@ def _score_attribute(
     Apply the full per-attribute formula and return the adjusted score.
 
     W_Final  = W_P × M_S
-    adjusted = (W_Final × multiplier) + boost
+    adjusted = (W_Final × multiplier) + (boost × wine_value / 5.0)
+
+    The boost is proportional to the wine's actual attribute value so that
+    e.g. an acidity boost in contrast mode rewards genuinely high-acid wines
+    rather than shifting every wine's score identically (which would leave
+    the relative ranking unchanged).
     """
     w_final = pref_weight * _match_score(pref_weight, wine_value)
     multiplier = pairing_cfg["multipliers"].get(attr, 1.0)
     boost = pairing_cfg["boosts"].get(attr, 0.0)
-    return (w_final * multiplier) + boost
+    return (w_final * multiplier) + (boost * wine_value / 5.0)
 
 
 # ---------------------------------------------------------------------------
