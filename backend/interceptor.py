@@ -45,9 +45,10 @@ from recommendation_service import (
 # Priority 1 — Residual Sugar  < 5 g/L  → "dry on paper"
 _DRY_RS_MAX = 5.0
 
-# Fortified / digestif threshold — ABV >= 14% captures port, sherry, muscat
-# without needing an explicit is_fortified flag on WineProfile.
-_FORTIFIED_ABV_MIN = 14.0
+# Fortified / digestif threshold — ABV >= 14.5% captures sherry, port, muscat
+# while allowing full-bodied table wines (Red Blend 14%, Cab Sauv 14%) through.
+# 14.0 was too low: Red Blend and Cab Sauv were incorrectly excluded from savory pairings.
+_FORTIFIED_ABV_MIN = 14.5
 
 # Savory food pairings — Sweet and fortified wines are excluded from these.
 _SAVORY_FOOD_PAIRINGS = frozenset({

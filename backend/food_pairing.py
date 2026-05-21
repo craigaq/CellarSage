@@ -70,11 +70,15 @@ FOOD_PAIRING: dict[str, dict] = {
             },
         },
         "contrast": {
-            # Fuller, more expressive wine contrasts the bird's mildness — Viognier style
-            "multipliers": {},
+            # Fuller, more expressive wine contrasts the bird's mildness — Viognier style.
+            # Tannin suppressed: contrast seeks expressive whites (Viognier, Fiano, Chardonnay);
+            # without tannin suppression a red with perfect tannin match beats them every time.
+            "multipliers": {
+                "tannin": 0.1,   # Remove tannin from the equation — contrast mode rewards aromatics, not grip
+            },
             "boosts": {
-                "body":     0.8,  # Richness frames and elevates the subtle protein
-                "aromatics": 0.5, # Floral or stone-fruit notes lift the whole dish
+                "body":     1.2,  # Full body frames the delicate bird — richness leads
+                "aromatics": 0.8, # Intense floral/stone-fruit notes deliberately outshine the dish
             },
         },
     },
@@ -118,13 +122,16 @@ FOOD_PAIRING: dict[str, dict] = {
             },
         },
         "contrast": {
-            # Match the salmon's weight with body rather than cutting through with acid
+            # Match the salmon's weight with body rather than cutting through with acid.
+            # Tannin and aromatics suppressed so full-bodied wines (Red Blend, Merlot) beat
+            # aromatic-match wines that happen to have the right tannin level.
             "multipliers": {
-                "tannin":  0.8,  # Richer flesh tolerates more texture
-                "acidity": 0.5,  # Step back on crispness — richness leads here
+                "tannin":   0.3,  # Suppress tannin — body leads; grip is secondary
+                "acidity":  0.5,  # Step back on crispness — richness leads here
+                "aromatics": 0.4, # Suppress aromatics — body drives the contrast, not fruit intensity
             },
             "boosts": {
-                "body": 1.0,     # Full body meets full fish — weight for weight
+                "body": 1.5,      # Full body meets full fish — weight for weight
             },
         },
     },
@@ -159,19 +166,23 @@ FOOD_PAIRING: dict[str, dict] = {
     "tomato_sauce": {
         "is_sweet_pairing": False,
         "congruent": {
-            # Acid meets acid — match the tomato's tartness
+            # Acid meets acid — match the tomato's tartness with a structured red
             "multipliers": {},
             "boosts": {
                 "acidity": 1.5,  # High acidity matches the tomato's natural tartness
+                "tannin":  0.3,  # Reward structured reds (Cab Franc, Sangiovese) over high-acid whites
             },
         },
         "contrast": {
-            # Smooth and round softens the tang instead of matching it
+            # Smooth and round softens the tang instead of matching it — Merlot / Red Blend style.
+            # Tannin and aromatics suppressed so body-forward wines beat aromatic-match wines.
             "multipliers": {
-                "acidity": 0.5,  # Step back on crispness — let the body absorb the acid
+                "acidity":  0.5,  # Step back on crispness — let the body absorb the acid
+                "tannin":   0.4,  # Suppress tannin advantage — body leads, not grip
+                "aromatics": 0.5, # Suppress aromatics — roundness leads, not fruit intensity
             },
             "boosts": {
-                "body": 0.8,     # Roundness and weight smooth out the tomato's sharpness
+                "body": 1.5,      # Roundness and weight smooth out the tomato's sharpness
             },
         },
     },
@@ -216,13 +227,16 @@ FOOD_PAIRING: dict[str, dict] = {
             },
         },
         "contrast": {
-            # Earthy, textured wine complements rather than mirrors the greens
+            # Earthy, textured wine complements rather than mirrors the greens — Sangiovese style.
+            # Aromatics and acidity suppressed so structured reds beat aromatic/crisp whites.
+            # Tannin boosted proportionally to reward wines with real grip (earthy character).
             "multipliers": {
-                "tannin": 0.8,   # Allow a little grip to ground the earthy pairing
+                "acidity":   0.4,  # Suppress crispness — earthy contrast doesn't need razor acid
+                "aromatics": 0.3,  # Suppress aromatics — earthy/spice notes ≠ intense fruit intensity
             },
             "boosts": {
-                "body":     0.5,  # Some weight to anchor the pairing
-                "aromatics": 1.0, # Expressive nose — earthy, spice, or stone fruit
+                "body":   1.2,     # Weight anchors the earthy pairing
+                "tannin": 1.2,     # Earthy, structured reds have grip — reward wines that actually have it
             },
         },
     },
@@ -239,12 +253,16 @@ FOOD_PAIRING: dict[str, dict] = {
             },
         },
         "contrast": {
-            # Lean and punchy — acid leads to cut through fat and salt aggressively
+            # Lean and punchy — acid leads to cut through fat and salt aggressively.
+            # Tannin and aromatics suppressed so crisp whites (Grüner, Sauvignon Blanc) beat
+            # aromatic reds that happen to match the user's tannin/flavour preference.
             "multipliers": {
-                "body": 0.6,     # Lighter frame lets the acid do the work
+                "body":     0.6,  # Lighter frame lets the acid do the work
+                "tannin":   0.2,  # Suppress tannin — lean acid wines don't need grip
+                "aromatics": 0.3, # Suppress aromatics — crispness leads, not fruit intensity
             },
             "boosts": {
-                "acidity": 1.2,  # High crispness cuts through salt, fat, and rich cheeses
+                "acidity": 1.5,   # High crispness cuts through salt, fat, and rich cheeses
             },
         },
     },
