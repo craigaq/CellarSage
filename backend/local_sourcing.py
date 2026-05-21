@@ -128,7 +128,7 @@ class MerchantResult:
 
 TIER_LABELS: dict[int, str] = {
     1: "The Local Hero",
-    2: "The National Rival",
+    2: "The Interstater",
     3: "The Global Icon",
 }
 
