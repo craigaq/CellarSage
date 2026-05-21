@@ -16,6 +16,12 @@ from datetime import datetime, timezone, timedelta
 
 _STALE_DAYS = 8
 
+# Allowlist for wine search keywords interpolated into SQL LIKE clause structure.
+# Values go through %s params (not directly into SQL), but validate defensively
+# in case this function is ever refactored.  Covers letters, digits, spaces,
+# hyphens, slashes, parentheses, and apostrophes used in real varietal names.
+_KW_SAFE_RE = re.compile(r"^[a-z0-9 \-/()']+$")
+
 log = logging.getLogger(__name__)
 
 _TTL_SECONDS    = 3600
@@ -294,6 +300,8 @@ def get_buy_options(
     # Match on varietal column first; fall back to name only when varietal is
     # NULL. This prevents blend wines (e.g. "Cabernet Merlot" stored as
     # varietal="Cabernet Sauvignon") from leaking into the wrong category.
+    if not all(_KW_SAFE_RE.match(kw) for kw in keywords):
+        raise ValueError(f"Unexpected characters in wine search keywords: {keywords!r}")
     like_clauses = " OR ".join(
         f"(w.varietal IS NOT NULL AND LOWER(w.varietal) LIKE %s)"
         f" OR (w.varietal IS NULL AND LOWER(w.name) LIKE %s)"
@@ -396,6 +404,8 @@ def get_wine_picks(
     if not conn:
         return _PICKS_CACHE.get(cache_key, {}).get("data", [])
 
+    if not all(_KW_SAFE_RE.match(kw) for kw in keywords):
+        raise ValueError(f"Unexpected characters in wine search keywords: {keywords!r}")
     like_clauses = " OR ".join(
         f"(w.varietal IS NOT NULL AND LOWER(w.varietal) LIKE %s)"
         f" OR (w.varietal IS NULL AND LOWER(w.name) LIKE %s)"

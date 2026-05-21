@@ -45,6 +45,7 @@ class _QuizScreenState extends State<QuizScreen> {
 
   // --- Saved profiles ---
   List<PalateProfile> _savedProfiles = [];
+  PalateProfile? _loadedProfile; // non-null when user launched from a saved profile card
 
   static const int _totalPages = 9;
 
@@ -238,8 +239,8 @@ class _QuizScreenState extends State<QuizScreen> {
           (action) => setState(() => _overrideMode = action),
         );
       }
-    } catch (_) {
-      // Non-critical — proceed without blocking navigation
+    } catch (e) {
+      debugPrint('[checkPairing] skipped — $e');
     }
   }
 
@@ -281,6 +282,7 @@ class _QuizScreenState extends State<QuizScreen> {
       _loading = false;
       _error = null;
       _conflictAlert = null;
+      _loadedProfile = null;
     });
     _controller.animateToPage(
       0,
@@ -300,18 +302,19 @@ class _QuizScreenState extends State<QuizScreen> {
 
   void _loadProfileAndJump(PalateProfile profile) {
     setState(() {
-      _crispness   = profile.crispness;
-      _weight      = profile.weight;
-      _texture     = profile.texture;
-      _flavor      = profile.flavor;
-      _foodPairing = profile.foodPairing;
-      _budgetIndex = profile.budgetIndex;
-      _prefDry     = profile.prefDry;
+      _crispness    = profile.crispness;
+      _weight       = profile.weight;
+      _texture      = profile.texture;
+      _flavor       = profile.flavor;
+      _foodPairing  = profile.foodPairing;
+      _budgetIndex  = profile.budgetIndex;
+      _prefDry      = profile.prefDry;
       _overrideMode = 'use_pairing_logic';
       _pairingMode  = 'congruent';
+      _loadedProfile = profile;
     });
     _controller.animateToPage(
-      6, // budget page
+      7, // summary page — jump straight here so user sees the full profile
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeInOut,
     );
@@ -649,6 +652,18 @@ class _QuizScreenState extends State<QuizScreen> {
                     : null,
                 icon: const Icon(Icons.bookmark_add_outlined, size: 14),
                 label: const Text('Save Profile'),
+                style: TextButton.styleFrom(
+                  foregroundColor: WwColors.violetMuted,
+                  textStyle: WwText.bodySmall(),
+                ),
+              ),
+            ],
+            if (_currentPage == 7 && _loadedProfile != null) ...[
+              const SizedBox(height: 4),
+              TextButton.icon(
+                onPressed: _startOver,
+                icon: const Icon(Icons.refresh, size: 14),
+                label: const Text('Start Over'),
                 style: TextButton.styleFrom(
                   foregroundColor: WwColors.violetMuted,
                   textStyle: WwText.bodySmall(),
@@ -1091,6 +1106,29 @@ class _QuizScreenState extends State<QuizScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (_loadedProfile != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: WwColors.violet.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: WwColors.violet.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.account_circle_outlined, size: 14, color: WwColors.violet),
+                  const SizedBox(width: 6),
+                  Text(
+                    _loadedProfile!.name,
+                    style: WwText.bodySmall(color: WwColors.violet)
+                        .copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           Text('Your Profile', style: WwText.headlineLarge()),
           const SizedBox(height: 8),
           Text(
@@ -1156,6 +1194,36 @@ class _QuizScreenState extends State<QuizScreen> {
                   ),
                   targetPage: 6,
                 ),
+                if (_loadedProfile?.savedWineName != null) ...[
+                  const Divider(height: 16, color: WwColors.borderSubtle),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.wine_bar_outlined, size: 16, color: WwColors.violetMuted),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'My Saved Wine',
+                            style: WwText.bodyMedium(color: WwColors.textPrimary),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 180),
+                          child: Text(
+                            _loadedProfile!.savedWineName!,
+                            style: WwText.bodyMedium(color: WwColors.violet)
+                                .copyWith(fontWeight: FontWeight.w600),
+                            textAlign: TextAlign.right,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1381,26 +1449,32 @@ class _WineResultCard extends StatefulWidget {
                       ? "Its lively, mouth-watering crispness lines up perfectly with your palate."
                       : "Its gentle, rounded finish matches your preference for a softer style.",
 
-      'Weight (Body)' => hasFood && contrast && !high
-          ? "Its lighter frame creates a refreshing contrast against the richness of $food."
-          : hasFood && high
-              ? "Its rich, full weight is built to match the heartiness of $food."
-              : hasFood && low
-                  ? "Its delicate body won't overwhelm the $food."
-                  : high
-                      ? "Its full, generous body matches exactly how you like your wine to feel."
-                      : "Its light, elegant weight lines up with your preference for a delicate style.",
+      'Weight (Body)' => hasFood && contrast && high
+          ? "Its full, rich weight pushes back against the lighter character of $food — bold contrast on the plate."
+          : hasFood && contrast && !high
+              ? "Its lighter frame creates a refreshing contrast against the richness of $food."
+              : hasFood && high
+                  ? "Its rich, full weight is built to match the heartiness of $food."
+                  : hasFood && low
+                      ? "Its delicate body won't overwhelm the $food."
+                      : high
+                          ? "Its full, generous body matches exactly how you like your wine to feel."
+                          : "Its light, elegant weight lines up with your preference for a delicate style.",
 
-      'Texture (Tannin)' => hasFood && high
-          ? "Its firm, structured texture is built to cut through the fat of $food."
-          : hasFood && low
-              ? "Its silky-smooth texture won't get in the way of the $food."
-              : high
-                  ? "Its firm grip matches your taste for a wine with real structure."
-                  : "Its silky-smooth texture matches your preference for a soft, easy-drinking style.",
+      'Texture (Tannin)' => hasFood && contrast && high
+          ? "Its firm, structured grip pushes back against the richness of $food — tension that makes the whole thing better."
+          : hasFood && contrast && !high
+              ? "Its smooth, gripless texture provides a silky contrast to the intensity of $food."
+              : hasFood && high
+                  ? "Its firm, structured texture is built to cut through the fat of $food."
+                  : hasFood && low
+                      ? "Its silky-smooth texture won't get in the way of the $food."
+                      : high
+                          ? "Its firm grip matches your taste for a wine with real structure."
+                          : "Its silky-smooth texture matches your preference for a soft, easy-drinking style.",
 
       _ => hasFood && contrast
-          ? "Its bold, expressive character creates a beautiful counterpoint to the $food."
+          ? "Its powerful aromatics push back against the $food — this wine leads the pairing, not the dish."
           : hasFood && high
               ? "Its bold, aromatic personality mirrors the big flavours of $food."
               : hasFood && low
@@ -2041,7 +2115,33 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final subtitle = profile.prefDry ? '$foodLabel · Dry' : foodLabel;
+    final subtitleText = profile.prefDry ? '$foodLabel · Dry' : foodLabel;
+    final savedWine = profile.savedWineName;
+
+    final subtitleWidget = savedWine != null
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(subtitleText, style: WwText.bodySmall(color: WwColors.textSecondary)),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.wine_bar_outlined, size: 12, color: WwColors.violetMuted),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      savedWine,
+                      style: WwText.bodySmall(color: WwColors.violetMuted),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          )
+        : Text(subtitleText, style: WwText.bodySmall(color: WwColors.textSecondary));
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: WwDecorations.card(),
@@ -2054,7 +2154,7 @@ class _ProfileCard extends StatelessWidget {
           style: WwText.bodyMedium(color: WwColors.textPrimary)
               .copyWith(fontWeight: FontWeight.w600),
         ),
-        subtitle: Text(subtitle, style: WwText.bodySmall(color: WwColors.textSecondary)),
+        subtitle: subtitleWidget,
         trailing: IconButton(
           icon: const Icon(Icons.delete_outline, size: 18, color: WwColors.textDisabled),
           tooltip: 'Delete profile',
