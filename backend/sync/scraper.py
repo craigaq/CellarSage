@@ -39,8 +39,9 @@ def run_actor(actor_id: str, actor_input: dict, max_items: int) -> list[dict]:
 
     run = client.actor(actor_id).call(run_input=run_input)
 
-    status = run.get("status", "UNKNOWN")
-    run_id = run.get("id", "?")
+    # SDK v2+ returns a Run Pydantic model, not a dict
+    status = getattr(run, "status", None) or "UNKNOWN"
+    run_id = getattr(run, "id", None) or "?"
     log.info("Actor %s run %s finished with status: %s", actor_id, run_id, status)
 
     if status != "SUCCEEDED":
@@ -49,9 +50,9 @@ def run_actor(actor_id: str, actor_input: dict, max_items: int) -> list[dict]:
             "Check the Apify Console for logs."
         )
 
-    dataset_id = run.get("defaultDatasetId")
+    dataset_id = getattr(run, "default_dataset_id", None)
     if not dataset_id:
-        raise RuntimeError(f"Actor run {run_id} returned no defaultDatasetId")
+        raise RuntimeError(f"Actor run {run_id} returned no default_dataset_id")
 
     items: list[dict] = list(
         client.dataset(dataset_id).iterate_items(limit=max_items)
