@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/wine_picks.dart';
@@ -165,7 +166,7 @@ class _WinePicksScreenState extends State<WinePicksScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('🦊', style: TextStyle(fontSize: 48)),
+              SvgPicture.asset('assets/images/sage_fox_nobg.svg', width: 72, height: 72),
               const SizedBox(height: 16),
               Text(
                 'The Cellar Fox couldn\'t find picks right now.',
