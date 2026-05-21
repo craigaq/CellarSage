@@ -12,9 +12,6 @@ from apify_client import ApifyClient
 
 log = logging.getLogger(__name__)
 
-# Max seconds to wait for a single actor run before giving up.
-RUN_TIMEOUT_SECONDS = 600
-
 
 def _client() -> ApifyClient:
     token = os.environ.get("APIFY_API_TOKEN")
@@ -40,7 +37,7 @@ def run_actor(actor_id: str, actor_input: dict, max_items: int) -> list[dict]:
     run_input = {**actor_input, "maxItems": max_items}
     log.info("Starting actor %s (maxItems=%d) …", actor_id, max_items)
 
-    run = client.actor(actor_id).call(run_input=run_input, timeout_secs=RUN_TIMEOUT_SECONDS)
+    run = client.actor(actor_id).call(run_input=run_input)
 
     status = run.get("status", "UNKNOWN")
     run_id = run.get("id", "?")
