@@ -169,20 +169,15 @@ def _match_wine(db_wine: dict, candidates: list[dict]) -> dict | None:
     _label, confidence, idx = result
     best = candidates[idx]
 
-    log.info(
-        "MATCH ATTEMPT  %-45s → %-45s  conf=%.0f%%",
-        db_wine['name'], labels[idx], confidence,
-    )
-
     brand = _brand_token(query)
     if brand and _normalize_brand(brand) not in _normalize_brand(labels[idx]):
-        log.info("  BRAND MISS  brand_token=%r  vivino_label=%r", brand, labels[idx])
+        log.debug("BRAND MISS  %r → %r (conf=%.0f%%)", db_wine['name'], labels[idx], confidence)
         return None
 
     if confidence >= _THRESHOLD_ACCEPT:
         return best
 
-    log.info("  LOW CONF — skipped (threshold=%.0f%%)", _THRESHOLD_ACCEPT)
+    log.debug("LOW CONF (%.0f%%)  %r", confidence, db_wine['name'])
     return None
 
 
@@ -265,18 +260,11 @@ def enrich_vivino(limit: int | None = None) -> int:
                 i + 1, i + len(batch), len(wines),
             )
 
-            log.info("enrich_vivino: sending names → %s", names)
             try:
                 results = _call_actor(names)
             except Exception as exc:
                 log.warning("enrich_vivino: actor call failed — %s", exc)
                 continue
-
-            log.info(
-                "enrich_vivino: vivino returned %d items — %s",
-                len(results),
-                [f"{(r.get('winery') or '')} {(r.get('name') or '')}".strip() for r in results],
-            )
 
             # Adelaide Local Edge: among multiple AU candidates at similar
             # confidence, sort AU wines first (by ratings_count desc) so the
