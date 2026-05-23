@@ -139,9 +139,9 @@ def _match_wine(db_wine: dict, candidates: list[dict]) -> dict | None:
     """
     Return the best-matching Vivino candidate for a DB wine, or None.
 
-    Rules (from product brief):
+    Rules:
       ≥ 90%  → auto-accept
-      75–90% → accept only when it's the sole candidate
+      75–90% → accept (brand guard still applies)
       < 75%  → discard
     Brand guard: the first non-stopword token of our wine name must appear
     in the Vivino label to prevent cross-brand false positives.
@@ -159,18 +159,20 @@ def _match_wine(db_wine: dict, candidates: list[dict]) -> dict | None:
     _label, confidence, idx = result
     best = candidates[idx]
 
+    log.info(
+        "MATCH ATTEMPT  %-45s → %-45s  conf=%.0f%%",
+        db_wine['name'], labels[idx], confidence,
+    )
+
     brand = _brand_token(query)
     if brand and brand not in labels[idx]:
-        log.debug("BRAND MISS  %r → %r", db_wine['name'], best.get('name'))
+        log.info("  BRAND MISS  brand_token=%r  vivino_label=%r", brand, labels[idx])
         return None
 
-    if confidence >= _THRESHOLD_AUTO:
+    if confidence >= _THRESHOLD_ACCEPT:
         return best
 
-    if confidence >= _THRESHOLD_ACCEPT and len(candidates) == 1:
-        return best
-
-    log.debug("LOW CONF (%.0f%%, %d candidates)  %r", confidence, len(candidates), db_wine['name'])
+    log.info("  LOW CONF — skipped (threshold=%.0f%%)", _THRESHOLD_ACCEPT)
     return None
 
 
@@ -253,11 +255,18 @@ def enrich_vivino(limit: int | None = None) -> int:
                 i + 1, i + len(batch), len(wines),
             )
 
+            log.info("enrich_vivino: sending names → %s", names)
             try:
                 results = _call_actor(names)
             except Exception as exc:
                 log.warning("enrich_vivino: actor call failed — %s", exc)
                 continue
+
+            log.info(
+                "enrich_vivino: vivino returned %d items — %s",
+                len(results),
+                [f"{(r.get('winery') or '')} {(r.get('name') or '')}".strip() for r in results],
+            )
 
             # Adelaide Local Edge: among multiple AU candidates at similar
             # confidence, sort AU wines first (by ratings_count desc) so the
