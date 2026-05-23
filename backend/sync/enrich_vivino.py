@@ -19,6 +19,7 @@ import logging
 import os
 import re
 import sys
+import unicodedata
 
 import psycopg2
 import psycopg2.extras
@@ -34,7 +35,8 @@ _MAX_RESULTS      = 3     # Vivino results per search term
 _THRESHOLD_AUTO   = 90.0  # auto-accept above this confidence
 _THRESHOLD_ACCEPT = 75.0  # accept only when it's the sole candidate
 
-_YEAR_RE = re.compile(r'\b(19[89]\d|20[012]\d)\b')
+_YEAR_RE   = re.compile(r'\b(19[89]\d|20[012]\d)\b')
+_VOLUME_RE = re.compile(r'\b\d+(\.\d+)?\s*(ml|l)\b', re.IGNORECASE)
 
 _FRUIT_KEYWORDS = frozenset({
     'blackberry', 'plum', 'cherry', 'raspberry', 'strawberry',
@@ -43,15 +45,23 @@ _FRUIT_KEYWORDS = frozenset({
     'passion fruit', 'mango', 'tropical', 'redcurrant',
 })
 
-_STOPWORDS = frozenset({'the', 'a', 'an', 'de', 'le', 'la', 'les', 'du', 'van', 'von'})
+_STOPWORDS = frozenset({'the', 'a', 'an', 'de', 'le', 'la', 'les', 'du', 'van', 'von', 'st'})
 
 
 # ── Text helpers ──────────────────────────────────────────────────────────────
 
 def _clean(name: str) -> str:
-    """Strip vintage years and normalise whitespace for fuzzy comparison."""
+    """Strip vintage years, volume suffixes, and normalise whitespace."""
     name = _YEAR_RE.sub('', name)
+    name = _VOLUME_RE.sub('', name)
     return ' '.join(name.lower().split())
+
+
+def _normalize_brand(s: str) -> str:
+    """Remove apostrophes and diacritics for brand token comparison."""
+    s = unicodedata.normalize('NFD', s)
+    s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+    return s.replace("'", "").replace("’", "")
 
 
 def _vivino_label(item: dict) -> str:
@@ -165,7 +175,7 @@ def _match_wine(db_wine: dict, candidates: list[dict]) -> dict | None:
     )
 
     brand = _brand_token(query)
-    if brand and brand not in labels[idx]:
+    if brand and _normalize_brand(brand) not in _normalize_brand(labels[idx]):
         log.info("  BRAND MISS  brand_token=%r  vivino_label=%r", brand, labels[idx])
         return None
 
