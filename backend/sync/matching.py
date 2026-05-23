@@ -98,15 +98,26 @@ def _write_match(conn, wine_id: int, score: float, source: str, confidence: floa
 # ── Post-match validation guards ─────────────────────────────────────────────
 
 def _brand_matches(db_name: str, we_title: str) -> bool:
-    """First token of our wine name must appear somewhere in the WE title.
+    """First two non-stopword tokens of our wine name must both appear in the WE title.
 
-    Prevents generic tokens like 'Estate Chardonnay' matching across brands.
-    Single-word stopwords are skipped so 'The Y Series' checks 'Y' not 'The'.
+    Using two tokens prevents single-word coincidences (e.g. 'Sisters Run' matching
+    'Mo Sisters') while still handling brands like 'The Ned' or 'De Bortoli'.
     """
-    _STOPWORDS = {'the', 'a', 'an', 'de', 'le', 'la', 'les', 'du', 'van', 'von'}
-    tokens = db_name.lower().split()
-    brand_token = next((t for t in tokens if t not in _STOPWORDS), tokens[0] if tokens else '')
-    return brand_token in we_title.lower()
+    _STOPWORDS = {'the', 'a', 'an', 'de', 'le', 'la', 'les', 'du', 'van', 'von', 'st'}
+    tokens = [t for t in db_name.lower().split() if t not in _STOPWORDS]
+    if not tokens:
+        return True
+    we_lower = we_title.lower()
+    # Require first token always; require second token if it exists and isn't a varietal
+    _VARIETAL_WORDS = {'sauvignon', 'blanc', 'chardonnay', 'shiraz', 'pinot', 'grigio',
+                       'gris', 'noir', 'cabernet', 'merlot', 'riesling', 'malbec',
+                       'prosecco', 'brut', 'sparkling', 'rosé', 'rose'}
+    first = tokens[0]
+    if first not in we_lower:
+        return False
+    if len(tokens) > 1 and tokens[1] not in _VARIETAL_WORDS:
+        return tokens[1] in we_lower
+    return True
 
 
 def _variety_compatible(our_varietal: str | None, we_variety: str | None) -> bool:
