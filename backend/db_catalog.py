@@ -86,6 +86,8 @@ _VARIETAL_KEYWORDS: list[tuple[str, str]] = sorted([
     ("vermentino",          "Vermentino"),
     ("chardonnay",          "Chardonnay"),
     ("grenache",            "Grenache"),
+    ("shiraz viognier",     "Red Blend"),           # 15 — blend; before bare "viognier" (8)
+    ("syrah viognier",      "Red Blend"),           # 14 — blend; before bare "viognier" (8)
     ("viognier",            "Viognier (Dry)"),
     ("riesling",            "Riesling"),
     ("marsanne",            "Marsanne"),

@@ -1,4 +1,4 @@
-package com.example.wine_wizard
+package au.com.cellarsage
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -109,6 +109,8 @@ _COMPOUND_OVERRIDES: list[tuple[re.Pattern, str]] = [
     (re.compile(r'tawny\s+port',         re.IGNORECASE), 'Tawny Port'),
     (re.compile(r'vintage\s+port',       re.IGNORECASE), 'Vintage Port'),
     (re.compile(r'fino\s+sherry',        re.IGNORECASE), 'Fino Sherry'),
+    (re.compile(r'shiraz\s+viognier',    re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'syrah\s+viognier',     re.IGNORECASE), 'Red Blend'),
 ]
 
 
@@ -196,6 +198,9 @@ def _infer_origin(name: str) -> tuple[str, str | None]:
 
 def _infer_varietal(name: str) -> Optional[str]:
     """Extract the best-matching canonical varietal from a product name."""
+    for pattern, compound in _COMPOUND_OVERRIDES:
+        if pattern.search(name):
+            return compound
     lower = name.lower()
     for kw in _CATALOG_KEYWORDS:
         if kw in lower:
