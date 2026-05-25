@@ -2,7 +2,11 @@ import logging
 from dotenv import load_dotenv
 load_dotenv()  # loads backend/.env in local dev; no-op in production
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 logging.basicConfig(
     level=logging.INFO,
@@ -12,8 +16,8 @@ logging.basicConfig(
 # Show per-criterion Middle Ground debug lines from the interceptor
 logging.getLogger("cellar_sage.interceptor").setLevel(logging.DEBUG)
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, field_validator
+from typing import Literal, Optional
 
 import dataclasses
 import urllib.parse
@@ -31,6 +35,12 @@ from currency import convert_from_aud, convert_to_aud, lat_lng_to_currency, get_
 from affiliate_config import build_affiliate_url
 
 app = FastAPI(title="Cellar Sage API")
+
+# Rate limiting — 60 requests/minute per IP across all endpoints
+limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 
 @app.on_event("startup")
@@ -74,11 +84,11 @@ class RecommendRequest(BaseModel):
     food_pairing: Optional[str] = Field("none", description="Food pairing backend ID")
     top_n: Optional[int]   = Field(None, ge=1, description="Return top N results")
     pref_dry: bool         = Field(False, description="User prefers dry wines")
-    override_mode: str     = Field(
+    override_mode: Literal["filter_by_profile", "use_pairing_logic", "find_compromise"] = Field(
         "use_pairing_logic",
-        description="Palate Paradox resolution: filter_by_profile | use_pairing_logic | find_compromise",
+        description="Palate Paradox resolution mode",
     )
-    pairing_mode: str      = Field(
+    pairing_mode: Literal["congruent", "contrast"] = Field(
         "congruent",
         description="Pairing philosophy: congruent (match the dish) | contrast (balance the dish)",
     )
@@ -103,8 +113,8 @@ class RecommendResponse(BaseModel):
 
 class NearbyRequest(BaseModel):
     wine_name: str
-    user_lat: float
-    user_lng: float
+    user_lat: float = Field(..., ge=-90.0, le=90.0)
+    user_lng: float = Field(..., ge=-180.0, le=180.0)
     budget_min: float = 0.0
     budget_max: float = 9999.0
     show_global_tier: bool = Field(
@@ -123,6 +133,17 @@ class NearbyRequest(BaseModel):
             "When omitted, the server infers currency from the user's GPS coordinates."
         ),
     )
+
+    @field_validator("currency_code")
+    @classmethod
+    def validate_currency_code(cls, v: str) -> str:
+        from currency import CURRENCY_META
+        code = v.upper()
+        if code not in CURRENCY_META:
+            raise ValueError(
+                f"Unsupported currency '{v}'. Supported codes: {sorted(CURRENCY_META)}"
+            )
+        return code
 
 
 class MerchantResponse(BaseModel):
