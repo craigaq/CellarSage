@@ -81,7 +81,7 @@ class RecommendRequest(BaseModel):
     weight_body: int       = Field(..., ge=1, le=5, description="Weight (Body) preference 1-5")
     texture_tannin: int    = Field(..., ge=1, le=5, description="Texture (Tannin) preference 1-5")
     flavor_intensity: int  = Field(..., ge=1, le=5, description="Flavor Intensity (Aromatics) preference 1-5")
-    food_pairing: Optional[str] = Field("none", description="Food pairing backend ID")
+    food_pairing: Optional[str] = Field("none", max_length=100, description="Food pairing backend ID")
     top_n: Optional[int]   = Field(None, ge=1, description="Return top N results")
     pref_dry: bool         = Field(False, description="User prefers dry wines")
     override_mode: Literal["filter_by_profile", "use_pairing_logic", "find_compromise"] = Field(
@@ -112,7 +112,7 @@ class RecommendResponse(BaseModel):
 
 
 class NearbyRequest(BaseModel):
-    wine_name: str
+    wine_name: str = Field(..., max_length=200)
     user_lat: float = Field(..., ge=-90.0, le=90.0)
     user_lng: float = Field(..., ge=-180.0, le=180.0)
     budget_min: float = 0.0
@@ -245,7 +245,7 @@ def hello():
 
 @app.get("/check-pairing", response_model=CheckPairingResponse)
 def check_pairing(
-    food_type: str = Query(..., description="Food pairing selection"),
+    food_type: str = Query(..., max_length=100, description="Food pairing selection"),
     crispness_acidity: int = Query(..., ge=1, le=5),
     weight_body: int = Query(..., ge=1, le=5),
     texture_tannin: int = Query(..., ge=1, le=5),
@@ -390,8 +390,8 @@ def recommend(req: RecommendRequest):
 
 @app.get("/wine-picks", response_model=WinePicksResponse)
 def wine_picks(
-    varietal: str = Query(..., description="Canonical varietal name (e.g. 'Sauvignon Blanc')"),
-    user_state: Optional[str] = Query(None, description="User's Australian state (e.g. 'SA') for Tier 1 filtering"),
+    varietal: str = Query(..., max_length=100, description="Canonical varietal name (e.g. 'Sauvignon Blanc')"),
+    user_state: Optional[str] = Query(None, max_length=10, description="User's Australian state (e.g. 'SA') for Tier 1 filtering"),
     budget_min: float = Query(0.0, ge=0, description="Minimum price in AUD"),
     budget_max: float = Query(9999.0, ge=0, description="Maximum price in AUD"),
     pref_dry: bool = Query(False, description="Exclude sweet styles from Tier 4 deal pool"),
@@ -408,7 +408,7 @@ def wine_picks(
 
 @app.get("/buy-options", response_model=list[BuyOption])
 def buy_options(
-    varietal: str = Query(..., description="Canonical varietal name (e.g. 'Cabernet Sauvignon')"),
+    varietal: str = Query(..., max_length=100, description="Canonical varietal name (e.g. 'Cabernet Sauvignon')"),
     budget_min: float = Query(0.0, ge=0, description="Minimum price in AUD"),
     budget_max: float = Query(9999.0, ge=0, description="Maximum price in AUD"),
 ):

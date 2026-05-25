@@ -179,6 +179,14 @@ def _keywords_for_canonical(canonical: str) -> list[str]:
 # Module-level cache for buy-options and picks queries
 _BUY_CACHE: dict[tuple, dict] = {}
 _PICKS_CACHE: dict[tuple, dict] = {}
+_MAX_CACHE_SIZE = 512
+
+
+def _cache_put(cache: dict, key, value: dict) -> None:
+    """Insert into cache, evicting the oldest entry when the size cap is reached."""
+    if len(cache) >= _MAX_CACHE_SIZE:
+        cache.pop(next(iter(cache)))
+    cache[key] = value
 
 
 def _connection():
@@ -368,7 +376,7 @@ def get_buy_options(
             and "sparkling" not in (r.get("varietal") or "").lower()
         ]
 
-    _BUY_CACHE[cache_key] = {"data": result, "ts": time.time()}
+    _cache_put(_BUY_CACHE, cache_key, {"data": result, "ts": time.time()})
     log.info("db_catalog: get_buy_options varietal='%s' → %d results", varietal, len(result))
     return result
 
@@ -637,7 +645,7 @@ def get_wine_picks(
         picks.append(_row_to_pick(r, 4, "The Deal"))
         break
 
-    _PICKS_CACHE[cache_key] = {"data": picks, "ts": time.time()}
+    _cache_put(_PICKS_CACHE, cache_key, {"data": picks, "ts": time.time()})
     log.info("get_wine_picks: varietal='%s' → %d picks", varietal, len(picks))
     return picks
 
