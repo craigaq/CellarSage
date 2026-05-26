@@ -34,7 +34,7 @@ class _QuizScreenState extends State<QuizScreen> {
   String? _userState; // AU state code resolved from GPS in initState
   bool _prefDry = false;
   String _overrideMode = 'use_pairing_logic';
-  String _pairingMode = 'congruent'; // 'congruent' | 'contrast'
+  String _pairingMode = 'congruent'; // 'congruent' | 'contrast' | 'brave'
 
   // --- Results state ---
   List<WineRecommendation>? _results;
@@ -2043,7 +2043,7 @@ class _ScoreDots extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _PairingPhilosophyPicker extends StatelessWidget {
-  final String value; // 'congruent' | 'contrast'
+  final String value; // 'congruent' | 'contrast' | 'brave'
   final ValueChanged<String> onChanged;
 
   const _PairingPhilosophyPicker({
@@ -2051,7 +2051,7 @@ class _PairingPhilosophyPicker extends StatelessWidget {
     required this.onChanged,
   });
 
-  static const _options = [
+  static const _topOptions = [
     (
       id: 'congruent',
       icon: '🎵',
@@ -2066,6 +2066,13 @@ class _PairingPhilosophyPicker extends StatelessWidget {
     ),
   ];
 
+  static const _braveOption = (
+    id: 'brave',
+    icon: '🦊',
+    label: "I'm Brave",
+    description: "Let the Cellar Fox decide. Your palate steps aside — the food picks the wine.",
+  );
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -2074,22 +2081,31 @@ class _PairingPhilosophyPicker extends StatelessWidget {
         Text('Pairing Philosophy', style: WwText.titleMedium()),
         const SizedBox(height: 4),
         Text(
-          'Should your wine mirror the dish, or push back against it?',
+          'Should your wine mirror the dish, push back against it — or let the food choose?',
           style: WwText.bodySmall(),
         ),
         const SizedBox(height: 14),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (int i = 0; i < _options.length; i++) ...[
+            for (int i = 0; i < _topOptions.length; i++) ...[
               if (i > 0) const SizedBox(width: 10),
               Expanded(child: _PhilosophyCard(
-                option: _options[i],
-                selected: value == _options[i].id,
-                onTap: () => onChanged(_options[i].id),
+                option: _topOptions[i],
+                selected: value == _topOptions[i].id,
+                onTap: () => onChanged(_topOptions[i].id),
               )),
             ],
           ],
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: _PhilosophyCard(
+            option: _braveOption,
+            selected: value == _braveOption.id,
+            onTap: () => onChanged(_braveOption.id),
+          ),
         ),
       ],
     );

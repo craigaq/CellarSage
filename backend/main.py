@@ -88,9 +88,9 @@ class RecommendRequest(BaseModel):
         "use_pairing_logic",
         description="Palate Paradox resolution mode",
     )
-    pairing_mode: Literal["congruent", "contrast"] = Field(
+    pairing_mode: Literal["congruent", "contrast", "brave"] = Field(
         "congruent",
-        description="Pairing philosophy: congruent (match the dish) | contrast (balance the dish)",
+        description="Pairing philosophy: congruent (match the dish) | contrast (balance the dish) | brave (food chooses the wine)",
     )
 
 

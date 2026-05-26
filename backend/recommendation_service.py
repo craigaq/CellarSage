@@ -405,6 +405,30 @@ def check_food_pairing_conflicts(prefs: UserPreferences) -> FoodPairingAlert | N
 
 
 # ---------------------------------------------------------------------------
+# Brave mode — food-derived ideal palate vector
+# ---------------------------------------------------------------------------
+
+def _brave_palate(food_cfg: dict) -> dict[str, float]:
+    """Synthesise an ideal palate vector from a food's congruent pairing config.
+
+    Maps each attribute's multiplier/boost to a preference weight so the scoring
+    engine ranks wines by food-compatibility rather than user preference.
+    multiplier 0→weight 0.2 (banned), 1→0.6 (neutral), 1.5→0.9 (strongly desired).
+    """
+    congruent   = food_cfg.get("congruent", {"multipliers": {}, "boosts": {}})
+    multipliers = congruent.get("multipliers", {})
+    boosts      = congruent.get("boosts", {})
+    weights: dict[str, float] = {}
+    for attr in _ATTRS:
+        m = multipliers.get(attr, 1.0)
+        b = boosts.get(attr, 0.0)
+        base  = min(1.0, max(0.2, m * 0.6))  # 0→0.2, 1→0.6, 1.5→0.9
+        bonus = min(0.4, b * 0.15)            # high boost nudges weight up
+        weights[attr] = round(min(1.0, base + bonus), 3)
+    return weights
+
+
+# ---------------------------------------------------------------------------
 # RecommendationService
 # ---------------------------------------------------------------------------
 
@@ -487,13 +511,18 @@ class RecommendationService:
         preferences: UserPreferences,
     ) -> tuple[dict[str, float], dict[str, dict[str, float]]]:
         """Derive pref_weights and pairing_cfg from a UserPreferences instance."""
-        pref_weights = {
-            attr: _normalise(getattr(preferences, pref_field))
-            for pref_field, attr in _PREF_FIELD_TO_ATTR.items()
-        }
         food_entry = FOOD_PAIRING.get(preferences.food_pairing, FOOD_PAIRING["none"])
-        mode = preferences.pairing_mode if preferences.pairing_mode in ("congruent", "contrast") else "congruent"
-        pairing_cfg = food_entry.get(mode, food_entry["congruent"])
+        if preferences.pairing_mode == "brave":
+            # Override user palate entirely — use food-ideal weights + congruent config
+            pref_weights = _brave_palate(food_entry)
+            pairing_cfg  = food_entry["congruent"]
+        else:
+            pref_weights = {
+                attr: _normalise(getattr(preferences, pref_field))
+                for pref_field, attr in _PREF_FIELD_TO_ATTR.items()
+            }
+            mode = preferences.pairing_mode if preferences.pairing_mode in ("congruent", "contrast") else "congruent"
+            pairing_cfg = food_entry.get(mode, food_entry["congruent"])
         return pref_weights, pairing_cfg
 
     @staticmethod
