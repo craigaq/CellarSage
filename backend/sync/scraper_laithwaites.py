@@ -51,6 +51,10 @@ _PRICE_RE   = re.compile(
     r'\$([\d,]+(?:\.\d{2})?)(?:</[^>]+>)?\s+per\s+bottle(?!\s+when)',
     re.IGNORECASE,
 )
+# Schema.org JSON-LD block embedded in every PDP page
+_AGGREGATE_RE  = re.compile(r'"aggregateRating"\s*:\s*\{([^}]+)\}', re.IGNORECASE)
+_RATING_VAL_RE = re.compile(r'"ratingValue"\s*:\s*"([\d.]+)"')
+_REVIEW_CNT_RE = re.compile(r'"reviewCount"\s*:\s*"(\d+)"')
 
 
 def _fetch(url: str, delay: bool = True) -> Optional[str]:
@@ -110,7 +114,29 @@ def _parse_page(page: str, url: str) -> Optional[dict]:
         log.debug("Out of stock, skipping: %s", name)
         return None
 
-    return {"name": name, "price": price, "url": url, "retailer": "laithwaites"}
+    # Extract Laithwaites customer rating from the Schema.org JSON-LD block
+    rating: Optional[float] = None
+    review_count = 0
+    agg_m = _AGGREGATE_RE.search(page)
+    if agg_m:
+        agg = agg_m.group(1)
+        rv = _RATING_VAL_RE.search(agg)
+        rc = _REVIEW_CNT_RE.search(agg)
+        if rv:
+            try:
+                rating = float(rv.group(1))
+            except ValueError:
+                pass
+        if rc:
+            try:
+                review_count = int(rc.group(1))
+            except ValueError:
+                pass
+
+    return {
+        "name": name, "price": price, "url": url, "retailer": "laithwaites",
+        "rating": rating, "review_count": review_count,
+    }
 
 
 def scrape_laithwaites() -> list[dict]:

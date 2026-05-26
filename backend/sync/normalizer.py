@@ -436,12 +436,15 @@ def _normalize_laithwaites(item: dict, retailer: str) -> Optional[tuple[WineReco
     clean_name = re.sub(r'\s*\b(19[89]\d|20[012]\d)\b\s*', ' ', name).strip()
     varietal   = _infer_varietal(clean_name)
     country, state = _infer_origin(clean_name)
-    url        = item.get("url", "")
+    url          = item.get("url", "")
+    rating       = item.get("rating")
+    review_count = int(item.get("review_count") or 0)
 
     wine  = WineRecord(name=clean_name, vintage=vintage, varietal=varietal,
                        country=country, state=state)
     offer = MerchantOffer(wine_name=clean_name, vintage=vintage,
-                          retailer=retailer, price=price, url=url)
+                          retailer=retailer, price=price, url=url,
+                          rating=rating, review_count=review_count)
     return wine, offer
 
 
