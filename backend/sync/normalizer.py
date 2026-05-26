@@ -109,8 +109,21 @@ _COMPOUND_OVERRIDES: list[tuple[re.Pattern, str]] = [
     (re.compile(r'tawny\s+port',         re.IGNORECASE), 'Tawny Port'),
     (re.compile(r'vintage\s+port',       re.IGNORECASE), 'Vintage Port'),
     (re.compile(r'fino\s+sherry',        re.IGNORECASE), 'Fino Sherry'),
-    (re.compile(r'shiraz\s+viognier',    re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'syrah\s+viognier',     re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'shiraz\s+viognier',                          re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'syrah\s+viognier',                           re.IGNORECASE), 'Red Blend'),
+    # GSM and Rhône-style blends
+    (re.compile(r'grenache[\s/]+shiraz[\s/]+mourvèdre',        re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'grenache[\s/]+shiraz[\s/]+mourvedre',        re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'\bgsm\b',                                    re.IGNORECASE), 'Red Blend'),
+    # Cabernet-led blends
+    (re.compile(r'cabernet[\s/]+merlot',                       re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'cabernet[\s/]+shiraz',                       re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'shiraz[\s/]+cabernet',                       re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'cabernet[\s/]+merlot[\s/]+shiraz',           re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'cabernet[\s/]+franc[\s/]+merlot',            re.IGNORECASE), 'Red Blend'),
+    # Explicitly labelled blends
+    (re.compile(r'\bred\s+blend\b',                            re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'\bred\s+wine\s+blend\b',                     re.IGNORECASE), 'Red Blend'),
 ]
 
 
