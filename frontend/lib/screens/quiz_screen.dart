@@ -2068,7 +2068,7 @@ class _PairingPhilosophyPicker extends StatelessWidget {
 
   static const _braveOption = (
     id: 'brave',
-    icon: '🦊',
+    icon: '',
     label: "I'm Brave",
     description: "Let the Cellar Fox decide. Your palate steps aside — the food picks the wine.",
   );
@@ -2105,6 +2105,11 @@ class _PairingPhilosophyPicker extends StatelessWidget {
             option: _braveOption,
             selected: value == _braveOption.id,
             onTap: () => onChanged(_braveOption.id),
+            iconWidget: SvgPicture.asset(
+              'assets/images/sage_fox_nobg.svg',
+              width: 30,
+              height: 30,
+            ),
           ),
         ),
       ],
@@ -2185,11 +2190,13 @@ class _PhilosophyCard extends StatelessWidget {
   final ({String id, String icon, String label, String description}) option;
   final bool selected;
   final VoidCallback onTap;
+  final Widget? iconWidget;
 
   const _PhilosophyCard({
     required this.option,
     required this.selected,
     required this.onTap,
+    this.iconWidget,
   });
 
   @override
@@ -2213,7 +2220,7 @@ class _PhilosophyCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Icon
-            Text(option.icon, style: const TextStyle(fontSize: 30)),
+            iconWidget ?? Text(option.icon, style: const TextStyle(fontSize: 30)),
             const SizedBox(height: 10),
             // Label
             Text(
