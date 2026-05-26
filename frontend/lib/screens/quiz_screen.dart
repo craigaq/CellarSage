@@ -822,28 +822,18 @@ class _QuizScreenState extends State<QuizScreen> {
           const SizedBox(height: 16),
 
           // Pairing Philosophy — animated reveal once a food is chosen
-          AnimatedSwitcher(
+          AnimatedOpacity(
             duration: const Duration(milliseconds: 320),
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.08),
-                  end: Offset.zero,
-                ).animate(animation),
-                child: child,
-              ),
-            ),
+            opacity: _foodPairing != 'none' ? 1.0 : 0.0,
             child: _foodPairing != 'none'
                 ? Padding(
-                    key: const ValueKey('philosophy'),
-                    padding: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.only(bottom: 10),
                     child: _PairingPhilosophyPicker(
                       value: _pairingMode,
                       onChanged: (v) => setState(() => _pairingMode = v),
                     ),
                   )
-                : const SizedBox.shrink(key: ValueKey('philosophy-hidden')),
+                : const SizedBox.shrink(),
           ),
 
           // Fox commentary — fades in/out as the selection changes
@@ -2051,26 +2041,26 @@ class _PairingPhilosophyPicker extends StatelessWidget {
     required this.onChanged,
   });
 
-  static const _topOptions = [
+  static const _options = [
     (
       id: 'congruent',
       icon: '🎵',
       label: 'Harmonise',
-      description: 'Find a wine that mirrors the dish — flavour meeting flavour.',
+      description: 'Attempts to mirror the dish.',
     ),
     (
       id: 'contrast',
       icon: '⚡',
       label: 'Contrast',
-      description: 'Find a wine that challenges the dish — tension makes it sing.',
+      description: 'Challenges the dish — tension makes it sing!',
     ),
   ];
 
-  static const _braveOption = (
+  static const braveOption = (
     id: 'brave',
-    icon: '',
+    icon: '🦊',
     label: "I'm Brave",
-    description: "Let the Cellar Fox decide. Your palate steps aside — the food picks the wine.",
+    description: "Let the Cellar Fox decide.\nYour palate steps aside\n— the food picks the wine.",
   );
 
   @override
@@ -2079,38 +2069,27 @@ class _PairingPhilosophyPicker extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Pairing Philosophy', style: WwText.titleMedium()),
-        const SizedBox(height: 4),
-        Text(
-          'Should your wine mirror the dish, push back against it — or let the food choose?',
-          style: WwText.bodySmall(),
-        ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (int i = 0; i < _topOptions.length; i++) ...[
+            for (int i = 0; i < _options.length; i++) ...[
               if (i > 0) const SizedBox(width: 10),
               Expanded(child: _PhilosophyCard(
-                option: _topOptions[i],
-                selected: value == _topOptions[i].id,
-                onTap: () => onChanged(_topOptions[i].id),
+                option: _options[i],
+                selected: value == _options[i].id,
+                onTap: () => onChanged(_options[i].id),
+                compact: true,
               )),
             ],
           ],
         ),
         const SizedBox(height: 10),
-        SizedBox(
-          width: double.infinity,
-          child: _PhilosophyCard(
-            option: _braveOption,
-            selected: value == _braveOption.id,
-            onTap: () => onChanged(_braveOption.id),
-            iconWidget: SvgPicture.asset(
-              'assets/images/sage_fox_nobg.svg',
-              width: 30,
-              height: 30,
-            ),
-          ),
+        _PhilosophyCard(
+          option: braveOption,
+          selected: value == braveOption.id,
+          onTap: () => onChanged(braveOption.id),
+          fullWidth: true,
         ),
       ],
     );
@@ -2190,23 +2169,97 @@ class _PhilosophyCard extends StatelessWidget {
   final ({String id, String icon, String label, String description}) option;
   final bool selected;
   final VoidCallback onTap;
-  final Widget? iconWidget;
+  final bool fullWidth;
+  final bool compact;
 
   const _PhilosophyCard({
     required this.option,
     required this.selected,
     required this.onTap,
-    this.iconWidget,
+    this.fullWidth = false,
+    this.compact = false,
   });
+
+  static TextStyle _titleStyle(bool selected) => WwText.bodyMedium().copyWith(
+        fontWeight: FontWeight.w600,
+        color: selected ? WwColors.violet : WwColors.textSecondary,
+      );
 
   @override
   Widget build(BuildContext context) {
+    final content = fullWidth
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SvgPicture.asset(
+                'assets/images/sage_fox_skeleton.svg',
+                width: 30,
+                height: 30,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                option.label,
+                style: _titleStyle(selected),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                option.description,
+                style: WwText.bodySmall(
+                  color: selected ? WwColors.textSecondary : WwColors.textDisabled,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          )
+        : compact
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(option.icon, style: const TextStyle(fontSize: 18)),
+                      const SizedBox(width: 8),
+                      Text(option.label, style: _titleStyle(selected)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    option.description,
+                    style: WwText.bodySmall(
+                      color: selected ? WwColors.textSecondary : WwColors.textDisabled,
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(option.icon, style: const TextStyle(fontSize: 30)),
+                  const SizedBox(height: 10),
+                  Text(option.label, style: _titleStyle(selected)),
+                  const SizedBox(height: 6),
+                  Text(
+                    option.description,
+                    style: WwText.bodySmall(
+                      color: selected ? WwColors.textSecondary : WwColors.textDisabled,
+                    ),
+                  ),
+                ],
+              );
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOut,
-        padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+        width: fullWidth ? double.infinity : null,
+        padding: fullWidth
+            ? const EdgeInsets.symmetric(horizontal: 10, vertical: 10)
+            : compact
+                ? const EdgeInsets.symmetric(horizontal: 12, vertical: 10)
+                : const EdgeInsets.fromLTRB(14, 16, 14, 16),
         decoration: BoxDecoration(
           color: selected ? WwColors.violetTint : WwColors.bgSurface,
           borderRadius: BorderRadius.circular(14),
@@ -2216,31 +2269,7 @@ class _PhilosophyCard extends StatelessWidget {
           ),
           boxShadow: selected ? WwDecorations.violetGlow() : null,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Icon
-            iconWidget ?? Text(option.icon, style: const TextStyle(fontSize: 30)),
-            const SizedBox(height: 10),
-            // Label
-            Text(
-              option.label,
-              style: WwText.titleMedium(
-                color: selected ? WwColors.violet : WwColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            // Description
-            Text(
-              option.description,
-              style: WwText.bodySmall(
-                color: selected
-                    ? WwColors.textSecondary
-                    : WwColors.textDisabled,
-              ),
-            ),
-          ],
-        ),
+        child: content,
       ),
     );
   }
