@@ -35,6 +35,12 @@ _SKIP_SLUG_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Skip promotional listings — names starting with sale/discount prefixes
+_PROMO_NAME_RE = re.compile(
+    r'^\s*(eofy|sale[\s:]|offer|clearance|flash\s+sale|\d+\s*%\s*off|special\s+offer)',
+    re.IGNORECASE,
+)
+
 _COMMENT_RE = re.compile(r'<!--.*?-->', re.DOTALL)
 _H1_RE      = re.compile(r'<h1[^>]*>(.*?)</h1>', re.IGNORECASE | re.DOTALL)
 # Next.js renders prices as: $<!-- -->25.00</span> per bottle
@@ -85,6 +91,9 @@ def _parse_page(page: str, url: str) -> Optional[dict]:
         return None
     name = html.unescape(re.sub(r'<[^>]+>', '', h1.group(1))).strip()
     if not name:
+        return None
+    if _PROMO_NAME_RE.match(name):
+        log.debug("Skipping promotional listing: %s", name)
         return None
 
     # First single-bottle price match (bulk "when you mix" price excluded by regex)

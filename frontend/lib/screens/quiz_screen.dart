@@ -1700,7 +1700,7 @@ class _WineResultCardState extends State<_WineResultCard> {
                         ),
                       ),
                       icon: const Icon(Icons.wine_bar_outlined, size: 16),
-                      label: const Text('View Wine Picks'),
+                      label: const Text('View Recommendations'),
                     ),
                   ),
                 ],
