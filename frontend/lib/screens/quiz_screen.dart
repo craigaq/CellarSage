@@ -2046,21 +2046,21 @@ class _PairingPhilosophyPicker extends StatelessWidget {
       id: 'congruent',
       icon: '🎵',
       label: 'Harmonise',
-      description: 'Attempts to mirror the dish.',
+      description: 'Attempt to mirror the dish.',
     ),
     (
       id: 'contrast',
       icon: '⚡',
       label: 'Contrast',
-      description: 'Challenges the dish — tension makes it sing!',
+      description: 'Challenge the dish - tension makes it sing!',
     ),
   ];
 
   static const braveOption = (
     id: 'brave',
-    icon: '🦊',
+    icon: '✊',
     label: "I'm Brave",
-    description: "Let the Cellar Fox decide.\nYour palate steps aside\n— the food picks the wine.",
+    description: "Let the Cellar Fox decide. Your palate steps aside — the food picks the wine.",
   );
 
   @override
@@ -2180,7 +2180,8 @@ class _PhilosophyCard extends StatelessWidget {
     this.compact = false,
   });
 
-  static TextStyle _titleStyle(bool selected) => WwText.bodyMedium().copyWith(
+  static TextStyle _titleStyle(bool selected) => WwText.bodySmall().copyWith(
+        fontSize: 13,
         fontWeight: FontWeight.w600,
         color: selected ? WwColors.violet : WwColors.textSecondary,
       );
@@ -2188,28 +2189,26 @@ class _PhilosophyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final content = fullWidth
-        ? Column(
+        ? Row(
             crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
             children: [
-              SvgPicture.asset(
-                'assets/images/sage_fox_skeleton.svg',
-                width: 30,
-                height: 30,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                option.label,
-                style: _titleStyle(selected),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                option.description,
-                style: WwText.bodySmall(
-                  color: selected ? WwColors.textSecondary : WwColors.textDisabled,
+              Text(option.icon, style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(option.label, style: _titleStyle(selected)),
+                    const SizedBox(height: 3),
+                    Text(
+                      option.description,
+                      style: WwText.bodySmall(
+                        color: selected ? WwColors.textSecondary : WwColors.textDisabled,
+                      ),
+                    ),
+                  ],
                 ),
-                textAlign: TextAlign.center,
               ),
             ],
           )
@@ -2217,14 +2216,10 @@ class _PhilosophyCard extends StatelessWidget {
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Text(option.icon, style: const TextStyle(fontSize: 18)),
-                      const SizedBox(width: 8),
-                      Text(option.label, style: _titleStyle(selected)),
-                    ],
-                  ),
+                  Text(option.icon, style: const TextStyle(fontSize: 15)),
                   const SizedBox(height: 4),
+                  Text(option.label, style: _titleStyle(selected)),
+                  const SizedBox(height: 3),
                   Text(
                     option.description,
                     style: WwText.bodySmall(
