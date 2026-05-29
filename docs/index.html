@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cellar Sage — Find the right bottle, every time.</title>
+  <style>
+    :root {
+      --bg:       #1a1b26;
+      --surface:  #22233a;
+      --purple:   #c3a5ff;
+      --purple-d: #7c54cd;
+      --white:    #ffffff;
+      --muted:    #a0a0b4;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bg); color: var(--white); font-family: -apple-system, 'Segoe UI', sans-serif; line-height: 1.6; }
+
+    /* NAV */
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 1.2rem 2rem; border-bottom: 1px solid rgba(195,165,255,0.15); }
+    .nav-logo { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.02em; color: var(--white); }
+    .nav-logo span { color: var(--purple); }
+    nav a { color: var(--muted); text-decoration: none; font-size: 0.9rem; }
+    nav a:hover { color: var(--purple); }
+
+    /* HERO */
+    .hero { text-align: center; padding: 5rem 1.5rem 4rem; }
+    .hero-badge { display: inline-block; background: rgba(195,165,255,0.15); border: 1px solid rgba(195,165,255,0.3); color: var(--purple); padding: 0.35rem 1rem; border-radius: 50px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 2rem; }
+    .hero h1 { font-size: clamp(2.4rem, 6vw, 4rem); font-weight: 700; line-height: 1.1; margin-bottom: 1rem; }
+    .hero h1 span { color: var(--purple); }
+    .hero p { font-size: 1.15rem; color: var(--muted); max-width: 560px; margin: 0 auto 2.5rem; }
+    .btn { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--purple); color: #1a1b26; font-weight: 700; padding: 0.9rem 2rem; border-radius: 50px; text-decoration: none; font-size: 1rem; transition: opacity 0.2s; }
+    .btn:hover { opacity: 0.85; }
+    .btn-outline { background: transparent; border: 2px solid var(--purple); color: var(--purple); margin-left: 0.75rem; }
+    .btn-outline:hover { background: rgba(195,165,255,0.1); }
+
+    /* FOX SVG */
+    .fox-wrap { margin: 3rem auto 0; max-width: 220px; }
+    .fox-wrap svg { width: 100%; height: auto; filter: drop-shadow(0 0 32px rgba(195,165,255,0.25)); }
+
+    /* FEATURES */
+    .features { padding: 5rem 1.5rem; max-width: 1000px; margin: 0 auto; }
+    .section-label { text-align: center; color: var(--purple); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.75rem; }
+    .section-title { text-align: center; font-size: clamp(1.6rem, 4vw, 2.4rem); margin-bottom: 3rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; }
+    .card { background: var(--surface); border: 1px solid rgba(195,165,255,0.12); border-radius: 16px; padding: 2rem; }
+    .card-icon { font-size: 2rem; margin-bottom: 1rem; }
+    .card h3 { font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--white); }
+    .card p { color: var(--muted); font-size: 0.95rem; }
+
+    /* HOW IT WORKS */
+    .how { background: var(--surface); padding: 5rem 1.5rem; }
+    .how-inner { max-width: 700px; margin: 0 auto; }
+    .steps { margin-top: 2.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
+    .step { display: flex; gap: 1.25rem; align-items: flex-start; }
+    .step-num { flex-shrink: 0; width: 2.2rem; height: 2.2rem; border-radius: 50%; background: var(--purple-d); color: var(--white); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; margin-top: 0.1rem; }
+    .step h4 { font-size: 1rem; margin-bottom: 0.2rem; }
+    .step p { color: var(--muted); font-size: 0.9rem; }
+
+    /* CTA */
+    .cta { text-align: center; padding: 5rem 1.5rem; }
+    .cta h2 { font-size: clamp(1.6rem, 4vw, 2.4rem); margin-bottom: 1rem; }
+    .cta p { color: var(--muted); margin-bottom: 2rem; }
+
+    /* FOOTER */
+    footer { border-top: 1px solid rgba(195,165,255,0.12); padding: 2rem 1.5rem; text-align: center; color: var(--muted); font-size: 0.85rem; }
+    footer a { color: var(--purple); text-decoration: none; margin: 0 0.5rem; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="nav-logo">Cellar <span>Sage</span></div>
+    <a href="privacy-policy.html">Privacy Policy</a>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-badge">Now available on Android</div>
+    <h1>Find the right bottle,<br/><span>every time.</span></h1>
+    <p>Tell us how you like your wine. We'll match your palate to bottles you can buy right now.</p>
+    <a href="https://play.google.com/store/apps/details?id=au.com.cellarsage" class="btn">&#9654; Get it on Google Play</a>
+    <a href="privacy-policy.html" class="btn btn-outline">Privacy Policy</a>
+
+    <div class="fox-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="190 215 215 305">
+        <polygon style="fill:#1a1b26;stroke:white;stroke-width:4;stroke-opacity:0.9;stroke-linejoin:round;paint-order:stroke fill" points="243.64 457.76 229.69 469.94 200.26 477.9 196.65 480.99 203.56 483.16 228.25 488.22 268.32 499.48 309.01 505.73 329.25 505.73 347.61 505.73 369.41 500.38 384.74 450.51 364.66 419.63 360.13 388.11 322.96 349.18 302.67 326.64 294.75 315.14 294.77 314.46 297.81 313.99 306.12 313.29 327.82 310.89 337.42 299.6 337.4 297.92 333.3 295.19 315.64 283.52 313.74 272 303.06 263.43 306.81 226.21 306.02 224.31 304.09 224.66 278.98 242.31 271.76 247.6 270.18 219.32 268.2 220.41 259.65 228.96 249.81 241.57 241.85 252.74 234.73 263.52 217.72 313.67 220.27 316.08 211.15 342.98 209.69 352.48 214.9 361.82 220.8 374.08 223.41 379.83 231.61 414.46 242.18 453.93 243.64 457.76"/>
+        <polyline fill="#7c54cd" points="386.81 452.29 339.04 467.74 367.82 423.33"/>
+        <polyline fill="#ffffff" points="339.04 467.74 373.18 502.47 386.8 452.24"/>
+        <polygon fill="#c3a5ff" points="373.18 502.47 386.8 452.24 395 478"/>
+        <polygon fill="#7c54cd" points="339.04 467.74 332.77 507.77 349.11 507.77 373.18 502.47 339.04 467.74"/>
+        <polyline fill="#c3a5ff" points="284.34 461.57 327.24 507.87 331.24 507.87 339.04 467.74"/>
+        <polyline fill="#c3a5ff" points="339.04 467.74 337.66 467.74 331.08 507.77 333.75 507.77"/>
+        <polyline fill="#7c54cd" points="255.19 474.09 270.01 500.83 284.48 460.89"/>
+        <polyline fill="#7c54cd" points="199.37 483.9 228.25 490.11 255.02 475.67 256.37 475.16 257.13 473.77 231.92 471.61 229.69 469.94 200.26 477.9 196.65 480.99 199.37 482.51"/>
+        <polyline fill="#c3a5ff" points="229.55 489.26 228.25 490.11 269.84 500.83 269.67 500.06"/>
+        <polyline fill="#ffffff" points="282.34 461.71 255.19 474.09 229.55 472.23"/>
+        <polyline fill="#ffffff" points="301.22 479.1 269.84 500.71 284.28 461.01"/>
+        <polyline fill="#7c54cd" points="270.74 500.45 307.48 507.15 327.9 507.15 301.29 478.86"/>
+        <polyline fill="#c3a5ff" points="255.19 474.09 271.32 500.44 229.55 489.34"/>
+        <polygon fill="#ffffff" points="249.04 327.02 264.3 356.7 249.04 386.37 235.94 356.7"/>
+        <polyline fill="none" stroke="white" stroke-width="2" stroke-opacity="0.9" stroke-linejoin="round" stroke-linecap="round" points="243.64,457.76 229.69,469.94 200.26,477.9 196.65,480.99 199.37,483.9 228.25,490.11 269.84,500.83 307.48,507.15 327.9,507.15 331.24,507.87 349.11,507.77 373.18,502.47 395,478 386.8,452.24 384.74,450.51"/>
+      </svg>
+    </div>
+  </section>
+
+  <section class="features">
+    <p class="section-label">What it does</p>
+    <h2 class="section-title">Your algorithmic sommelier</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="card-icon">🎯</div>
+        <h3>Palate Quiz</h3>
+        <p>Dial in your acidity, body, tannin and flavour preferences. Takes under two minutes.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🍷</div>
+        <h3>Two Picks Per Search</h3>
+        <p>One local, one international — matched to your palate and available to buy right now.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🛒</div>
+        <h3>Buy in One Tap</h3>
+        <p>Links straight through to Liquorland and Laithwaites. No searching, no guessing.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🍽️</div>
+        <h3>Food Pairing</h3>
+        <p>Tell us what you're eating. Harmonise with the dish or contrast it — your call.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">⭐</div>
+        <h3>Critic Scores</h3>
+        <p>Vivino community ratings and Wine Enthusiast critic scores shown on every pick.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📍</div>
+        <h3>Nearby Stores</h3>
+        <p>Find your closest bottle shop on a live map and get directions in one tap.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="how">
+    <div class="how-inner">
+      <p class="section-label">How it works</p>
+      <h2 class="section-title">Three steps to the right bottle</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div>
+            <h4>Set your palate</h4>
+            <p>Adjust four sliders — acidity, body, tannin, and flavour intensity — to describe how you like your wine.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div>
+            <h4>Pick a food and philosophy</h4>
+            <p>Choose what you're eating and whether you want the wine to harmonise with the dish or create contrast.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div>
+            <h4>Get your picks</h4>
+            <p>The Sage Fox returns two wine recommendations with prices, ratings, and a direct link to buy.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <h2>Ready to find your bottle?</h2>
+    <p>Free to download. No account required.</p>
+    <a href="https://play.google.com/store/apps/details?id=au.com.cellarsage" class="btn">&#9654; Get it on Google Play</a>
+  </section>
+
+  <footer>
+    <p>&copy; 2026 Cellar Sage. Made in South Australia.</p>
+    <p style="margin-top: 0.75rem;">
+      <a href="privacy-policy.html">Privacy Policy</a> |
+      <a href="mailto:support@cellarsage.com.au">Contact</a>
+    </p>
+    <p style="margin-top: 0.75rem; font-size: 0.8rem;">Please drink responsibly.</p>
+  </footer>
+
+</body>
+</html>
