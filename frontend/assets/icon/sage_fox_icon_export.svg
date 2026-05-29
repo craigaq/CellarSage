@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 595.28 841.89">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="190 215 215 305">
+  <!-- Dark background -->
+  <rect x="190" y="215" width="215" height="305" fill="#1a1b26"/>
   <!-- Fox body -->
   <polygon style="fill:#1a1b26;stroke:white;stroke-width:4;stroke-opacity:0.9;stroke-linejoin:round;paint-order:stroke fill" points="243.64 457.76 229.69 469.94 200.26 477.9 196.65 480.99 203.56 483.16 228.25 488.22 268.32 499.48 309.01 505.73 329.25 505.73 347.61 505.73 369.41 500.38 384.74 450.51 364.66 419.63 360.13 388.11 322.96 349.18 302.67 326.64 294.75 315.14 294.77 314.46 297.81 313.99 306.12 313.29 327.82 310.89 337.42 299.6 337.4 297.92 333.3 295.19 315.64 283.52 313.74 272 303.06 263.43 306.81 226.21 306.02 224.31 304.09 224.66 278.98 242.31 271.76 247.6 270.18 219.32 268.2 220.41 259.65 228.96 249.81 241.57 241.85 252.74 234.73 263.52 217.72 313.67 220.27 316.08 211.15 342.98 209.69 352.48 214.9 361.82 220.8 374.08 223.41 379.83 231.61 414.46 242.18 453.93 243.64 457.76"/>
   <!-- Upper tail triangle — dark purple -->
@@ -21,6 +23,6 @@
   <polyline fill="#c3a5ff" points="255.19 474.09 271.32 500.44 229.55 489.34"/>
   <!-- Diamond chest -->
   <polygon fill="#ffffff" points="249.04 327.02 264.3 356.7 249.04 386.37 235.94 356.7"/>
-  <!-- Tail outer perimeter — white stroke to complete silhouette outline -->
+  <!-- Tail outer perimeter — white stroke on top of all triangles to complete the fox silhouette outline -->
   <polyline fill="none" stroke="white" stroke-width="2" stroke-opacity="0.9" stroke-linejoin="round" stroke-linecap="round" points="243.64,457.76 229.69,469.94 200.26,477.9 196.65,480.99 199.37,483.9 228.25,490.11 269.84,500.83 307.48,507.15 327.9,507.15 331.24,507.87 349.11,507.77 373.18,502.47 395,478 386.8,452.24 384.74,450.51"/>
 </svg>
