@@ -166,7 +166,7 @@ class _WinePicksScreenState extends State<WinePicksScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SvgPicture.asset('assets/images/sage_fox_nobg.svg', width: 72, height: 72),
+              SvgPicture.asset('assets/images/sage_fox_new_dark.svg', width: 72, height: 72),
               const SizedBox(height: 16),
               Text(
                 'The Cellar Fox couldn\'t find picks right now.',

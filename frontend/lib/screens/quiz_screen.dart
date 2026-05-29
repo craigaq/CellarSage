@@ -1029,7 +1029,7 @@ class _QuizScreenState extends State<QuizScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             SvgPicture.asset(
-                              'assets/images/sage_fox_nobg.svg',
+                              'assets/images/sage_fox_new_dark.svg',
                               width: 24,
                               height: 24,
                             ),
@@ -1653,7 +1653,7 @@ class _WineResultCardState extends State<_WineResultCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           SvgPicture.asset(
-                            'assets/images/sage_fox_nobg.svg',
+                            'assets/images/sage_fox_new_dark.svg',
                             width: 18,
                             height: 18,
                           ),
@@ -1896,7 +1896,7 @@ class _FoxComment extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SvgPicture.asset('assets/images/sage_fox_nobg.svg', width: 32, height: 32),
+          SvgPicture.asset('assets/images/sage_fox_new_dark.svg', width: 32, height: 32),
           const SizedBox(width: 10),
           Expanded(
             child: Text(text, style: WwText.witQuote()),

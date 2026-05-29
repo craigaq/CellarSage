@@ -42,7 +42,7 @@ Future<void> showPalateParadoxSheet(
               ),
             ),
 
-            SvgPicture.asset('assets/images/sage_fox_nobg.svg', height: 72),
+            SvgPicture.asset('assets/images/sage_fox_new_dark.svg', height: 72),
             const SizedBox(height: 10),
 
             Text(
@@ -122,7 +122,7 @@ Future<void> showConflictAlert(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SvgPicture.asset('assets/images/sage_fox_nobg.svg', height: 80),
+              SvgPicture.asset('assets/images/sage_fox_new_dark.svg', height: 80),
               const SizedBox(height: 15),
               Text(
                 alert.message,

@@ -57,14 +57,14 @@ class _SageFoxWidgetState extends State<SageFoxWidget>
                     0, 0, 0, 0.55, 0,
                   ]),
                   child: SvgPicture.asset(
-                    'assets/images/sage_fox_nobg.svg',
+                    'assets/images/sage_fox_new_dark.svg',
                     width: widget.size,
                     height: widget.size,
                   ),
                 ),
               ),
               SvgPicture.asset(
-                'assets/images/sage_fox_nobg.svg',
+                'assets/images/sage_fox_new_dark.svg',
                 width: widget.size,
                 height: widget.size,
               ),
