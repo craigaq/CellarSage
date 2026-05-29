@@ -227,6 +227,12 @@ class _WinePicksScreenState extends State<WinePicksScreen> {
             pick: pick,
             onSave: () => _showSaveSheet(pick),
           ),
+        const SizedBox(height: 16),
+        Text(
+          'Please drink responsibly. CellarSage promotes responsible alcohol consumption.',
+          textAlign: TextAlign.center,
+          style: WwText.bodySmall(color: WwColors.textDisabled),
+        ),
       ],
     );
   }
