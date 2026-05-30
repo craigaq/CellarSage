@@ -48,6 +48,17 @@
     .card h3 { font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--white); }
     .card p { color: var(--muted); font-size: 0.95rem; }
 
+    /* SCREENSHOTS */
+    .screenshots { padding: 5rem 1.5rem; background: var(--bg); }
+    .screenshots-inner { max-width: 1100px; margin: 0 auto; }
+    .screens-scroll { display: flex; gap: 1.25rem; overflow-x: auto; padding-bottom: 1rem; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+    .screens-scroll::-webkit-scrollbar { height: 4px; }
+    .screens-scroll::-webkit-scrollbar-track { background: var(--surface); border-radius: 2px; }
+    .screens-scroll::-webkit-scrollbar-thumb { background: var(--purple-d); border-radius: 2px; }
+    .screen-item { flex-shrink: 0; scroll-snap-align: start; width: 220px; }
+    .screen-item img { width: 100%; border-radius: 20px; border: 1px solid rgba(195,165,255,0.15); box-shadow: 0 8px 32px rgba(0,0,0,0.4); display: block; }
+    .screen-item p { text-align: center; font-size: 0.8rem; color: var(--muted); margin-top: 0.75rem; }
+
     /* HOW IT WORKS */
     .how { background: var(--surface); padding: 5rem 1.5rem; }
     .how-inner { max-width: 700px; margin: 0 auto; }
@@ -135,6 +146,35 @@
         <div class="card-icon">📍</div>
         <h3>Nearby Stores</h3>
         <p>Find your closest bottle shop on a live map and get directions in one tap.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="screenshots">
+    <div class="screenshots-inner">
+      <p class="section-label">See it in action</p>
+      <h2 class="section-title">Built for wine lovers</h2>
+      <div class="screens-scroll">
+        <div class="screen-item">
+          <img src="screenshots/Onboarding screen.jpg" alt="Welcome screen"/>
+          <p>Welcome</p>
+        </div>
+        <div class="screen-item">
+          <img src="screenshots/Quiz screen.jpg" alt="Palate quiz"/>
+          <p>Palate Quiz</p>
+        </div>
+        <div class="screen-item">
+          <img src="screenshots/Pairing screen.jpg" alt="Pairing philosophy"/>
+          <p>Pairing Philosophy</p>
+        </div>
+        <div class="screen-item">
+          <img src="screenshots/Wine results screen.jpg" alt="Wine recommendations"/>
+          <p>Your Picks</p>
+        </div>
+        <div class="screen-item">
+          <img src="screenshots/Nearby stores screen.jpg" alt="Where to buy"/>
+          <p>Where to Buy</p>
+        </div>
       </div>
     </div>
   </section>
