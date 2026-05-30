@@ -41,7 +41,7 @@ _PRODUCER_STATE: list[tuple[str, str]] = sorted(
 _SWEET_KEYWORDS = frozenset({"moscato", "muscat", "dessert", "sweet", "demi-sec", "doux"})
 
 # Bundle product filter — applied at query time to hide already-ingested bundles.
-_BUNDLE_NAME_RE = re.compile(r'\b(dozen|add[- ]?on)\b', re.IGNORECASE)
+_BUNDLE_NAME_RE = re.compile(r'\b(dozen|add[- ]?on|six\s+pack|\d+\s*pack)\b', re.IGNORECASE)
 
 # Canonical names that ARE sparkling — excluded from the sparkling bleed filter.
 _SPARKLING_CANONICALS = frozenset({
@@ -287,14 +287,65 @@ def _liquorland_search_url(wine_name: str) -> str:
     return f"https://www.liquorland.com.au/search?q={urllib.parse.quote(wine_name)}"
 
 
+_BUY_MAX_TOTAL       = 12   # max wines shown in Where to Buy
+_BUY_MAX_PER_RETAILER = 4   # max wines per retailer before overflow
+
+
+def _balance_buy_options(result: list[dict]) -> list[dict]:
+    """
+    Return up to _BUY_MAX_TOTAL wines balanced across retailers.
+
+    Priority order:
+      1. Rated wines (have vivino_rating or critic_score) — sorted by rating desc
+      2. Unrated wines — sorted by price asc
+    Within each priority group, at most _BUY_MAX_PER_RETAILER wines per retailer
+    are selected. Any remaining slots after the first pass are filled from the
+    overflow pool (still respecting the total cap).
+    """
+    rated   = sorted(
+        [r for r in result if r.get("_has_rating")],
+        key=lambda r: -(r.get("_rating_score") or 0),
+    )
+    unrated = sorted(
+        [r for r in result if not r.get("_has_rating")],
+        key=lambda r: r["price"],
+    )
+
+    final: list[dict] = []
+    counts: dict[str, int] = {}
+
+    for pool in (rated, unrated):
+        for wine in pool:
+            r = wine["retailer"]
+            if counts.get(r, 0) < _BUY_MAX_PER_RETAILER and len(final) < _BUY_MAX_TOTAL:
+                final.append(wine)
+                counts[r] = counts.get(r, 0) + 1
+
+    # If still under the cap (some retailers had fewer than 4 wines),
+    # fill remaining slots from any retailer.
+    if len(final) < _BUY_MAX_TOTAL:
+        added = {w["name"] for w in final}
+        for pool in (rated, unrated):
+            for wine in pool:
+                if wine["name"] not in added and len(final) < _BUY_MAX_TOTAL:
+                    final.append(wine)
+                    added.add(wine["name"])
+
+    # Strip internal sort keys before returning
+    for wine in final:
+        wine.pop("_has_rating", None)
+        wine.pop("_rating_score", None)
+
+    return final
+
+
 def get_buy_options(
     varietal: str,
     budget_min_aud: float = 0.0,
     budget_max_aud: float = 9999.0,
 ) -> list[dict]:
     """
-    Return all matching offers (all retailers) for a canonical varietal name,
-    one row per wine showing the cheapest available price and its retailer.
+    Return up to 12 matching offers balanced across retailers, rated wines first.
 
     Result shape: [{"name": "...", "price": 18.99, "url": "...", "retailer": "..."}]
     """
@@ -344,12 +395,19 @@ def get_buy_options(
                       AND price <= %s
                     ORDER BY wine_id, price ASC
                 )
-                SELECT w.name, c.price, c.url, c.retailer, c.last_updated
+                SELECT
+                    w.name, c.price, c.url, c.retailer, c.last_updated,
+                    w.vivino_rating, w.critic_score
                 FROM cheapest c
                 JOIN wines w ON w.id = c.wine_id
                 WHERE ({like_clauses})
-                ORDER BY c.price ASC
-                LIMIT 20
+                ORDER BY
+                    CASE WHEN w.vivino_rating IS NOT NULL
+                              OR w.critic_score IS NOT NULL THEN 0 ELSE 1 END ASC,
+                    GREATEST(COALESCE(w.vivino_rating, 0),
+                             COALESCE(w.critic_score::numeric / 20.0, 0)) DESC,
+                    c.price ASC
+                LIMIT 60
                 """,
                 params,
             )
@@ -372,9 +430,16 @@ def get_buy_options(
             ),
             "retailer": row["retailer"] or "",
             "price_is_stale": bool(row.get("last_updated") and row["last_updated"] < cutoff),
+            # Internal sort fields — stripped before returning
+            "_has_rating": bool(row.get("vivino_rating") or row.get("critic_score")),
+            "_rating_score": max(
+                float(row["vivino_rating"]) if row.get("vivino_rating") else 0.0,
+                float(row["critic_score"]) / 20.0 if row.get("critic_score") else 0.0,
+            ),
         }
         for row in rows
     ]
+
     # Exclude bundle products (dozens, add-ons) from buy-options.
     result = [r for r in result if not _BUNDLE_NAME_RE.search(r.get("name", ""))]
 
@@ -385,6 +450,9 @@ def get_buy_options(
             if "sparkling" not in r["name"].lower()
             and "sparkling" not in (r.get("varietal") or "").lower()
         ]
+
+    # Balance across retailers, cap at 12, rated wines prioritised.
+    result = _balance_buy_options(result)
 
     _cache_put(_BUY_CACHE, cache_key, {"data": result, "ts": time.time()})
     log.info("db_catalog: get_buy_options varietal='%s' → %d results", varietal, len(result))
