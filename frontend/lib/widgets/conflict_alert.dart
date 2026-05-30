@@ -19,18 +19,24 @@ Future<void> showPalateParadoxSheet(
     enableDrag: false,
     isScrollControlled: true,
     builder: (context) {
-      return Container(
-        decoration: const BoxDecoration(
-          color: WwColors.bgElevated,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          border: Border(
-            top: BorderSide(color: WwColors.borderMedium, width: 1),
-          ),
+      final bottomPad = MediaQuery.of(context).padding.bottom;
+      return ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
         ),
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 36),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+        child: Container(
+          decoration: const BoxDecoration(
+            color: WwColors.bgElevated,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border(
+              top: BorderSide(color: WwColors.borderMedium, width: 1),
+            ),
+          ),
+          padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomPad),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
             // Drag handle
             Container(
               width: 40,
@@ -91,7 +97,9 @@ Future<void> showPalateParadoxSheet(
                 ),
               );
             }),
-          ],
+              ],
+            ),
+          ),
         ),
       );
     },
