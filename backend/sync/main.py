@@ -30,10 +30,12 @@ def _load_direct_scrapers():
     from .scraper_portersliquor import scrape_portersliquor
     from .scraper_bottleo import scrape_bottleo
     from .scraper_laithwaites import scrape_laithwaites
+    from .scraper_boozeit import scrape_boozeit
     _DIRECT_SCRAPERS["cellarbrations"]  = scrape_cellarbrations
     _DIRECT_SCRAPERS["portersliquor"]   = scrape_portersliquor
     _DIRECT_SCRAPERS["bottleo"]         = scrape_bottleo
     _DIRECT_SCRAPERS["laithwaites"]     = scrape_laithwaites
+    _DIRECT_SCRAPERS["boozeit"]         = scrape_boozeit
 
 
 # Max wines enriched with Vivino per weekly sync run.

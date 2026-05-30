@@ -20,6 +20,10 @@ MERCHANT_REGISTRY: dict = {
         "scraper_type": "direct",
         "enabled": True,
     },
+    "boozeit": {
+        "scraper_type": "direct",
+        "enabled": True,
+    },
     "liquorland": {
         "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
         "max_items": 50,   # per-page cap; actor hard-limits to 50 per call

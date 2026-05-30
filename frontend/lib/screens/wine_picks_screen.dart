@@ -534,6 +534,7 @@ class _PickCard extends StatelessWidget {
     'bottleo'        => 'The Bottle-O',
     'danmurphys'     => 'Dan Murphy\'s',
     'laithwaites'    => 'Laithwaites',
+    'boozeit'        => 'Boozeit',
     _                => retailer.isNotEmpty ? retailer : 'retailer',
   };
 

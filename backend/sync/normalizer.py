@@ -243,6 +243,8 @@ _CATALOG_KEYWORDS: list[str] = sorted([
     "cabernet",   # catch-all — must stay after more specific entries
     # ── Sparkling ────────────────────────────────────────────────────────────
     "sparkling shiraz", "champagne", "prosecco", "cava",
+    # ── Rosé ─────────────────────────────────────────────────────────────────
+    "rosé", "rose wine", "rose",
     # ── Dessert ──────────────────────────────────────────────────────────────
     "botrytis semillon", "late harvest riesling",
     "botrytis", "late harvest", "sauternes", "trockenbeerenauslese",
@@ -448,6 +450,51 @@ def _normalize_laithwaites(item: dict, retailer: str) -> Optional[tuple[WineReco
     return wine, offer
 
 
+def _normalize_boozeit(item: dict, retailer: str) -> Optional[tuple[WineRecord, MerchantOffer]]:
+    name = (item.get("name") or "").strip()
+    if not name:
+        return None
+
+    price = _coerce_price(item.get("price"))
+    if price is None or price <= 0:
+        return None
+
+    if not _is_standard_bottle(name, item):
+        log.debug("boozeit item skipped — non-standard size: %r", name)
+        return None
+
+    varietal = item.get("varietal") or None
+
+    if not _matches_catalog(varietal, name):
+        log.debug("boozeit item skipped — not in catalog: %r", name)
+        return None
+
+    if _BUNDLE_NAME_RE.search(name):
+        log.debug("boozeit item skipped — bundle product: %r", name)
+        return None
+
+    vintage    = _extract_vintage(name)
+    clean_name = re.sub(r'\s*\b(19[89]\d|20[012]\d)\b\s*', ' ', name).strip()
+
+    if varietal is not None:
+        varietal = _refine_compound_varietal(varietal, name)
+        # Shopify product_type may be generic ("Red Wine", "White Wine") —
+        # fall through to keyword inference when no specific varietal is found.
+        if varietal.lower() in ("red wine", "white wine", "wine", "spirits", "beer"):
+            varietal = _infer_varietal(clean_name)
+    else:
+        varietal = _infer_varietal(clean_name)
+
+    country, state = _infer_origin(clean_name)
+    url = item.get("url") or ""
+
+    wine  = WineRecord(name=clean_name, vintage=vintage, varietal=varietal,
+                       country=country, state=state)
+    offer = MerchantOffer(wine_name=clean_name, vintage=vintage,
+                          retailer=retailer, price=price, url=url)
+    return wine, offer
+
+
 def _normalize_danmurphys(item: dict, retailer: str) -> Optional[tuple[WineRecord, MerchantOffer]]:
     name = _first('name', 'title', 'productName', src=item)
     if not name:
@@ -487,6 +534,7 @@ _NORMALIZERS = {
     "portersliquor":        _normalize_cellarbrations,  # same WYNSHOP format
     "bottleo":              _normalize_cellarbrations,  # same WYNSHOP format
     "laithwaites":          _normalize_laithwaites,
+    "boozeit":              _normalize_boozeit,
     "danmurphys":           _normalize_danmurphys,
 }
 
