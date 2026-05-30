@@ -321,15 +321,25 @@ def _balance_buy_options(result: list[dict]) -> list[dict]:
                 final.append(wine)
                 counts[r] = counts.get(r, 0) + 1
 
-    # If still under the cap (some retailers had fewer than 4 wines),
-    # fill remaining slots from any retailer.
+    # Overflow pass — fill remaining slots using round-robin across retailers
+    # so no single retailer dominates when another is short.
     if len(final) < _BUY_MAX_TOTAL:
         added = {w["name"] for w in final}
-        for pool in (rated, unrated):
-            for wine in pool:
-                if wine["name"] not in added and len(final) < _BUY_MAX_TOTAL:
+        overflow_pool = [w for pool in (rated, unrated) for w in pool if w["name"] not in added]
+        # Group overflow candidates by retailer, preserving priority order within each
+        overflow_by_retailer: dict[str, list[dict]] = {}
+        for wine in overflow_pool:
+            overflow_by_retailer.setdefault(wine["retailer"], []).append(wine)
+        # Round-robin: one wine per retailer per rotation until cap is reached
+        while len(final) < _BUY_MAX_TOTAL:
+            added_this_round = False
+            for retailer_pool in overflow_by_retailer.values():
+                if retailer_pool and len(final) < _BUY_MAX_TOTAL:
+                    wine = retailer_pool.pop(0)
                     final.append(wine)
-                    added.add(wine["name"])
+                    added_this_round = True
+            if not added_this_round:
+                break
 
     # Strip internal sort keys before returning
     for wine in final:
