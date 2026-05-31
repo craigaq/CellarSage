@@ -20,7 +20,7 @@ _STALE_DAYS = 8
 # Values go through %s params (not directly into SQL), but validate defensively
 # in case this function is ever refactored.  Covers letters, digits, spaces,
 # hyphens, slashes, parentheses, and apostrophes used in real varietal names.
-_KW_SAFE_RE = re.compile(r"^[a-z0-9 \-/()']+$")
+_KW_SAFE_RE = re.compile(r"^[a-z0-9À-ɏ \-/()']+$")
 
 log = logging.getLogger(__name__)
 
@@ -103,6 +103,8 @@ _VARIETAL_KEYWORDS: list[tuple[str, str]] = sorted([
     ("marsanne roussanne",              "White Blend"), # 17
     ("white blend",                     "White Blend"), # 11
     ("gsm",                             "Red Blend"),  # 3  — must come after longer "grenache shiraz" entries
+    ("rosé",               "Rose"),        # accented — checked before plain "rose"
+    ("rose",               "Rose"),        # catch-all for rosé wines
     ("viognier",            "Viognier (Dry)"),
     ("riesling",            "Riesling"),
     ("marsanne",            "Marsanne"),
