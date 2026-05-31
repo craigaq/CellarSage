@@ -547,6 +547,7 @@ _NORMALIZERS = {
     "liquorland_search_riesling":   _normalize_liquorland,
     "liquorland_search_tempranillo":_normalize_liquorland,
     "liquorland_search_prosecco":   _normalize_liquorland,
+    "liquorland_search_semillon":   _normalize_liquorland,
     "cellarbrations":       _normalize_cellarbrations,
     "portersliquor":        _normalize_cellarbrations,  # same WYNSHOP format
     "bottleo":              _normalize_cellarbrations,  # same WYNSHOP format
@@ -569,6 +570,7 @@ _MERCHANT_TO_RETAILER: dict[str, str] = {
     "liquorland_search_riesling":   "liquorland",
     "liquorland_search_tempranillo":"liquorland",
     "liquorland_search_prosecco":   "liquorland",
+    "liquorland_search_semillon":   "liquorland",
 }
 
 
