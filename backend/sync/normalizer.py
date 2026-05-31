@@ -123,6 +123,8 @@ _COMPOUND_OVERRIDES: list[tuple[re.Pattern, str]] = [
     (re.compile(r'cabernet[\s/]+franc[\s/]+merlot',            re.IGNORECASE), 'Red Blend'),
     # Explicitly labelled blends
     (re.compile(r'\bwhite\s+blend\b',                          re.IGNORECASE), 'White Blend'),
+    (re.compile(r'\bbrut\b',                                   re.IGNORECASE), 'Champagne'),
+    (re.compile(r'\bpetillant\b|\bpétillant\b',                re.IGNORECASE), 'Champagne'),
     (re.compile(r'semillon[\s/]+sauvignon',                    re.IGNORECASE), 'White Blend'),
     (re.compile(r'\bred\s+blend\b',                            re.IGNORECASE), 'Red Blend'),
     (re.compile(r'\bred\s+wine\s+blend\b',                     re.IGNORECASE), 'Red Blend'),
