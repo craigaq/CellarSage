@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/wine_picks.dart';
 import '../services/api_service.dart';
+import '../services/location_service.dart';
 import '../services/palate_prefs.dart';
 import '../theme/app_theme.dart';
 
@@ -49,12 +50,27 @@ class _WinePicksScreenState extends State<WinePicksScreen> {
   String? _error;
   int _loadGeneration = 0;
   List<PalateProfile> _profiles = [];
+  double? _userLat;
+  double? _userLng;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _fetchLocationThenLoad();
     _loadProfiles();
+  }
+
+  Future<void> _fetchLocationThenLoad() async {
+    try {
+      final pos = await LocationService().getCurrentPosition();
+      if (mounted) {
+        _userLat = pos.latitude;
+        _userLng = pos.longitude;
+      }
+    } catch (_) {
+      // Location unavailable — geo-gated retailers simply won't appear
+    }
+    _load();
   }
 
   Future<void> _loadProfiles() async {
@@ -119,6 +135,8 @@ class _WinePicksScreenState extends State<WinePicksScreen> {
         budgetMax: widget.budgetMax,
         prefDry: widget.prefDry,
         userState: widget.userState,
+        userLat: _userLat,
+        userLng: _userLng,
       );
       if (generation != _loadGeneration || !mounted) return;
       setState(() { _response = response; _loading = false; });
@@ -528,14 +546,15 @@ class _PickCard extends StatelessWidget {
   };
 
   String _retailerLabel(String retailer) => switch (retailer) {
-    'liquorland'     => 'Liquorland',
-    'cellarbrations' => 'Cellarbrations',
-    'portersliquor'  => 'Porters Liquor',
-    'bottleo'        => 'The Bottle-O',
-    'danmurphys'     => 'Dan Murphy\'s',
-    'laithwaites'    => 'Laithwaites',
-    'boozeit'        => 'Boozeit',
-    _                => retailer.isNotEmpty ? retailer : 'retailer',
+    'liquorland'             => 'Liquorland',
+    'cellarbrations'         => 'Cellarbrations',
+    'cellarbrations_sunbury' => 'Cellarbrations',
+    'portersliquor'          => 'Porters Liquor',
+    'bottleo'                => 'The Bottle-O',
+    'danmurphys'             => 'Dan Murphy\'s',
+    'laithwaites'            => 'Laithwaites',
+    'boozeit'                => 'Boozeit',
+    _                        => retailer.isNotEmpty ? retailer : 'retailer',
   };
 
   String _retailerUrl(WinePick pick) {

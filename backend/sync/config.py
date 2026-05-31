@@ -6,7 +6,11 @@ Add new merchants here; the scrape manager picks them up automatically.
 MERCHANT_REGISTRY: dict = {
     "cellarbrations": {
         "scraper_type": "direct",
-        "enabled": False,  # store-specific URLs cause "wine not found" errors — poor UX
+        "enabled": False,  # national scrape disabled — store-specific URLs cause "wine not found" errors
+    },
+    "cellarbrations_sunbury": {
+        "scraper_type": "direct",
+        "enabled": True,   # Sunbury-only pilot for VIC beta testers (15km radius geo-gate)
     },
     "portersliquor": {
         "scraper_type": "direct",

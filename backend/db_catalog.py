@@ -360,6 +360,8 @@ def get_buy_options(
     varietal: str,
     budget_min_aud: float = 0.0,
     budget_max_aud: float = 9999.0,
+    user_lat: float | None = None,
+    user_lng: float | None = None,
 ) -> list[dict]:
     """
     Return up to 12 matching offers balanced across retailers, rated wines first.
@@ -460,6 +462,13 @@ def get_buy_options(
     # Exclude bundle products (dozens, add-ons) from buy-options.
     result = [r for r in result if not _BUNDLE_NAME_RE.search(r.get("name", ""))]
 
+    # Geo-gate: remove store-specific retailers when user is outside their radius.
+    from sync.geo_retailers import is_geo_retailer, retailer_visible
+    result = [
+        r for r in result
+        if retailer_visible(r.get("retailer", ""), user_lat, user_lng)
+    ]
+
     # Exclude sparkling wines when the requested varietal is not a sparkling type.
     if varietal.lower() not in _SPARKLING_CANONICALS:
         result = [
@@ -503,6 +512,8 @@ def get_wine_picks(
     budget_min: float = 0.0,
     budget_max: float = 9999.0,
     pref_dry: bool = False,
+    user_lat: float | None = None,
+    user_lng: float | None = None,
 ) -> list[dict]:
     """
     Return up to 4 tiered wine picks for a canonical varietal, filtered to budget_max.
@@ -588,6 +599,13 @@ def get_wine_picks(
 
     # Exclude bundle products (dozens, add-ons).
     all_rows = [r for r in all_rows if not _BUNDLE_NAME_RE.search(r.get("name", ""))]
+
+    # Geo-gate: remove store-specific retailers when user is outside their radius.
+    from sync.geo_retailers import retailer_visible
+    all_rows = [
+        r for r in all_rows
+        if retailer_visible(r.get("retailer", ""), user_lat, user_lng)
+    ]
 
     # Exclude sparkling wines when the requested varietal is not a sparkling type.
     if varietal.lower() not in _SPARKLING_CANONICALS:

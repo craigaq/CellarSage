@@ -1869,14 +1869,15 @@ class _BuyOptionRow extends StatelessWidget {
   }
 
   String _retailerShortName(String retailer) => switch (retailer) {
-    'liquorland'     => 'Liquorland',
-    'cellarbrations' => 'Cellarbrations',
-    'danmurphys'     => "Dan Murphy's",
-    'laithwaites'    => 'Laithwaites',
-    'portersliquor'  => 'Porters Liquor',
-    'bottleo'        => 'The Bottle-O',
-    'boozeit'        => 'Boozeit',
-    _                => 'Buy',
+    'liquorland'             => 'Liquorland',
+    'cellarbrations'         => 'Cellarbrations',
+    'cellarbrations_sunbury' => 'Cellarbrations',
+    'danmurphys'             => "Dan Murphy's",
+    'laithwaites'            => 'Laithwaites',
+    'portersliquor'          => 'Porters Liquor',
+    'bottleo'                => 'The Bottle-O',
+    'boozeit'                => 'Boozeit',
+    _                        => 'Buy',
   };
 }
 

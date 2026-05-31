@@ -791,9 +791,10 @@ _NORMALIZERS = {
     "liquorland_search_cabernet":        _normalize_liquorland,
     "liquorland_search_rose":            _normalize_liquorland,
     "liquorland_search_sauvignon_blanc": _normalize_liquorland,
-    "cellarbrations":       _normalize_cellarbrations,
-    "portersliquor":        _normalize_cellarbrations,  # same WYNSHOP format
-    "bottleo":              _normalize_cellarbrations,  # same WYNSHOP format
+    "cellarbrations":          _normalize_cellarbrations,
+    "cellarbrations_sunbury":  _normalize_cellarbrations,  # same WYNSHOP format, single store
+    "portersliquor":           _normalize_cellarbrations,  # same WYNSHOP format
+    "bottleo":                 _normalize_cellarbrations,  # same WYNSHOP format
     "laithwaites":          _normalize_laithwaites,
     "boozeit":              _normalize_boozeit,
     "danmurphys":           _normalize_danmurphys,

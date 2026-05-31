@@ -395,6 +395,8 @@ def wine_picks(
     budget_min: float = Query(0.0, ge=0, description="Minimum price in AUD"),
     budget_max: float = Query(9999.0, ge=0, description="Maximum price in AUD"),
     pref_dry: bool = Query(False, description="Exclude sweet styles from Tier 4 deal pool"),
+    user_lat: Optional[float] = Query(None, description="User latitude for geo-gated retailer filtering"),
+    user_lng: Optional[float] = Query(None, description="User longitude for geo-gated retailer filtering"),
 ):
     """
     Return up to 4 tiered picks for a given varietal, filtered to the user's budget range.
@@ -402,7 +404,8 @@ def wine_picks(
     """
     from db_catalog import get_wine_picks
     picks = get_wine_picks(varietal=varietal, user_state=user_state,
-                           budget_min=budget_min, budget_max=budget_max, pref_dry=pref_dry)
+                           budget_min=budget_min, budget_max=budget_max, pref_dry=pref_dry,
+                           user_lat=user_lat, user_lng=user_lng)
     return WinePicksResponse(varietal=varietal, picks=[WinePick(**p) for p in picks])
 
 
@@ -411,13 +414,16 @@ def buy_options(
     varietal: str = Query(..., max_length=100, description="Canonical varietal name (e.g. 'Cabernet Sauvignon')"),
     budget_min: float = Query(0.0, ge=0, description="Minimum price in AUD"),
     budget_max: float = Query(9999.0, ge=0, description="Maximum price in AUD"),
+    user_lat: Optional[float] = Query(None, description="User latitude for geo-gated retailer filtering"),
+    user_lng: Optional[float] = Query(None, description="User longitude for geo-gated retailer filtering"),
 ):
     """
     Return matching listings for a given wine varietal within the user's budget range.
     Used by the Flutter app after the user selects a recommended wine style.
     """
     from db_catalog import get_buy_options
-    options = get_buy_options(varietal=varietal, budget_min_aud=budget_min, budget_max_aud=budget_max)
+    options = get_buy_options(varietal=varietal, budget_min_aud=budget_min, budget_max_aud=budget_max,
+                              user_lat=user_lat, user_lng=user_lng)
     return [BuyOption(**o) for o in options]
 
 

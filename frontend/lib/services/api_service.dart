@@ -110,12 +110,17 @@ class ApiService {
     required String varietal,
     double budgetMin = 0.0,
     double budgetMax = 9999.0,
+    double? userLat,
+    double? userLng,
   }) async {
-    final uri = Uri.parse('$_baseUrl/buy-options').replace(queryParameters: {
+    final params = <String, String>{
       'varietal': varietal,
       'budget_min': '$budgetMin',
       'budget_max': '$budgetMax',
-    });
+    };
+    if (userLat != null) params['user_lat'] = '$userLat';
+    if (userLng != null) params['user_lng'] = '$userLng';
+    final uri = Uri.parse('$_baseUrl/buy-options').replace(queryParameters: params);
     final response = await _client.get(uri);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as List;
@@ -132,6 +137,8 @@ class ApiService {
     double budgetMin = 0.0,
     double budgetMax = 9999.0,
     bool prefDry = false,
+    double? userLat,
+    double? userLng,
   }) async {
     final params = <String, String>{
       'varietal': varietal,
@@ -140,6 +147,8 @@ class ApiService {
       'pref_dry': '$prefDry',
     };
     if (userState != null) params['user_state'] = userState;
+    if (userLat != null) params['user_lat'] = '$userLat';
+    if (userLng != null) params['user_lng'] = '$userLng';
     final uri = Uri.parse('$_baseUrl/wine-picks').replace(queryParameters: params);
     final response = await _client.get(uri);
     if (response.statusCode == 200) {
