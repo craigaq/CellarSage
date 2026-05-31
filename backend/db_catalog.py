@@ -606,6 +606,7 @@ def get_wine_picks(
 
     rated_rows   = [r for r in all_rows if _has_rating(r)]
     unrated_rows = [r for r in all_rows if not _has_rating(r)]
+    all_rows_full = list(all_rows)  # preserved for Tier 1 state fallback
 
     if len(rated_rows) >= 2:
         all_rows = rated_rows
@@ -697,10 +698,22 @@ def get_wine_picks(
     # Tier 1 — best-value wine from the user's own state ("The Local Hero").
     # Only awarded when the wine is genuinely from the user's state.
     # Falls back to skipping Tier 1 (non-local wines are promoted to Tier 2 instead).
+    # If rated_rows had no state match, fall back to unrated state wines (marked is_sage_pick).
     tier1_awarded = False
     if user_state:
         state_upper = user_state.upper()
         state_rows  = [r for r in au_rows if (r.get("state") or "").upper() == state_upper]
+        if not state_rows and all_rows_full:
+            # Rated pool had no local wine — try full unfiltered pool for state match
+            fallback = sorted(
+                [r for r in all_rows_full
+                 if (r.get("country") or "").lower() == "australia"
+                 and (r.get("state") or "").upper() == state_upper],
+                key=_sort_key,
+            )
+            for r in fallback:
+                r["is_sage_pick"] = True
+            state_rows = fallback
         if state_rows:
             r = state_rows[0]
             picks.append(_row_to_pick(r, 1, "The Local Hero"))
