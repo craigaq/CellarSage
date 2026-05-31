@@ -406,7 +406,7 @@ def get_buy_options(
                     ORDER BY wine_id, price ASC
                 )
                 SELECT
-                    w.name, c.price, c.url, c.retailer, c.last_updated,
+                    w.name, w.varietal, c.price, c.url, c.retailer, c.last_updated,
                     w.vivino_rating, w.critic_score
                 FROM cheapest c
                 JOIN wines w ON w.id = c.wine_id
@@ -460,6 +460,22 @@ def get_buy_options(
             if "sparkling" not in r["name"].lower()
             and "sparkling" not in (r.get("varietal") or "").lower()
         ]
+
+    # Varietal bleed filter — the broad 'cabernet' catch-all keyword can pull in
+    # Cabernet Franc, Cabernet Merlot blends, etc. when searching Cabernet Sauvignon.
+    # Re-infer each row's canonical and drop any that map to a different one.
+    requested_canonical = _infer_varietal(None, varietal) or varietal
+    filtered = []
+    for r in result:
+        row_canonical = _infer_varietal(r.get("varietal"), r["name"])
+        if row_canonical is None or row_canonical == requested_canonical:
+            filtered.append(r)
+        else:
+            log.debug(
+                "buy_options bleed filter: dropped %r (varietal=%r → %r, requested=%r)",
+                r["name"], r.get("varietal"), row_canonical, requested_canonical,
+            )
+    result = filtered
 
     # Balance across retailers, cap at 12, rated wines prioritised.
     result = _balance_buy_options(result)
