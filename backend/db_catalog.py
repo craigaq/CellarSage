@@ -468,11 +468,16 @@ def get_buy_options(
 
     # Varietal bleed filter — the broad 'cabernet' catch-all keyword can pull in
     # Cabernet Franc, Cabernet Merlot blends, etc. when searching Cabernet Sauvignon.
-    # Re-infer each row's canonical and drop any that map to a different one.
+    # Infer canonical from STORED VARIETAL ONLY (not name) so blend wines explicitly
+    # stored as "Red Blend" are not dropped because their name contains "cabernet sauvignon".
     requested_canonical = _infer_varietal(None, varietal) or varietal
     filtered = []
     for r in result:
-        row_canonical = _infer_varietal(r.get("varietal"), r["name"])
+        stored = r.get("varietal")
+        if stored:
+            row_canonical = _infer_varietal(stored, "")   # varietal field only
+        else:
+            row_canonical = _infer_varietal(None, r["name"])  # fallback when no varietal
         if row_canonical is None or row_canonical == requested_canonical:
             filtered.append(r)
         else:

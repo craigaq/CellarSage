@@ -535,10 +535,16 @@ def _normalize_danmurphys(item: dict, retailer: str) -> Optional[tuple[WineRecor
 # ── Dispatch ──────────────────────────────────────────────────────────────────
 
 _NORMALIZERS = {
-    "liquorland":           _normalize_liquorland,
-    "liquorland_premium":   _normalize_liquorland,
-    "liquorland_fortified": _normalize_liquorland,
-    "liquorland_dessert":   _normalize_liquorland,
+    "liquorland":                   _normalize_liquorland,
+    "liquorland_premium":           _normalize_liquorland,
+    "liquorland_fortified":         _normalize_liquorland,
+    "liquorland_dessert":           _normalize_liquorland,
+    "liquorland_search_merlot":     _normalize_liquorland,
+    "liquorland_search_pinot":      _normalize_liquorland,
+    "liquorland_search_grenache":   _normalize_liquorland,
+    "liquorland_search_riesling":   _normalize_liquorland,
+    "liquorland_search_tempranillo":_normalize_liquorland,
+    "liquorland_search_prosecco":   _normalize_liquorland,
     "cellarbrations":       _normalize_cellarbrations,
     "portersliquor":        _normalize_cellarbrations,  # same WYNSHOP format
     "bottleo":              _normalize_cellarbrations,  # same WYNSHOP format
@@ -552,9 +558,15 @@ _NORMALIZERS = {
 # Keeps DB retailer values consistent regardless of how many scrape configs
 # a single retailer has (e.g. liquorland + liquorland_fortified → "liquorland").
 _MERCHANT_TO_RETAILER: dict[str, str] = {
-    "liquorland_premium":   "liquorland",
-    "liquorland_fortified": "liquorland",
-    "liquorland_dessert":   "liquorland",
+    "liquorland_premium":           "liquorland",
+    "liquorland_fortified":         "liquorland",
+    "liquorland_dessert":           "liquorland",
+    "liquorland_search_merlot":     "liquorland",
+    "liquorland_search_pinot":      "liquorland",
+    "liquorland_search_grenache":   "liquorland",
+    "liquorland_search_riesling":   "liquorland",
+    "liquorland_search_tempranillo":"liquorland",
+    "liquorland_search_prosecco":   "liquorland",
 }
 
 
