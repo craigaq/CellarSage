@@ -97,6 +97,11 @@ _VARIETAL_KEYWORDS: list[tuple[str, str]] = sorted([
     ("syrah viognier",                  "Red Blend"),  # 14 — blend; before bare "viognier" (8)
     ("red blend",                       "Red Blend"),  # 9
     ("red wine blend",                  "Red Blend"),  # 13
+    ("semillon sauvignon blanc",        "White Blend"), # 24 — before bare "semillon" or "sauvignon blanc"
+    ("sauvignon blanc semillon",        "White Blend"), # 24
+    ("chardonnay semillon",             "White Blend"), # 18
+    ("marsanne roussanne",              "White Blend"), # 17
+    ("white blend",                     "White Blend"), # 11
     ("gsm",                             "Red Blend"),  # 3  — must come after longer "grenache shiraz" entries
     ("viognier",            "Viognier (Dry)"),
     ("riesling",            "Riesling"),

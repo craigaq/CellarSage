@@ -122,8 +122,15 @@ _COMPOUND_OVERRIDES: list[tuple[re.Pattern, str]] = [
     (re.compile(r'cabernet[\s/]+merlot[\s/]+shiraz',           re.IGNORECASE), 'Red Blend'),
     (re.compile(r'cabernet[\s/]+franc[\s/]+merlot',            re.IGNORECASE), 'Red Blend'),
     # Explicitly labelled blends
+    (re.compile(r'\bwhite\s+blend\b',                          re.IGNORECASE), 'White Blend'),
+    (re.compile(r'semillon[\s/]+sauvignon',                    re.IGNORECASE), 'White Blend'),
     (re.compile(r'\bred\s+blend\b',                            re.IGNORECASE), 'Red Blend'),
     (re.compile(r'\bred\s+wine\s+blend\b',                     re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'semillon[\s/]+sauvignon\s+blanc',            re.IGNORECASE), 'White Blend'),
+    (re.compile(r'sauvignon\s+blanc[\s/]+semillon',            re.IGNORECASE), 'White Blend'),
+    (re.compile(r'chardonnay[\s/]+semillon',                   re.IGNORECASE), 'White Blend'),
+    (re.compile(r'marsanne[\s/]+roussanne',                    re.IGNORECASE), 'White Blend'),
+    (re.compile(r'\bwhite\s+blend\b',                          re.IGNORECASE), 'White Blend'),
 ]
 
 
@@ -240,6 +247,7 @@ _CATALOG_KEYWORDS: list[str] = sorted([
     "nebbiolo", "zinfandel", "moscato", "muscat",
     "airén", "airen", "albariño", "albarino",
     "torrontés", "torrontes", "friulano",
+    "white blend", "semillon sauvignon blanc", "sauvignon blanc semillon",
     "cabernet",   # catch-all — must stay after more specific entries
     # ── Sparkling ────────────────────────────────────────────────────────────
     "sparkling shiraz", "champagne", "prosecco", "cava",

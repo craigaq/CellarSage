@@ -126,6 +126,16 @@ _REDS: list[WineProfile] = [
         # moderate tannin, food-friendly acidity.
     ),
 
+    # Australian workhorse white blend — Semillon Sauvignon Blanc dominant
+    WineProfile(
+        "White Blend", sku_id="WW-WB01",
+        acidity_ph=3.30, body=2.5, tannin_structure=1, aromatic_intensity=6,
+        abv_percentage=12.5, residual_sugar_gl=3.0,
+        location_tag="Local",           # SSB is an Australian regional specialty (Hunter Valley, Clare Valley)
+        # Medium-high acidity, light-medium body, virtually no tannin.
+        # Tropical + citrus aromatics from Sauvignon Blanc lifted by Semillon texture.
+    ),
+
     # Rank 17 — Big presence in US (California rosé & reds)
     WineProfile(
         "Zinfandel", sku_id="WW-ZF01",
