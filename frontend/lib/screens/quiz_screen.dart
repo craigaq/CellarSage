@@ -1875,6 +1875,7 @@ class _BuyOptionRow extends StatelessWidget {
     'laithwaites'    => 'Laithwaites',
     'portersliquor'  => 'Porters Liquor',
     'bottleo'        => 'The Bottle-O',
+    'boozeit'        => 'Boozeit',
     _                => 'Buy',
   };
 }
