@@ -36,6 +36,19 @@ MERCHANT_REGISTRY: dict = {
             "includeRaw": False,
         },
     },
+    "liquorland_premium": {
+        "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
+        "max_items": 50,
+        "pages": 3,        # 150 wines sorted high-to-low captures the premium tier
+        "enabled": True,
+        "actor_input": {
+            "operation": "category",
+            "path": "/wine",
+            "show": 50,
+            "includeRaw": False,
+            "sortBy": "PRICE_HIGH_TO_LOW",
+        },
+    },
     "liquorland_fortified": {
         "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
         "max_items": 50,

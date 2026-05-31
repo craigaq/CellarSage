@@ -528,6 +528,7 @@ def _normalize_danmurphys(item: dict, retailer: str) -> Optional[tuple[WineRecor
 
 _NORMALIZERS = {
     "liquorland":           _normalize_liquorland,
+    "liquorland_premium":   _normalize_liquorland,
     "liquorland_fortified": _normalize_liquorland,
     "liquorland_dessert":   _normalize_liquorland,
     "cellarbrations":       _normalize_cellarbrations,
@@ -543,6 +544,7 @@ _NORMALIZERS = {
 # Keeps DB retailer values consistent regardless of how many scrape configs
 # a single retailer has (e.g. liquorland + liquorland_fortified → "liquorland").
 _MERCHANT_TO_RETAILER: dict[str, str] = {
+    "liquorland_premium":   "liquorland",
     "liquorland_fortified": "liquorland",
     "liquorland_dessert":   "liquorland",
 }
