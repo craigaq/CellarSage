@@ -742,8 +742,21 @@ def get_wine_picks(
         picks.append(_row_to_pick(r, 2, t2_label))
         seen.add(r["name"])
 
-    # Tier 3 — best-value non-Australian
-    for r in int_rows:
+    # Tier 3 — best-value non-Australian.
+    # If rated pool had no international wines, fall back to unrated international
+    # wines from the full pre-filter pool (marked is_sage_pick=True).
+    t3_pool = int_rows
+    if not any(r["name"] not in seen for r in t3_pool):
+        fallback_int = sorted(
+            [r for r in all_rows_full
+             if (r.get("country") or "").lower() not in ("", "australia")
+             and r["name"] not in seen],
+            key=_sort_key,
+        )
+        for r in fallback_int:
+            r["is_sage_pick"] = True
+        t3_pool = fallback_int
+    for r in t3_pool:
         if r["name"] not in seen:
             picks.append(_row_to_pick(r, 3, "The Internationalist"))
             seen.add(r["name"])
