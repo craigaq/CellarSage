@@ -729,11 +729,23 @@ def get_wine_picks(
 
     # Tier 2 — best-value wine from a DIFFERENT Australian state ("The Interstater").
     # Prefer cross-state wines so the label is always accurate.
-    # Falls back to a same-state wine only if no cross-state options exist,
-    # in which case the label changes to "The Local Alternative".
+    # If the rated pool has no cross-state wines, fall back to unrated interstate
+    # wines from all_rows_full (marked is_sage_pick=True).
+    # Falls back to same-state only if truly no interstate options exist anywhere.
     _state_upper = (user_state or "").upper()
     _other_au = [r for r in au_rows if r["name"] not in seen
                  and (_state_upper == "" or (r.get("state") or "").upper() != _state_upper)]
+    if not _other_au and _state_upper and all_rows_full:
+        fallback_other = sorted(
+            [r for r in all_rows_full
+             if (r.get("country") or "").lower() == "australia"
+             and (r.get("state") or "").upper() != _state_upper
+             and r["name"] not in seen],
+            key=_sort_key,
+        )
+        for r in fallback_other:
+            r["is_sage_pick"] = True
+        _other_au = fallback_other
     _same_au  = [r for r in au_rows if r["name"] not in seen and r not in _other_au]
     _t2_pool  = _other_au or _same_au
     if _t2_pool:
