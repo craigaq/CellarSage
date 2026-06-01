@@ -256,12 +256,26 @@ def resolve_pairing_conflict(prefs: UserPreferences) -> PalateParadox | None:
     if prefs.override_mode != "use_pairing_logic":
         return None
 
-    return PalateParadox(
-        status="CONFLICT",
-        message=(
+    _messages: dict[str, str] = {
+        "spicy_food": (
             "This dish pairs best with off-dry or fruit-forward wine to cool the heat, "
             "but you've told the Cellar Fox you prefer dry. How would you like to proceed?"
         ),
+        "dessert": (
+            "Dessert calls for a wine with a touch of sweetness — otherwise the wine "
+            "tastes thin and bitter alongside the food. You've told the Cellar Fox you "
+            "prefer dry. How would you like to proceed?"
+        ),
+    }
+    _default_message = (
+        "This dish pairs best with an off-dry or fruit-forward wine, "
+        "but you've told the Cellar Fox you prefer dry. How would you like to proceed?"
+    )
+    message = _messages.get(prefs.food_pairing, _default_message)
+
+    return PalateParadox(
+        status="CONFLICT",
+        message=message,
         options=[
             {
                 "label":  "Stick to my Dry preference",
