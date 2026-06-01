@@ -363,6 +363,7 @@ def get_buy_options(
     varietal: str,
     budget_min_aud: float = 0.0,
     budget_max_aud: float = 9999.0,
+    pref_organic: bool = False,
     user_lat: float | None = None,
     user_lng: float | None = None,
 ) -> list[dict]:

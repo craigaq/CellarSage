@@ -415,6 +415,7 @@ def buy_options(
     varietal: str = Query(..., max_length=100, description="Canonical varietal name (e.g. 'Cabernet Sauvignon')"),
     budget_min: float = Query(0.0, ge=0, description="Minimum price in AUD"),
     budget_max: float = Query(9999.0, ge=0, description="Maximum price in AUD"),
+    pref_organic: bool = Query(False, description="Prioritise organic/preservative-free wines"),
     user_lat: Optional[float] = Query(None, description="User latitude for geo-gated retailer filtering"),
     user_lng: Optional[float] = Query(None, description="User longitude for geo-gated retailer filtering"),
 ):
@@ -424,7 +425,7 @@ def buy_options(
     """
     from db_catalog import get_buy_options
     options = get_buy_options(varietal=varietal, budget_min_aud=budget_min, budget_max_aud=budget_max,
-                              user_lat=user_lat, user_lng=user_lng)
+                              pref_organic=pref_organic, user_lat=user_lat, user_lng=user_lng)
     return [BuyOption(**o) for o in options]
 
 
