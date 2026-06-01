@@ -1584,23 +1584,31 @@ class _WineResultCardState extends State<_WineResultCard> {
                 const SizedBox(height: 16),
                 const Divider(height: 1),
                 const SizedBox(height: 12),
-                // Column headers
+                // Column headers — aligned over their respective dot columns
                 Row(
                   children: [
                     const Expanded(child: SizedBox()),
-                    Text(
-                      'You',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                    SizedBox(
+                      width: 60,
+                      child: Text(
+                        'You',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      'Wine',
-                      style: WwText.bodySmall(color: WwColors.violet)
-                          .copyWith(fontWeight: FontWeight.w600),
+                    SizedBox(
+                      width: 60,
+                      child: Text(
+                        'Wine',
+                        textAlign: TextAlign.center,
+                        style: WwText.bodySmall(color: WwColors.violet)
+                            .copyWith(fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ],
                 ),
