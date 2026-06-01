@@ -28,7 +28,7 @@ class _Card {
 const _crispness = [
   _Card('🧈', 'Dead Flat', 'Buttery and round. Zero freshness, all richness'),
   _Card('🍐', 'Mellow Fresh', 'Soft pear-drop gentleness on the tongue'),
-  _Card('🥂', 'Citrus Bright', 'Balanced and celebratory. The sweet spot'),
+  _Card('🥂', 'Citrus Bright', 'Balanced and celebratory. The perfect middle ground'),
   _Card('🍋', 'Electric Zing!', 'Lemon-sharp and mouth-watering. It crackles!'),
   _Card('🍋‍🟩', 'Lightning Bolt!', 'Razor-sharp lime. Eye-wateringly crisp'),
 ];
@@ -36,7 +36,7 @@ const _crispness = [
 const _weight = [
   _Card('🕯️', 'Feather Light', 'Delicate as a taper flame. Barely there on the palate'),
   _Card('☁️', 'Cloud Soft', 'Graceful and floaty. Easy-drinking and gentle'),
-  _Card('🌊', 'Flowing Wave', 'Balanced and present. The classic medium-bodied sweet spot'),
+  _Card('🌊', 'Flowing Wave', 'Balanced and present. The classic medium-bodied choice'),
   _Card('🧥', 'Full & Huggable', 'Rich and substantial. Warming and deeply satisfying'),
   _Card('💪', 'Mighty Boulder!', 'A true heavyweight. Big, bold and built to last'),
 ];
