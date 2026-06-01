@@ -77,6 +77,18 @@ MERCHANT_REGISTRY: dict = {
             "includeRaw": False,
         },
     },
+    "liquorland_search_moscato": {
+        "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
+        "max_items": 50,
+        "pages": 2,
+        "enabled": True,
+        "actor_input": {
+            "operation": "search",
+            "query": "moscato",
+            "show": 50,
+            "includeRaw": False,
+        },
+    },
     "liquorland_search_semillon": {
         "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
         "max_items": 50,

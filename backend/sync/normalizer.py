@@ -513,8 +513,10 @@ def _matches_catalog(varietal: Optional[str], name: str) -> bool:
 # Standard 750ml bottles often omit the size entirely, so we reject only
 # explicit non-standard sizes rather than requiring "750ml" to be present.
 _NON_STD_SIZE_RE = re.compile(
-    r'(?<![0-9])(375\s?m[lL]|187\s?m[lL]|1[.·]5\s?[lL]|1500\s?m[lL]'
-    r'|1\s?[lL](?!\s?[0-9])|1000\s?m[lL]|[2-9]\s?[lL]|[2-9]000\s?m[lL])',
+    r'(?<![0-9])(375\s?m[lL]|187\s?m[lL]|250\s?m[lL]|200\s?m[lL]|330\s?m[lL]'
+    r'|1[.·]5\s?[lL]|1500\s?m[lL]'
+    r'|1\s?[lL](?!\s?[0-9])|1000\s?m[lL]|[2-9]\s?[lL]|[2-9]000\s?m[lL]'
+    r'|\bcan\b|\bcans\b|\bpicolo\b|\bpiccolino\b)',
     re.IGNORECASE,
 )
 
@@ -783,6 +785,7 @@ _NORMALIZERS = {
     "liquorland_search_riesling":        _normalize_liquorland,
     "liquorland_search_tempranillo":     _normalize_liquorland,
     "liquorland_search_prosecco":        _normalize_liquorland,
+    "liquorland_search_moscato":         _normalize_liquorland,
     "liquorland_search_semillon":        _normalize_liquorland,
     "liquorland_search_pinot_grigio":    _normalize_liquorland,
     "liquorland_search_pinot_gris":      _normalize_liquorland,
@@ -815,6 +818,7 @@ _MERCHANT_TO_RETAILER: dict[str, str] = {
     "liquorland_search_riesling":        "liquorland",
     "liquorland_search_tempranillo":     "liquorland",
     "liquorland_search_prosecco":        "liquorland",
+    "liquorland_search_moscato":         "liquorland",
     "liquorland_search_semillon":        "liquorland",
     "liquorland_search_pinot_grigio":    "liquorland",
     "liquorland_search_pinot_gris":      "liquorland",
