@@ -395,6 +395,7 @@ def wine_picks(
     budget_min: float = Query(0.0, ge=0, description="Minimum price in AUD"),
     budget_max: float = Query(9999.0, ge=0, description="Maximum price in AUD"),
     pref_dry: bool = Query(False, description="Exclude sweet styles from Tier 4 deal pool"),
+    pref_organic: bool = Query(False, description="Prioritise organic/preservative-free wines"),
     user_lat: Optional[float] = Query(None, description="User latitude for geo-gated retailer filtering"),
     user_lng: Optional[float] = Query(None, description="User longitude for geo-gated retailer filtering"),
 ):
@@ -405,7 +406,7 @@ def wine_picks(
     from db_catalog import get_wine_picks
     picks = get_wine_picks(varietal=varietal, user_state=user_state,
                            budget_min=budget_min, budget_max=budget_max, pref_dry=pref_dry,
-                           user_lat=user_lat, user_lng=user_lng)
+                           pref_organic=pref_organic, user_lat=user_lat, user_lng=user_lng)
     return WinePicksResponse(varietal=varietal, picks=[WinePick(**p) for p in picks])
 
 

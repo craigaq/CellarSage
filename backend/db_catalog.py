@@ -40,6 +40,9 @@ _PRODUCER_STATE: list[tuple[str, str]] = sorted(
 # Sweet varietal/style keywords used to filter Tier 4 when pref_dry=True.
 _SWEET_KEYWORDS = frozenset({"moscato", "muscat", "dessert", "sweet", "demi-sec", "doux"})
 
+# Organic/natural wine keywords used to boost results when pref_organic=True.
+_ORGANIC_KEYWORDS = frozenset({"organic", "preservative free", "preservative-free", "biodynamic", "pres free"})
+
 # Bundle product filter — applied at query time to hide already-ingested bundles.
 _BUNDLE_NAME_RE = re.compile(r'\b(dozen|add[- ]?on|six\s+pack|\d+\s*pack)\b', re.IGNORECASE)
 
@@ -512,6 +515,7 @@ def get_wine_picks(
     budget_min: float = 0.0,
     budget_max: float = 9999.0,
     pref_dry: bool = False,
+    pref_organic: bool = False,
     user_lat: float | None = None,
     user_lng: float | None = None,
 ) -> list[dict]:
@@ -523,7 +527,7 @@ def get_wine_picks(
     - Tier 4 (The Deal): absolute cheapest, subject to quality floor and dry guard
     """
     effective_min = max(MIN_PRICE_AUD, budget_min)
-    cache_key = (varietal, user_state, effective_min, budget_max, pref_dry)
+    cache_key = (varietal, user_state, effective_min, budget_max, pref_dry, pref_organic)
     cached = _PICKS_CACHE.get(cache_key)
     if cached and (time.time() - cached["ts"]) < _TTL_SECONDS:
         return cached["data"]
@@ -623,6 +627,15 @@ def get_wine_picks(
         r for r in all_rows
         if _infer_varietal(r.get("varietal") or "", "") in (canonical_requested, None)
     ]
+
+    # Organic boost: when pref_organic=True, sort organic/preservative-free wines
+    # to the top of the pool so they are preferred within each tier.
+    # Falls back silently to non-organic if no organic wines exist for a tier.
+    if pref_organic:
+        def _is_organic(r) -> bool:
+            name_lower = r.get("name", "").lower()
+            return any(kw in name_lower for kw in _ORGANIC_KEYWORDS)
+        all_rows = sorted(all_rows, key=lambda r: (0 if _is_organic(r) else 1))
 
     # Prefer wines with a meaningful rating signal (Vivino ≥10 reviews or critic score).
     # If fewer than 2 rated wines exist (e.g. Vivino enrichment down), fall back to

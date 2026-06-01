@@ -137,6 +137,7 @@ class ApiService {
     double budgetMin = 0.0,
     double budgetMax = 9999.0,
     bool prefDry = false,
+    bool prefOrganic = false,
     double? userLat,
     double? userLng,
   }) async {
@@ -145,6 +146,7 @@ class ApiService {
       'budget_min': '$budgetMin',
       'budget_max': '$budgetMax',
       'pref_dry': '$prefDry',
+      'pref_organic': '$prefOrganic',
     };
     if (userState != null) params['user_state'] = userState;
     if (userLat != null) params['user_lat'] = '$userLat';

@@ -32,7 +32,8 @@ class _QuizScreenState extends State<QuizScreen> {
   int _budgetIndex = 1; // index into CurrencyService.getBrackets()
   String _currencyCode = 'AUD'; // resolved from GPS in initState
   String? _userState; // AU state code resolved from GPS in initState
-  bool _prefDry = false;
+  bool _prefDry     = false;
+  bool _prefOrganic = false;
   String _overrideMode = 'use_pairing_logic';
   String _pairingMode = 'congruent'; // 'congruent' | 'contrast' | 'brave'
 
@@ -275,7 +276,8 @@ class _QuizScreenState extends State<QuizScreen> {
       _flavor = 1;
       _foodPairing = 'none';
       _budgetIndex = 1;
-      _prefDry = false;
+      _prefDry     = false;
+      _prefOrganic = false;
       _overrideMode = 'use_pairing_logic';
       _pairingMode = 'congruent';
       _results = null;
@@ -784,6 +786,17 @@ class _QuizScreenState extends State<QuizScreen> {
                 _prefDry = v;
                 _overrideMode = 'use_pairing_logic';
               }),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Organic preference toggle — prioritises organic/preservative-free wines
+          Card(
+            child: SwitchListTile(
+              secondary: const Text('🌿', style: TextStyle(fontSize: 22)),
+              title: const Text('I prefer organic wines'),
+              subtitle: const Text('Prioritises organic & preservative-free options'),
+              value: _prefOrganic,
+              onChanged: (v) => setState(() => _prefOrganic = v),
             ),
           ),
           const SizedBox(height: 12),
@@ -1315,6 +1328,7 @@ class _QuizScreenState extends State<QuizScreen> {
         budgetMax: _selectedBracket.max,
         currencyCode: _currencyCode,
         prefDry: _prefDry,
+        prefOrganic: _prefOrganic,
         userState: _userState,
         foodPairing: _foodPairing,
         pairingMode: _pairingMode,
@@ -1376,6 +1390,7 @@ class _WineResultCard extends StatefulWidget {
   final double budgetMax;
   final String currencyCode;
   final bool prefDry;
+  final bool prefOrganic;
   final String? userState;
   final String foodPairing;
   final String pairingMode;
@@ -1389,6 +1404,7 @@ class _WineResultCard extends StatefulWidget {
     required this.budgetMax,
     this.currencyCode = 'AUD',
     this.prefDry = false,
+    this.prefOrganic = false,
     this.userState,
     this.snapshot,
     this.foodPairing = 'none',
@@ -1692,6 +1708,7 @@ class _WineResultCardState extends State<_WineResultCard> {
                             budgetMin: widget.budgetMin,
                             budgetMax: widget.budgetMax,
                             prefDry: widget.prefDry,
+                            prefOrganic: widget.prefOrganic,
                             userState: widget.userState,
                             snapshot: widget.snapshot,
                           ),
@@ -2068,7 +2085,7 @@ class _PairingPhilosophyPicker extends StatelessWidget {
 
   static const braveOption = (
     id: 'brave',
-    icon: '✊',
+    icon: '🙏',
     label: "I'm Brave",
     description: "Let the Cellar Fox decide. Your palate steps aside — the food picks the wine.",
   );
