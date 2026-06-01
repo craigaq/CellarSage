@@ -2054,7 +2054,7 @@ class _PairingPhilosophyPicker extends StatelessWidget {
   static const _options = [
     (
       id: 'congruent',
-      icon: '🎵',
+      icon: '🤝',
       label: 'Harmonise',
       description: 'Attempt to mirror the dish.',
     ),
