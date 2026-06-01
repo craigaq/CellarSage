@@ -234,8 +234,8 @@ class _WinePicksScreenState extends State<WinePicksScreen> {
           padding: const EdgeInsets.only(bottom: 16),
           child: Text(
             picks.length == 1
-                ? 'One pick for your palate.'
-                : '${picks.length} picks — one for every palate.',
+                ? 'One pick — matched to your palate.'
+                : '${picks.length} picks — local hero to global icon.',
             style: WwText.bodyMedium(),
             textAlign: TextAlign.center,
           ),
