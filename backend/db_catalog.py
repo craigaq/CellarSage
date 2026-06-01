@@ -501,6 +501,18 @@ def get_buy_options(
             )
     result = filtered
 
+    # Organic boost: when pref_organic=True, sort organic wines to the top
+    # before the retailer-balance cap is applied.
+    if pref_organic:
+        result = sorted(
+            result,
+            key=lambda r: (
+                0 if any(kw in r.get("name", "").lower() for kw in _ORGANIC_KEYWORDS) else 1,
+                not r.get("_has_rating", False),
+                r.get("price", 9999),
+            )
+        )
+
     # Balance across retailers, cap at 12, rated wines prioritised.
     result = _balance_buy_options(result)
 
@@ -628,15 +640,6 @@ def get_wine_picks(
         if _infer_varietal(r.get("varietal") or "", "") in (canonical_requested, None)
     ]
 
-    # Organic boost: when pref_organic=True, sort organic/preservative-free wines
-    # to the top of the pool so they are preferred within each tier.
-    # Falls back silently to non-organic if no organic wines exist for a tier.
-    if pref_organic:
-        def _is_organic(r) -> bool:
-            name_lower = r.get("name", "").lower()
-            return any(kw in name_lower for kw in _ORGANIC_KEYWORDS)
-        all_rows = sorted(all_rows, key=lambda r: (0 if _is_organic(r) else 1))
-
     # Prefer wines with a meaningful rating signal (Vivino ≥10 reviews or critic score).
     # If fewer than 2 rated wines exist (e.g. Vivino enrichment down), fall back to
     # unrated wines so the screen stays useful — marked as Sage Picks in the UI.
@@ -645,6 +648,10 @@ def get_wine_picks(
             (r.get("vivino_rating") is not None and int(r.get("vivino_review_count") or 0) >= 10)
             or r.get("critic_score") is not None
         )
+
+    def _is_organic(r) -> bool:
+        name_lower = r.get("name", "").lower()
+        return any(kw in name_lower for kw in _ORGANIC_KEYWORDS)
 
     rated_rows   = [r for r in all_rows if _has_rating(r)]
     unrated_rows = [r for r in all_rows if not _has_rating(r)]
@@ -666,25 +673,29 @@ def get_wine_picks(
         critic        = r.get("critic_score")
         price         = float(r.get("price") or 9999)
 
+        # Organic prefix: when pref_organic=True, organic wines sort before
+        # non-organic wines of equal quality. 0 = organic, 1 = non-organic.
+        org = 0 if (pref_organic and _is_organic(r)) else 1
+
         # Tier 0: Vivino community data (global, high-volume signal)
         # Cap at 500 reviews so a 15k-review wine doesn't dominate a 200-review wine.
         if vivino_rating is not None and vivino_count >= 10:
             base  = (float(vivino_rating) * min(vivino_count, 500) / 500) / math.log1p(price)
             boost = max(0.0, (float(critic) - 85.0) / 15.0) if critic else 0.0
-            return (0, -(base + boost))
+            return (org, 0, -(base + boost))
 
         # Tier 0 fallback: retailer rating (low volume — cap at 30)
         if ret_rating is not None and ret_count >= 3:
             base  = (float(ret_rating) * min(ret_count, 30) / 30) / math.log1p(price)
             boost = max(0.0, (float(critic) - 85.0) / 15.0) if critic else 0.0
-            return (0, -(base + boost))
+            return (org, 0, -(base + boost))
 
         # Tier 0 fallback: critic score only, no community signal
         if critic is not None:
             base = (float(critic) / 100.0) / math.log1p(price)
-            return (0, -base)
+            return (org, 0, -base)
 
-        return (1, price)
+        return (org, 1, price)
 
     au_rows  = sorted(
         [r for r in all_rows if (r.get("country") or "").lower() == "australia"],
