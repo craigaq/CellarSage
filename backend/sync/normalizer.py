@@ -336,6 +336,9 @@ _BUNDLE_NAME_RE = re.compile(
 # but the product name clearly indicates a compound style (e.g. "Sparkling Shiraz"),
 # use the compound form so the DB keyword matching works correctly.
 _COMPOUND_OVERRIDES: list[tuple[re.Pattern, str]] = [
+    # Color-modifier compounds: strip the base varietal, keep only the color
+    (re.compile(r'\w+\s+(?:rosé|rose)\b', re.IGNORECASE), 'Rose'),  # e.g., "Sangiovese Rose" → "Rose"
+
     (re.compile(r'sparkling\s+shiraz', re.IGNORECASE), 'Sparkling Shiraz'),
     (re.compile(r'sparkling\s+red\b',  re.IGNORECASE), 'Sparkling Shiraz'),
     (re.compile(r'late\s+harvest\s+riesling', re.IGNORECASE), 'Late Harvest Riesling'),
