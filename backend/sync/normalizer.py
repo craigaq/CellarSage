@@ -339,6 +339,9 @@ _COMPOUND_OVERRIDES: list[tuple[re.Pattern, str]] = [
     # Color-modifier compounds: strip the base varietal, keep only the color
     (re.compile(r'\w+\s+(?:rosé|rose)\b', re.IGNORECASE), 'Rose'),  # e.g., "Sangiovese Rose" → "Rose"
 
+    # Sparkling blends: Chardonnay + Pinot Noir is classic Champagne
+    (re.compile(r'chardonnay[\s/]+pinot\s+noir', re.IGNORECASE), 'Champagne'),
+
     (re.compile(r'sparkling\s+shiraz', re.IGNORECASE), 'Sparkling Shiraz'),
     (re.compile(r'sparkling\s+red\b',  re.IGNORECASE), 'Sparkling Shiraz'),
     (re.compile(r'late\s+harvest\s+riesling', re.IGNORECASE), 'Late Harvest Riesling'),
