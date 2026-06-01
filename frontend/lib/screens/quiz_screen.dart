@@ -57,100 +57,89 @@ class _QuizScreenState extends State<QuizScreen> {
       'label': 'Steak, Lamb, or Burgers',
       'id': 'red_meat',
       'emoji': '🥩',
-      'comment':
-          "Steak nights are the best! We'll hunt for a wine with enough 'grip' (Tannin) to handle all that richness.",
-      'contrast_comment':
-          "Bold move — we'll find a bright, acid-driven wine to cut through the fat instead. Think Pinot Noir over Cabernet.",
+      'comment': "Find a wine with grip to handle the richness.",
+      'contrast_comment': "Find a bright, acid-driven wine to cut through the fat.",
+      'brave_comment': "Let the Cellar Fox decide what pairs best here.",
     },
     {
       'label': 'Chicken, Turkey, or Pork',
       'id': 'poultry',
       'emoji': '🍗',
-      'comment':
-          "Chicken or pork? A versatile choice! Let's find a wine that's supportive but still brings its own personality to the party.",
-      'contrast_comment':
-          "Rather than mirroring the delicacy, we'll find a richer, more expressive wine to frame the dish. Viognier energy.",
+      'comment': "Find a wine that echoes this pairing.",
+      'contrast_comment': "Find a richer wine to frame the delicacy.",
+      'brave_comment': "Let the Cellar Fox decide what works here.",
     },
     {
       'label': 'White Fish or Shellfish',
       'id': 'white_fish',
       'emoji': '🐟',
-      'comment':
-          "Delicate flavors! We'll keep things light and 'crisp' (Acidity) so the wine doesn't drown out the fish.",
-      'contrast_comment':
-          "We'll look for a more textured, expressive wine to frame the delicacy — think skin-contact or fuller whites. Tannin still off-limits.",
+      'comment': "Find a crisp wine that won't drown the fish.",
+      'contrast_comment': "Find a textured wine to frame the delicacy.",
+      'brave_comment': "Let the Cellar Fox decide what pairs best here.",
     },
     {
       'label': 'Salmon or Tuna',
       'id': 'rich_fish',
       'emoji': '🍣',
-      'comment':
-          "Salmon has some weight to it! We need a wine with enough 'zing' (Acidity) to cut through the richness.",
-      'contrast_comment':
-          "Instead of cutting through the richness, we'll match salmon's weight with a full-bodied wine. Richness meets richness.",
+      'comment': "Find a wine with acidity to cut through richness.",
+      'contrast_comment': "Find a full-bodied wine to match salmon's weight.",
+      'brave_comment': "Let the Cellar Fox decide what works here.",
     },
     {
       'label': 'Spicy Curry or Tacos',
       'id': 'spicy_food',
       'emoji': '🌶️',
-      'comment':
-          "Ooh, a spicy one! We'll look for something 'fruity' (Aromatics) to act like a fire extinguisher for your tongue.",
-      'contrast_comment':
-          "Dangerous choice — we'll amplify the fire instead of fighting it. Maximum aromatics to match the dish's intensity.",
+      'comment': "Find something fruity to cool the heat.",
+      'contrast_comment': "Find something bold to amplify the fire.",
+      'brave_comment': "Let the Cellar Fox decide what pairs best here.",
     },
     {
       'label': 'Tomato Pasta or Pizza',
       'id': 'tomato_sauce',
       'emoji': '🍕',
-      'comment':
-          "Zesty tomato sauce! We need a wine with enough 'punch' (Acidity) to keep up with that tangy energy.",
-      'contrast_comment':
-          "Instead of matching the tang, we'll find a smooth, round wine to soften it. The velvet glove to the tomato's fist.",
+      'comment': "Find a wine with punch to keep up.",
+      'contrast_comment': "Find a smooth wine to soften the tang.",
+      'brave_comment': "Let the Cellar Fox decide what works here.",
     },
     {
       'label': 'Creamy or Cheesy Pasta',
       'id': 'creamy_sauce',
       'emoji': '🧀',
-      'comment':
-          "Rich and buttery? We'll find a 'heavyweight' (Full-bodied) wine that feels just as luxurious as the sauce.",
-      'contrast_comment':
-          "Classic sommelier move — a razor-sharp, high-acid wine to cut straight through all that dairy fat. Chablis would approve.",
+      'comment': "Find a heavyweight to match the richness.",
+      'contrast_comment': "Find a sharp, high-acid wine to cut through.",
+      'brave_comment': "Let the Cellar Fox decide what pairs best here.",
     },
     {
       'label': 'Salads or Green Veggies',
       'id': 'greens',
       'emoji': '🥗',
-      'comment':
-          "Fresh and light! Let's pick a 'crisp' (Acidity) wine that tastes like a summer garden in a glass.",
-      'contrast_comment':
-          "Rather than mirroring the freshness, we'll find an earthy, more expressive wine to complement those green notes.",
+      'comment': "Find a crisp wine like a summer garden.",
+      'contrast_comment': "Find an earthy wine to complement the greens.",
+      'brave_comment': "Let the Cellar Fox decide what works here.",
     },
     {
       'label': 'Cheese & Charcuterie',
       'id': 'charcuterie',
       'emoji': '🍖',
-      'comment':
-          "The ultimate snack pack! We'll find a crowd-pleaser that can handle everything from creamy brie to salty salami.",
-      'contrast_comment':
-          "We'll go lean and punchy — high acid to cut aggressively through all that fat and salt. A wine with something to say.",
+      'comment': "Find a crowd-pleaser for the whole board.",
+      'contrast_comment': "Find a punchy, high-acid wine to cut through.",
+      'brave_comment': "Let the Cellar Fox decide what pairs best here.",
     },
     {
       'label': 'Dessert or Sweet Treats',
       'id': 'dessert',
       'emoji': '🍰',
-      'comment':
-          "Sweet finish! The Cellar Fox will hunt for something luscious and aromatic to mirror the magic — think Botrytis Semillon or Rutherglen Muscat.",
-      'contrast_comment':
-          "Bold move — we'll find a razor-sharp, high-acid wine to slice through all that sweetness instead. Bright and cleansing.",
+      'comment': "Find something luscious to mirror the sweetness.",
+      'contrast_comment': "Find a sharp wine to slice through the sweetness.",
+      'brave_comment': "Let the Cellar Fox decide what works here.",
     },
     {
       'label': 'Just sipping (No food)',
       'id': 'none',
       'emoji': '🍷',
-      'comment':
-          "Just a glass and some good vibes? Perfection. Let's find a wine that's a star all on its own.",
-      'contrast_comment':
-          "Just a glass and some good vibes? Perfection. Let's find a wine that's a star all on its own.",
+      'comment': "Let's find a wine that shines all on its own.",
+      'contrast_comment': "Let's find a wine that shines all on its own.",
+      'brave_comment': "Let's find a wine that shines all on its own.",
     },
   ];
 
@@ -174,9 +163,11 @@ class _QuizScreenState extends State<QuizScreen> {
       orElse: () => {},
     );
     if (option.isEmpty) return null;
-    return _pairingMode == 'contrast'
-        ? (option['contrast_comment'] ?? option['comment'])
-        : option['comment'];
+    return switch (_pairingMode) {
+      'contrast' => option['contrast_comment'] ?? option['comment'],
+      'brave' => option['brave_comment'] ?? option['comment'],
+      _ => option['comment'],
+    };
   }
 
   Map<String, int> get _userPrefs => {
