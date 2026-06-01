@@ -615,6 +615,15 @@ def get_wine_picks(
             and "sparkling" not in (r.get("varietal") or "").lower()
         ]
 
+    # Varietal bleed filter: exclude wines whose stored varietal maps to a
+    # different canonical than requested (e.g. "Botrytis Semillon" appearing
+    # in Semillon results, or "Late Harvest Riesling" in Riesling results).
+    canonical_requested = _infer_varietal(None, varietal) or varietal
+    all_rows = [
+        r for r in all_rows
+        if _infer_varietal(r.get("varietal") or "", "") in (canonical_requested, None)
+    ]
+
     # Prefer wines with a meaningful rating signal (Vivino ≥10 reviews or critic score).
     # If fewer than 2 rated wines exist (e.g. Vivino enrichment down), fall back to
     # unrated wines so the screen stays useful — marked as Sage Picks in the UI.

@@ -514,7 +514,7 @@ def _matches_catalog(varietal: Optional[str], name: str) -> bool:
 # Standard 750ml bottles often omit the size entirely, so we reject only
 # explicit non-standard sizes rather than requiring "750ml" to be present.
 _NON_STD_SIZE_RE = re.compile(
-    r'(?<![0-9])(375\s?m[lL]|187\s?m[lL]|250\s?m[lL]|200\s?m[lL]|330\s?m[lL]'
+    r'(?<![0-9])(375\s?m[lL]|187\s?m[lL]|500\s?m[lL]|250\s?m[lL]|200\s?m[lL]|330\s?m[lL]'
     r'|1[.·]5\s?[lL]|1500\s?m[lL]'
     r'|1\s?[lL](?!\s?[0-9])|1000\s?m[lL]|[2-9]\s?[lL]|[2-9]000\s?m[lL]'
     r'|\bcan\b|\bcans\b|\bpicolo\b|\bpiccolino\b)',
