@@ -659,7 +659,15 @@ def get_wine_picks(
     all_rows_full = list(all_rows)  # preserved for Tier 1 state fallback
 
     if len(rated_rows) >= 2:
-        all_rows = rated_rows
+        if pref_organic:
+            # When organic is preferred, include unrated organic wines in the pool
+            # so they can be surfaced by the sort key. Mark them as Sage Picks.
+            organic_unrated = [r for r in unrated_rows if _is_organic(r)]
+            for r in organic_unrated:
+                r["is_sage_pick"] = True
+            all_rows = rated_rows + organic_unrated
+        else:
+            all_rows = rated_rows
     else:
         # Vivino likely unavailable — surface everything, flagged for UI fallback label
         for r in unrated_rows:
