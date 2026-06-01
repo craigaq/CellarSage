@@ -794,7 +794,7 @@ class _QuizScreenState extends State<QuizScreen> {
             child: SwitchListTile(
               secondary: const Text('🌿', style: TextStyle(fontSize: 22)),
               title: const Text('I prefer organic wines'),
-              subtitle: const Text('Prioritises organic & preservative-free options'),
+              subtitle: const Text('Organic & preservative-free where possible, best available otherwise'),
               value: _prefOrganic,
               onChanged: (v) => setState(() => _prefOrganic = v),
             ),
