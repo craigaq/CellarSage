@@ -1601,7 +1601,7 @@ class _WineResultCardState extends State<_WineResultCard> {
                         'You',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
