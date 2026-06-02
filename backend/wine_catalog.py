@@ -77,11 +77,12 @@ _REDS: list[WineProfile] = [
     # Rank 6 — Key player in Australia and globally
     WineProfile(
         "Syrah/Shiraz", sku_id="WW-SH01",
-        acidity_ph=3.50, body=5.0, tannin_structure=4, aromatic_intensity=9,
+        acidity_ph=3.50, body=4.0, tannin_structure=4, aromatic_intensity=8,
         abv_percentage=14.5, residual_sugar_gl=2.0,
         location_tag="Local",           # Barossa Valley SA is THE global benchmark for Shiraz
         # Wine Australia: "plush, velvety, full-bodied — lower relative acid than Clare Valley."
-        # pH 3.50 → lower acidity score (≈ 1.67); body 5.0 = truly full-bodied Barossa profile.
+        # pH 3.50 → lower acidity score (≈ 1.67); body 4.0 = full-bodied across all AU regions
+        # (body=5/aromatics=9 was Barossa-specific; 4/8 better represents broader AU Shiraz).
     ),
 
     # Rank 7 — Dominates Spain; moderate global market presence
