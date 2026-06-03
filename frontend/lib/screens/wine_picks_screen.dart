@@ -63,16 +63,22 @@ class _WinePicksScreenState extends State<WinePicksScreen> {
   }
 
   Future<void> _fetchLocationThenLoad() async {
+    // Start loading immediately so the screen isn't blank while GPS resolves.
+    // If location arrives within 5 seconds, reload with geo-gated retailers included.
+    _load();
     try {
-      final pos = await LocationService().getCurrentPosition();
-      if (mounted) {
-        _userLat = pos.latitude;
-        _userLng = pos.longitude;
+      final pos = await LocationService().getCurrentPosition()
+          .timeout(const Duration(seconds: 5));
+      if (mounted && (pos.latitude != _userLat || pos.longitude != _userLng)) {
+        setState(() {
+          _userLat = pos.latitude;
+          _userLng = pos.longitude;
+        });
+        _load(); // reload with location so geo-gated retailers appear
       }
     } catch (_) {
       // Location unavailable — geo-gated retailers simply won't appear
     }
-    _load();
   }
 
   Future<void> _loadProfiles() async {
