@@ -6,9 +6,12 @@ Store ID: 99839
 Coordinates: -37.5791, 144.7494
 """
 
+import gzip
 import json
+import random
 import ssl
 import logging
+import time
 import urllib.parse
 import urllib.request
 import uuid
@@ -24,6 +27,14 @@ _STORE_LNG = 144.74941778805461
 
 _QUERIES = ["wine", "port", "sherry", "muscat", "botrytis", "fortified"]
 
+# Rotate through realistic Chrome versions to avoid UA fingerprinting
+_USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0",
+]
+
 _ctx = ssl.create_default_context()
 _ctx.check_hostname = False
 _ctx.verify_mode    = ssl.CERT_NONE
@@ -31,16 +42,16 @@ _ctx.verify_mode    = ssl.CERT_NONE
 
 def _headers() -> dict:
     return {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"
-        ),
-        "Accept":          "application/json, */*",
-        "Accept-Language": "en-AU,en;q=0.9",
-        "Origin":          _SITE_BASE,
-        "Referer":         f"{_SITE_BASE}/wine",
-        "X-Shopping-Mode": "22222222-2222-2222-2222-222222222222",
-        "X-Site-Host":     _SITE_BASE,
+        "User-Agent":       random.choice(_USER_AGENTS),
+        "Accept":           "application/json, text/plain, */*",
+        "Accept-Language":  "en-AU,en-GB;q=0.9,en;q=0.8",
+        "Accept-Encoding":  "gzip, deflate, br",
+        "Origin":           _SITE_BASE,
+        "Referer":          f"{_SITE_BASE}/wine",
+        "Cache-Control":    "no-cache",
+        "Pragma":           "no-cache",
+        "X-Shopping-Mode":  "22222222-2222-2222-2222-222222222222",
+        "X-Site-Host":      _SITE_BASE,
         "X-Correlation-Id":       str(uuid.uuid4()),
         "x-customer-session-id":  f"{_SITE_BASE}|{uuid.uuid4()}",
         "X-Customer-Address-Latitude":  str(_STORE_LAT),
@@ -49,10 +60,16 @@ def _headers() -> dict:
 
 
 def _fetch(url: str) -> Optional[dict]:
+    # Use a cookie-enabled opener so session cookies are preserved across requests
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor())
     req = urllib.request.Request(url, headers=_headers())
     try:
-        with urllib.request.urlopen(req, timeout=20, context=_ctx) as r:
-            return json.loads(r.read())
+        with opener.open(req, timeout=20) as r:
+            raw = r.read()
+            # Decompress gzip if the response is compressed
+            if raw[:2] == b'\x1f\x8b':
+                raw = gzip.decompress(raw)
+            return json.loads(raw)
     except urllib.error.HTTPError as e:
         log.warning("cellarbrations_sunbury: HTTP %d — %s", e.code, url)
     except Exception as e:
@@ -66,7 +83,11 @@ def scrape_cellarbrations_sunbury() -> list[dict]:
     seen_ids: set[str] = set()
     raw_products: list[dict] = []
 
-    for term in _QUERIES:
+    for i, term in enumerate(_QUERIES):
+        # Polite delay between requests — 2-4 seconds randomised
+        if i > 0:
+            time.sleep(random.uniform(2.0, 4.0))
+
         url = (
             f"{_GW_BASE}/api/stores/{_STORE_ID}/preview"
             f"?q={urllib.parse.quote(term)}&productsTake=1000"
