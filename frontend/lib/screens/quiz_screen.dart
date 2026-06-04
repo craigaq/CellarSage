@@ -32,6 +32,8 @@ class _QuizScreenState extends State<QuizScreen> {
   int _budgetIndex = 1; // index into CurrencyService.getBrackets()
   String _currencyCode = 'AUD'; // resolved from GPS in initState
   String? _userState; // AU state code resolved from GPS in initState
+  double? _userLat;   // raw GPS lat — passed to geo-gated retailer filter
+  double? _userLng;   // raw GPS lng
   bool _prefDry     = false;
   bool _prefOrganic = false;
   String _overrideMode = 'use_pairing_logic';
@@ -508,6 +510,10 @@ class _QuizScreenState extends State<QuizScreen> {
       CurrencyService.detectAustralianStateFromGps().then((state) {
         if (mounted) setState(() => _userState = state);
       });
+      // Also capture raw lat/lng for geo-gated retailer filtering.
+      LocationService().getCurrentPosition().then((pos) {
+        if (mounted) setState(() { _userLat = pos.latitude; _userLng = pos.longitude; });
+      }).catchError((_) {});
     });
     _refreshProfiles();
   }
@@ -1321,6 +1327,8 @@ class _QuizScreenState extends State<QuizScreen> {
         prefDry: _prefDry,
         prefOrganic: _prefOrganic,
         userState: _userState,
+        userLat: _userLat,
+        userLng: _userLng,
         foodPairing: _foodPairing,
         pairingMode: _pairingMode,
         snapshot: PalateSnapshot(
@@ -1383,6 +1391,8 @@ class _WineResultCard extends StatefulWidget {
   final bool prefDry;
   final bool prefOrganic;
   final String? userState;
+  final double? userLat;
+  final double? userLng;
   final String foodPairing;
   final String pairingMode;
 
@@ -1397,6 +1407,8 @@ class _WineResultCard extends StatefulWidget {
     this.prefDry = false,
     this.prefOrganic = false,
     this.userState,
+    this.userLat,
+    this.userLng,
     this.snapshot,
     this.foodPairing = 'none',
     this.pairingMode = 'congruent',
@@ -1502,6 +1514,8 @@ class _WineResultCardState extends State<_WineResultCard> {
         varietal: varietal,
         budgetMin: widget.budgetMin,
         budgetMax: widget.budgetMax,
+        userLat: widget.userLat,
+        userLng: widget.userLng,
       );
       if (mounted) setState(() { _buyOptions = options; _buyLoading = false; });
     } catch (e) {
