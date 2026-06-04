@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/wine_recommendation.dart';
 import '../services/api_service.dart';
+import '../services/location_service.dart';
 import '../services/palate_prefs.dart';
 import '../screens/wine_picks_screen.dart';
 import '../services/currency_service.dart';
