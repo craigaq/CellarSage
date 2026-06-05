@@ -179,12 +179,12 @@ class _MagicPaletteStepState extends State<MagicPaletteStep>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 50),
+        const SizedBox(height: 16),
         // Title
         Text(widget.title, style: WwText.headlineLarge()),
         const SizedBox(height: 8),
         Text(widget.description, style: WwText.bodyMedium()),
-        const SizedBox(height: 32),
+        const SizedBox(height: 20),
 
         // ── Hero card ────────────────────────────────────────────────────
         Center(
