@@ -214,7 +214,7 @@ class _MagicPaletteStepState extends State<MagicPaletteStep>
                         ),
                       ],
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -226,10 +226,10 @@ class _MagicPaletteStepState extends State<MagicPaletteStep>
                           child: Text(
                             selected.emoji,
                             key: ValueKey(widget.value),
-                            style: const TextStyle(fontSize: 72),
+                            style: const TextStyle(fontSize: 56),
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         // Label — DM Sans bold
                         AnimatedSwitcher(
                           duration: const Duration(milliseconds: 250),
@@ -324,7 +324,7 @@ class _MagicPaletteStepState extends State<MagicPaletteStep>
           ),
         ),
 
-        const SizedBox(height: 28),
+        const SizedBox(height: 16),
 
         // ── 5 thumbnail selector tiles ───────────────────────────────────
         Row(
