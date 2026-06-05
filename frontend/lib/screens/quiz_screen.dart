@@ -1023,39 +1023,7 @@ class _QuizScreenState extends State<QuizScreen> {
               }),
             ),
           ),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            child: _hasConflict
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(width: 12),
-                      Container(
-                        width: 110,
-                        padding: const EdgeInsets.all(10),
-                        decoration: WwDecorations.witCallout(),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SvgPicture.asset(
-                              'assets/images/sage_fox_new_dark.svg',
-                              width: 24,
-                              height: 24,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Spiky palate — the Cellar Fox has thoughts.',
-                              style: WwText.bodySmall(),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  )
-                : const SizedBox.shrink(),
-          ),
+          const SizedBox.shrink(),
         ],
       ),
     );
