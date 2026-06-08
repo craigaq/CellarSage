@@ -188,6 +188,8 @@ _PREF_FIELD_TO_ATTR: dict[str, str] = {
 _ATTRS: tuple[str, ...] = tuple(_PREF_FIELD_TO_ATTR.values())
 
 
+import math as _math
+
 def _normalise(user_input: int) -> float:
     """Map a 1-5 user input to a preference weight W_P in [0.2, 1.0]."""
     if not 1 <= user_input <= 5:
@@ -195,15 +197,34 @@ def _normalise(user_input: int) -> float:
     return user_input / 5.0
 
 
-def _match_score(preference_weight: float, wine_value: float) -> float:
-    """
-    Compute M_S: how well a wine's attribute value satisfies the preference weight.
+# Per-attribute Gaussian sigma values (in 1-5 scale units).
+# Lower sigma = tighter tolerance (user is more sensitive to that attribute).
+# Tannin and acidity are polarising — tight tolerance (1.0).
+# Body and aromatics have broader tolerance bands (1.5).
+_ATTR_SIGMA: dict[str, float] = {
+    "acidity":  1.0,
+    "body":     1.5,
+    "tannin":   1.0,
+    "aromatics": 1.5,
+}
 
-    Both preference_weight (W_P) and wine_value are on [0.2, 1.0] after normalisation.
-    Returns a value in [0.0, 1.0]; 1.0 = perfect match, 0.0 = opposite ends.
+
+def _match_score(preference_weight: float, wine_value: float, attr: str = "") -> float:
     """
-    wine_normalised = wine_value / 5.0
-    return 1.0 - abs(preference_weight - wine_normalised)
+    Compute M_S via Gaussian decay: how well the wine's attribute matches the
+    user's preference. Returns 1.0 at perfect match, decaying exponentially
+    with distance. Replaces the previous linear abs-difference model which
+    penalised adjacent values (e.g. user=1, wine=2) as harshly as distant
+    values (e.g. user=1, wine=5).
+
+    Both user_input and wine_value are on the 1-5 scale.
+    sigma is per-attribute (tannin/acidity tight at 1.0; body/aromatics wide at 1.5).
+    """
+    sigma = _ATTR_SIGMA.get(attr, 1.0)
+    # Convert preference_weight back to 1-5 scale for the distance calculation
+    user_input_scaled = preference_weight * 5.0
+    diff = wine_value - user_input_scaled
+    return _math.exp(-(diff ** 2) / (2 * sigma ** 2))
 
 
 def _score_attribute(
@@ -215,7 +236,7 @@ def _score_attribute(
     """
     Apply the full per-attribute formula and return the adjusted score.
 
-    W_Final  = W_P × M_S
+    W_Final  = W_P × M_S  (Gaussian decay match score)
     adjusted = (W_Final × multiplier) + (boost × wine_value / 5.0)
 
     The boost is proportional to the wine's actual attribute value so that
@@ -223,7 +244,7 @@ def _score_attribute(
     rather than shifting every wine's score identically (which would leave
     the relative ranking unchanged).
     """
-    w_final = pref_weight * _match_score(pref_weight, wine_value)
+    w_final = pref_weight * _match_score(pref_weight, wine_value, attr)
     multiplier = pairing_cfg["multipliers"].get(attr, 1.0)
     boost = pairing_cfg["boosts"].get(attr, 0.0)
     return (w_final * multiplier) + (boost * wine_value / 5.0)

@@ -50,7 +50,7 @@ const _texture = [
 ];
 
 const _flavor = [
-  _Card('💧', 'Whisper Quiet', 'Barely there. A neutral, almost water-like presence'),
+  _Card('💧', 'Whisper Quiet', 'A neutral, almost water-like presence'),
   _Card('🌿', 'Gently Speaks', 'Subtle herb and mineral. Quietly charming'),
   _Card('🌹', 'In Full Bloom', 'Expressive and aromatic. Beautiful and complex'),
   _Card('🍒', 'Star Power!', 'Vibrant and fruity. Bold, exciting, the spotlight is yours'),
@@ -179,11 +179,10 @@ class _MagicPaletteStepState extends State<MagicPaletteStep>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 16),
         // Title
-        Text(widget.title, style: WwText.headlineLarge()),
-        const SizedBox(height: 8),
-        Text(widget.description, style: WwText.bodyMedium()),
+        Text(widget.title, style: WwText.headlineMedium().copyWith(fontSize: 23)),
+        const SizedBox(height: 4),
+        Text(widget.description, style: WwText.bodyMedium().copyWith(fontSize: 13)),
         const SizedBox(height: 20),
 
         // ── Hero card ────────────────────────────────────────────────────

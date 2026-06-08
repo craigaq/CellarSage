@@ -36,3 +36,17 @@ print(f"Normalised {len(pairs)} wine/offer pairs")
 
 wines_saved, offers_saved = upsert_batch(pairs)
 print(f"\nDone: {wines_saved} wines, {offers_saved} offers upserted to DB")
+
+# Flush the backend cache so the next user request gets fresh data
+import urllib.request, urllib.parse
+_token = os.environ.get("CACHE_FLUSH_TOKEN", "")
+_api   = os.environ.get("API_BASE_URL", "https://cellarsage-api.fly.dev")
+if _token:
+    try:
+        _url = f"{_api}/internal/flush-cache?token={urllib.parse.quote(_token)}"
+        urllib.request.urlopen(urllib.request.Request(_url, method="POST"), timeout=10)
+        print("Cache flushed on Fly.io — next request will pull fresh DB data.")
+    except Exception as e:
+        print(f"Cache flush skipped (non-fatal): {e}")
+else:
+    print("CACHE_FLUSH_TOKEN not set — skipping remote cache flush.")

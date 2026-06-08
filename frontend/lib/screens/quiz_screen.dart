@@ -46,6 +46,7 @@ class _QuizScreenState extends State<QuizScreen> {
   String? _error;
   ConflictAlert? _conflictAlert;
   int _fetchGeneration = 0;
+  int _selectedResultIndex = 0; // which of the top-3 varietal tabs is active
 
   // --- Saved profiles ---
   List<PalateProfile> _savedProfiles = [];
@@ -445,6 +446,7 @@ class _QuizScreenState extends State<QuizScreen> {
         _results = result.recommendations;
         _conflictAlert = result.alert;
         _loading = false;
+        _selectedResultIndex = 0;
       });
       // Palate conflict alert (shown after results load)
       if (result.alert != null && mounted) {
@@ -560,14 +562,14 @@ class _QuizScreenState extends State<QuizScreen> {
                 _buildAttributeStep(
                   title: 'Weight (Body)',
                   description:
-                      'Do you prefer a light, delicate sip or a rich, full-bodied experience?',
+                      'A light, delicate sip or a rich, full-bodied experience?',
                   value: _weight,
                   onChanged: (v) => setState(() => _weight = v),
                 ),
                 _buildAttributeStep(
                   title: 'Texture (Tannin)',
                   description:
-                      'How do you feel about that dry, grippy sensation common in red wines?',
+                      'Do you like that dry, grippy sensation common in red wines?',
                   value: _texture,
                   onChanged: (v) => setState(() => _texture = v),
                 ),
@@ -1259,86 +1261,154 @@ class _QuizScreenState extends State<QuizScreen> {
     if (_results == null) {
       return const Center(child: Text('No results yet.'));
     }
+
+    // Top 3 varietals for the carousel tabs; remaining shown below as weaker matches.
+    final top3   = _results!.take(3).toList();
+    final others = _results!.skip(3).toList();
+    final idx    = _selectedResultIndex.clamp(0, top3.length - 1);
+    final sel    = top3[idx];
+
+    // Detect near-tie: show note when #1 and #2 are within 5% of each other.
+    final nearTie = top3.length >= 2 &&
+        (top3[0].score - top3[1].score).abs() / top3[0].score < 0.05;
+
+    Widget _card(WineRecommendation wine, int rank) => _WineResultCard(
+      rank: rank,
+      wine: wine,
+      userPrefs: _userPrefs,
+      attrOrder: _attrOrder,
+      budgetMin: _selectedBracket.min,
+      budgetMax: _selectedBracket.max,
+      currencyCode: _currencyCode,
+      prefDry: _prefDry,
+      prefOrganic: _prefOrganic,
+      userState: _userState,
+      userLat: _userLat,
+      userLng: _userLng,
+      foodPairing: _foodPairing,
+      pairingMode: _pairingMode,
+      snapshot: PalateSnapshot(
+        crispness:   _crispness,
+        weight:      _weight,
+        texture:     _texture,
+        flavor:      _flavor,
+        foodPairing: _foodPairing,
+        budgetIndex: _budgetIndex,
+        prefDry:     _prefDry,
+      ),
+    );
+
     return _stepShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Your Recommendations', style: WwText.headlineLarge()),
+          Text('Your Top Matches', style: WwText.headlineLarge()),
           const SizedBox(height: 4),
           Text(
-            'Tap a card to see how each wine matches your palate.',
+            'The Cellar Fox found your top ${top3.length} varietals. Tap to explore each.',
             style: WwText.bodyMedium(),
           ),
+          if (nearTie) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: WwColors.violet.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '🦊 Very close call — #1 and #2 are nearly tied. Both worth exploring.',
+                style: WwText.bodySmall(color: WwColors.violet),
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+
+          // ── Varietal tab chips ──────────────────────────────────────────
+          Row(
+            children: [
+              for (int i = 0; i < top3.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedResultIndex = i),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+                      decoration: BoxDecoration(
+                        color: i == idx ? WwColors.violet : WwColors.bgSurface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: i == idx ? WwColors.violet : WwColors.borderSubtle,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            '#${i + 1}',
+                            style: WwText.bodySmall(
+                              color: i == idx ? Colors.black : WwColors.textSecondary,
+                            ).copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            top3[i].name,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: WwText.bodySmall(
+                              color: i == idx ? Colors.black : WwColors.textPrimary,
+                            ).copyWith(fontSize: 11, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${(top3[i].score * 100).round()}%',
+                            style: WwText.bodySmall(
+                              color: i == idx
+                                  ? Colors.black.withValues(alpha: 0.75)
+                                  : WwColors.textSecondary,
+                            ).copyWith(fontSize: 10),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+
           const SizedBox(height: 16),
-          ..._buildResultCards(_results!),
+
+          // ── Selected varietal card ──────────────────────────────────────
+          _card(sel, idx + 1),
+
+          // ── Other varietals (weaker matches) ───────────────────────────
+          if (others.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 16, bottom: 12),
+              child: Row(
+                children: [
+                  Expanded(child: Divider(color: WwColors.textDisabled.withValues(alpha: 0.4))),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text('Other matches', style: WwText.bodySmall(color: WwColors.textDisabled)),
+                  ),
+                  Expanded(child: Divider(color: WwColors.textDisabled.withValues(alpha: 0.4))),
+                ],
+              ),
+            ),
+            for (int i = 0; i < others.length; i++) _card(others[i], top3.length + i + 1),
+          ],
         ],
       ),
     );
   }
 
-  static const double _greatMatchThreshold = 0.60;
-
-  List<Widget> _buildResultCards(List<WineRecommendation> results) {
-    final great  = results.where((w) => w.score >= _greatMatchThreshold).toList();
-    final weaker = results.where((w) => w.score <  _greatMatchThreshold).toList();
-
-    int rank = 0;
-    Widget card(WineRecommendation wine) {
-      rank++;
-      return _WineResultCard(
-        rank: rank,
-        wine: wine,
-        userPrefs: _userPrefs,
-        attrOrder: _attrOrder,
-        budgetMin: _selectedBracket.min,
-        budgetMax: _selectedBracket.max,
-        currencyCode: _currencyCode,
-        prefDry: _prefDry,
-        prefOrganic: _prefOrganic,
-        userState: _userState,
-        userLat: _userLat,
-        userLng: _userLng,
-        foodPairing: _foodPairing,
-        pairingMode: _pairingMode,
-        snapshot: PalateSnapshot(
-          crispness:   _crispness,
-          weight:      _weight,
-          texture:     _texture,
-          flavor:      _flavor,
-          foodPairing: _foodPairing,
-          budgetIndex: _budgetIndex,
-          prefDry:     _prefDry,
-        ),
-      );
-    }
-
-    return [
-      for (final wine in great) card(wine),
-      if (weaker.isNotEmpty) ...[
-        Padding(
-          padding: const EdgeInsets.only(top: 8, bottom: 16),
-          child: Row(
-            children: [
-              Expanded(child: Divider(color: WwColors.textDisabled.withValues(alpha: 0.4))),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  'Weaker matches',
-                  style: WwText.bodySmall(color: WwColors.textDisabled),
-                ),
-              ),
-              Expanded(child: Divider(color: WwColors.textDisabled.withValues(alpha: 0.4))),
-            ],
-          ),
-        ),
-        for (final wine in weaker) card(wine),
-      ],
-    ];
-  }
-
   Widget _stepShell({required Widget child}) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
       child: child,
     );
   }

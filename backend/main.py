@@ -27,7 +27,7 @@ from recommendation_service import (
     check_food_pairing_conflicts,
     resolve_pairing_conflict,
 )
-from wine_catalog import WINE_DATABASE
+from wine_catalog import load_catalog_from_db
 from term_mapping import TECHNICAL_TO_UI
 from interceptor import run_recommendation_middleware, run_merchant_middleware, TieredMerchantResults
 from local_sourcing import TIER_LABELS, TIER_REGION_HINTS
@@ -66,10 +66,14 @@ app.add_middleware(
 )
 
 
-# Wine catalog is maintained in wine_catalog.py (Enhanced Data Schema)
-_CATALOG = WINE_DATABASE
+# Varietal catalog: loaded from DB at startup, falls back to bundled wine_catalog.py.
+# Reload by calling _reload_service() (e.g. after /internal/flush-cache).
+_service = RecommendationService(load_catalog_from_db())
 
-_service = RecommendationService(_CATALOG)
+
+def _reload_service() -> None:
+    global _service
+    _service = RecommendationService(load_catalog_from_db())
 
 
 # ---------------------------------------------------------------------------
@@ -510,3 +514,29 @@ def nearby(req: NearbyRequest):
         tiers=tier_responses,
         pricing_precedent_applied=tiered.tier_3_suppressed,
     )
+
+
+# ---------------------------------------------------------------------------
+# Internal — cache management
+# ---------------------------------------------------------------------------
+
+@app.post("/internal/flush-cache")
+def flush_cache(token: str = Query(...)):
+    """
+    Flush all in-memory caches so the next request pulls fresh data from the DB.
+    Called by sync scripts after a data update completes.
+    Token must match the CACHE_FLUSH_TOKEN environment variable.
+    """
+    import os
+    expected = os.environ.get("CACHE_FLUSH_TOKEN", "")
+    if not expected or token != expected:
+        raise HTTPException(status_code=403, detail="Invalid token")
+
+    from db_catalog import _CACHE, _BUY_CACHE, _PICKS_CACHE
+    _CACHE.clear()
+    _BUY_CACHE.clear()
+    _PICKS_CACHE.clear()
+    _reload_service()
+    log = logging.getLogger("cellar_sage")
+    log.info("[Cache] All caches flushed and varietal catalog reloaded via /internal/flush-cache")
+    return {"flushed": True, "message": "All caches cleared and varietal catalog reloaded"}

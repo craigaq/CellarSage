@@ -546,3 +546,42 @@ WINE_DATABASE: list[WineProfile] = _REDS + _WHITES + _SPARKLING + _DESSERT + _FO
 
 # Lookup by wine name — useful for sourcing layer and tests
 WINE_BY_NAME: dict[str, WineProfile] = {w.name: w for w in WINE_DATABASE}
+
+
+def load_catalog_from_db() -> list[WineProfile]:
+    """Return varietal profiles from the DB, falling back to the bundled WINE_DATABASE."""
+    import os, logging
+    log = logging.getLogger("cellar_sage")
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        return WINE_DATABASE
+    try:
+        import psycopg2, psycopg2.extras
+        conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT * FROM varietal_profiles ORDER BY id")
+            rows = cur.fetchall()
+        if not rows:
+            log.warning("[Catalog] varietal_profiles table is empty — using bundled catalog")
+            return WINE_DATABASE
+        profiles = [
+            WineProfile(
+                name=r["name"],
+                acidity_ph=float(r["acidity_ph"]),
+                body=float(r["body"]),
+                tannin_structure=int(r["tannin_structure"]),
+                aromatic_intensity=int(r["aromatic_intensity"]),
+                abv_percentage=float(r["abv_percentage"]),
+                residual_sugar_gl=float(r["residual_sugar_gl"]),
+                style=r["style"],
+                varietal=r["varietal"] or "",
+                sku_id=r["sku_id"] or "",
+                location_tag=r["location_tag"] or "",
+            )
+            for r in rows
+        ]
+        log.info("[Catalog] Loaded %d varietal profiles from DB", len(profiles))
+        return profiles
+    except Exception as exc:
+        log.warning("[Catalog] DB load failed, using bundled catalog: %s", exc)
+        return WINE_DATABASE

@@ -660,11 +660,24 @@ def get_wine_picks(
 
     if len(rated_rows) >= 2:
         if pref_organic:
-            # When organic is preferred, include unrated organic wines in the pool
-            # so they can be surfaced by the sort key. Mark them as Sage Picks.
+            # When organic is preferred, include unrated organic wines in the pool.
+            # Assign a proxy Vivino rating (varietal median of rated wines) so they
+            # compete fairly in _sort_key rather than dropping to the unrated tier.
+            vivino_ratings = [
+                float(r["vivino_rating"]) for r in rated_rows
+                if r.get("vivino_rating") is not None
+                and int(r.get("vivino_review_count") or 0) >= 10
+            ]
+            proxy_rating = (
+                sorted(vivino_ratings)[len(vivino_ratings) // 2]
+                if vivino_ratings else None
+            )
             organic_unrated = [r for r in unrated_rows if _is_organic(r)]
             for r in organic_unrated:
                 r["is_sage_pick"] = True
+                if proxy_rating is not None:
+                    r["vivino_rating"]       = proxy_rating
+                    r["vivino_review_count"] = 10   # minimum signal floor
             all_rows = rated_rows + organic_unrated
         else:
             all_rows = rated_rows
@@ -836,17 +849,34 @@ def get_wine_picks(
             seen.add(r["name"])
             break
 
-    # Tier 4 — The Deal: cheapest wine that clears the quality floor AND is
-    # genuinely cheaper than every pick already selected. If nothing is cheaper
-    # than the existing picks (e.g. the cheapest bottle already became T1),
-    # suppress T4 rather than showing a "deal" that costs more.
-    cheapest_picked = min((float(p["price"]) for p in picks), default=9999.0)
-    deal_pool = sorted(all_rows, key=lambda r: float(r.get("price") or 9999))
+    # Tier 4 — The Deal: best Price-to-Quality wine not already selected.
+    # P/Q score = (vivino_rating * 20) / price — surfaces aggressive value,
+    # not just the cheapest bottle. Falls back to retailer rating when no
+    # Vivino data exists. Wines with no rating get a neutral proxy score so
+    # they can still appear if genuinely cheap. Quality floor: retailer rating
+    # >= 3.0 with >= 3 reviews required (bad-value guard unchanged).
+    def _pq_score(r) -> float:
+        price = float(r.get("price") or 9999)
+        if price <= 0:
+            return 0.0
+        vivino = r.get("vivino_rating")
+        if vivino is not None and int(r.get("vivino_review_count") or 0) >= 10:
+            return float(vivino) * 20.0 / price
+        ret = r.get("rating")
+        if ret is not None and int(r.get("review_count") or 0) >= 3:
+            return float(ret) * 20.0 / price
+        critic = r.get("critic_score")
+        if critic is not None:
+            return (float(critic) / 5.0) / price   # critic /100 * 20 / price
+        # Unrated wines: neutral proxy so price still separates them
+        return 10.0 / price
+
+    deal_pool = sorted(
+        [r for r in all_rows if r["name"] not in seen],
+        key=_pq_score,
+        reverse=True,
+    )
     for r in deal_pool:
-        if r["name"] in seen:
-            continue
-        if float(r.get("price") or 9999) >= cheapest_picked:
-            break  # pool is price-sorted; nothing cheaper exists
         _rating  = r.get("rating")
         _reviews = int(r.get("review_count") or 0)
         if _rating is not None and _reviews >= 3 and float(_rating) < 3.0:
