@@ -1320,7 +1320,7 @@ class _QuizScreenState extends State<QuizScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SvgPicture.asset('assets/images/sage_fox_new_dark.svg', width: 20, height: 20),
+                  SvgPicture.asset('assets/images/sage_fox_new_dark.svg', width: 36, height: 36),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
