@@ -1273,6 +1273,7 @@ class _QuizScreenState extends State<QuizScreen> {
         (top3[0].score - top3[1].score).abs() / top3[0].score < 0.05;
 
     Widget _card(WineRecommendation wine, int rank) => _WineResultCard(
+      key: ValueKey(wine.varietal),
       rank: rank,
       wine: wine,
       userPrefs: _userPrefs,
@@ -1316,9 +1317,18 @@ class _QuizScreenState extends State<QuizScreen> {
                 color: WwColors.violet.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(
-                '🦊 Very close call — #1 and #2 are nearly tied. Both worth exploring.',
-                style: WwText.bodySmall(color: WwColors.violet),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SvgPicture.asset('assets/images/sage_fox_new_dark.svg', width: 20, height: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Very close call — #1 and #2 are nearly tied. Both worth exploring.',
+                      style: WwText.bodySmall(color: WwColors.violet),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -1436,6 +1446,7 @@ class _WineResultCard extends StatefulWidget {
   final String pairingMode;
 
   const _WineResultCard({
+    super.key,
     required this.rank,
     required this.wine,
     required this.userPrefs,
