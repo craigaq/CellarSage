@@ -380,11 +380,12 @@ _COMPOUND_OVERRIDES: list[tuple[re.Pattern, str]] = [
 
 
 def _refine_compound_varietal(varietal: str, name: str) -> str:
-    """Override a simple varietal with its compound form when the product name demands it."""
+    """Override a simple varietal with its compound form when the product name demands it,
+    then normalise to the canonical catalog label."""
     for pattern, compound in _COMPOUND_OVERRIDES:
         if pattern.search(name):
             return compound
-    return varietal
+    return _normalise_varietal(varietal)
 
 
 # Unaccented → accented canonical spellings
@@ -397,6 +398,31 @@ _VARIETAL_CANONICAL: dict[str, str] = {
     "albarino": "Albariño",
     "torrontes": "Torrontés",
 }
+
+# API-supplied varietal strings that need remapping to our catalog labels.
+# Applied after compound-override checks so fine-grained patterns win first.
+_VARIETAL_SYNONYMS: dict[str, str] = {
+    # Retailers store as "Shiraz" or "Syrah" — catalog label is "Syrah/Shiraz"
+    "shiraz":            "Syrah/Shiraz",
+    "syrah":             "Syrah/Shiraz",
+    # Tawny without "Port" suffix
+    "tawny":             "Tawny Port",
+    # Rutherglen Muscat sold under several names
+    "topaque":           "Muscat Liqueur",
+    "tokay":             "Muscat Liqueur",
+    "liqueur muscat":    "Muscat Liqueur",
+    "rutherglen muscat": "Muscat Liqueur",
+}
+
+
+def _normalise_varietal(varietal: str) -> str:
+    """Map a raw API varietal string to the canonical catalog label."""
+    key = varietal.strip().lower()
+    if key in _VARIETAL_SYNONYMS:
+        return _VARIETAL_SYNONYMS[key]
+    if key in _VARIETAL_CANONICAL:
+        return _VARIETAL_CANONICAL[key]
+    return varietal
 
 
 # ── Australian producer → state mapping (loaded from producer_state.json) ────
@@ -469,7 +495,8 @@ def _infer_varietal(name: str) -> Optional[str]:
     lower = name.lower()
     for kw in _CATALOG_KEYWORDS:
         if kw in lower:
-            return _VARIETAL_CANONICAL.get(kw, kw.title())
+            raw = _VARIETAL_CANONICAL.get(kw, kw.title())
+            return _normalise_varietal(raw)
     return None
 
 
