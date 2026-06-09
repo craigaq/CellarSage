@@ -354,9 +354,13 @@ _COMPOUND_OVERRIDES: list[tuple[re.Pattern, str]] = [
     (re.compile(r'fino\s+sherry',        re.IGNORECASE), 'Fino Sherry'),
     (re.compile(r'shiraz\s+viognier',                          re.IGNORECASE), 'Red Blend'),
     (re.compile(r'syrah\s+viognier',                           re.IGNORECASE), 'Red Blend'),
-    # GSM and Rhône-style blends
+    # GSM and Rhône-style blends — any order of the three
     (re.compile(r'grenache[\s/]+shiraz[\s/]+mourvèdre',        re.IGNORECASE), 'Red Blend'),
     (re.compile(r'grenache[\s/]+shiraz[\s/]+mourvedre',        re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'shiraz[\s/\w]*grenache[\s/\w]*mourv',        re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'grenache[\s/\w]*mourv',                      re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'mourv[èe]dre[\s/\w]*(shiraz|grenache)',      re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'(shiraz|grenache)[\s/\w]*mourv[èe]dre',      re.IGNORECASE), 'Red Blend'),
     (re.compile(r'\bgsm\b',                                    re.IGNORECASE), 'Red Blend'),
     # Cabernet-led blends
     (re.compile(r'cabernet[\s/]+merlot',                       re.IGNORECASE), 'Red Blend'),
@@ -364,6 +368,18 @@ _COMPOUND_OVERRIDES: list[tuple[re.Pattern, str]] = [
     (re.compile(r'shiraz[\s/]+cabernet',                       re.IGNORECASE), 'Red Blend'),
     (re.compile(r'cabernet[\s/]+merlot[\s/]+shiraz',           re.IGNORECASE), 'Red Blend'),
     (re.compile(r'cabernet[\s/]+franc[\s/]+merlot',            re.IGNORECASE), 'Red Blend'),
+    # Malbec-led blends
+    (re.compile(r'malbec[\s/\w]*shiraz',                       re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'malbec[\s/\w]*syrah',                        re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'malbec[\s/\w]*durif',                        re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'malbec[\s/\w]*cabernet',                     re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'malbec[\s/\w]*merlot',                       re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'syrah[\s/]+malbec',                          re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'shiraz[\s/]+malbec',                         re.IGNORECASE), 'Red Blend'),
+    # Durif blends (Durif/Petite Sirah mixed with anything = Red Blend)
+    (re.compile(r'shiraz[\s/\w]*durif',                        re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'durif[\s/\w]*shiraz',                        re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'durif[\s/\w]*cabernet',                      re.IGNORECASE), 'Red Blend'),
     # Explicitly labelled blends
     (re.compile(r'\bwhite\s+blend\b',                          re.IGNORECASE), 'White Blend'),
     (re.compile(r'\bbrut\b',                                   re.IGNORECASE), 'Champagne'),
