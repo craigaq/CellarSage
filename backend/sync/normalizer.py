@@ -352,34 +352,7 @@ _COMPOUND_OVERRIDES: list[tuple[re.Pattern, str]] = [
     (re.compile(r'tawny\s+port',         re.IGNORECASE), 'Tawny Port'),
     (re.compile(r'vintage\s+port',       re.IGNORECASE), 'Vintage Port'),
     (re.compile(r'fino\s+sherry',        re.IGNORECASE), 'Fino Sherry'),
-    (re.compile(r'shiraz\s+viognier',                          re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'syrah\s+viognier',                           re.IGNORECASE), 'Red Blend'),
-    # GSM and Rhône-style blends — any order of the three
-    (re.compile(r'grenache[\s/]+shiraz[\s/]+mourvèdre',        re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'grenache[\s/]+shiraz[\s/]+mourvedre',        re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'shiraz[\s/\w]*grenache[\s/\w]*mourv',        re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'grenache[\s/\w]*mourv',                      re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'mourv[èe]dre[\s/\w]*(shiraz|grenache)',      re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'(shiraz|grenache)[\s/\w]*mourv[èe]dre',      re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'\bgsm\b',                                    re.IGNORECASE), 'Red Blend'),
-    # Cabernet-led blends
-    (re.compile(r'cabernet[\s/]+merlot',                       re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'cabernet[\s/]+shiraz',                       re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'shiraz[\s/]+cabernet',                       re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'cabernet[\s/]+merlot[\s/]+shiraz',           re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'cabernet[\s/]+franc[\s/]+merlot',            re.IGNORECASE), 'Red Blend'),
-    # Malbec-led blends
-    (re.compile(r'malbec[\s/\w]*shiraz',                       re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'malbec[\s/\w]*syrah',                        re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'malbec[\s/\w]*durif',                        re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'malbec[\s/\w]*cabernet',                     re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'malbec[\s/\w]*merlot',                       re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'syrah[\s/]+malbec',                          re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'shiraz[\s/]+malbec',                         re.IGNORECASE), 'Red Blend'),
-    # Durif blends (Durif/Petite Sirah mixed with anything = Red Blend)
-    (re.compile(r'shiraz[\s/\w]*durif',                        re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'durif[\s/\w]*shiraz',                        re.IGNORECASE), 'Red Blend'),
-    (re.compile(r'durif[\s/\w]*cabernet',                      re.IGNORECASE), 'Red Blend'),
+    (re.compile(r'\bgsm\b', re.IGNORECASE), 'Red Blend'),
     # Explicitly labelled blends
     (re.compile(r'\bwhite\s+blend\b',                          re.IGNORECASE), 'White Blend'),
     (re.compile(r'\bbrut\b',                                   re.IGNORECASE), 'Champagne'),
@@ -395,12 +368,67 @@ _COMPOUND_OVERRIDES: list[tuple[re.Pattern, str]] = [
 ]
 
 
+# Ordered longest-first so "cabernet sauvignon" matches before bare "cabernet",
+# and "pinot noir" matches before "pinot" (preventing false-positives with Pinot Grigio).
+_RED_VARIETAL_TOKENS: list[str] = sorted([
+    "cabernet sauvignon",
+    "cabernet franc",
+    "petit verdot",
+    "petite verdot",
+    "pinot noir",
+    "nero d'avola",
+    "touriga nacional",
+    "touriga",
+    "cabernet",   # catch-all — after the specific cabernet entries
+    "shiraz",
+    "syrah",
+    "grenache",
+    "mourvedre",
+    "mourvèdre",
+    "merlot",
+    "malbec",
+    "tempranillo",
+    "sangiovese",
+    "nebbiolo",
+    "barbera",
+    "gamay",
+    "zinfandel",
+    "durif",
+    "viognier",   # often co-fermented with Shiraz; counts as a blending signal
+    "monastrell",
+    "carmenere",
+    "carménère",
+], key=lambda s: -len(s))
+
+
+def _count_red_varietals(name: str) -> int:
+    """Count how many distinct red varietal tokens appear in a product name."""
+    lower = name.lower()
+    found: set[str] = set()
+    for token in _RED_VARIETAL_TOKENS:
+        if token in lower:
+            # Normalise aliases so "shiraz" and "syrah" don't double-count
+            canonical = {
+                "syrah": "shiraz",
+                "mourvedre": "mourvedre", "mourvèdre": "mourvedre",
+                "cabernet franc": "cabernet franc",
+                "cabernet sauvignon": "cabernet sauvignon",
+                "cabernet": "cabernet sauvignon",  # bare cabernet = same slot
+                "carmenere": "carmenere", "carménère": "carmenere",
+                "petit verdot": "petit verdot", "petite verdot": "petit verdot",
+            }.get(token, token)
+            found.add(canonical)
+    return len(found)
+
+
 def _refine_compound_varietal(varietal: str, name: str) -> str:
     """Override a simple varietal with its compound form when the product name demands it,
     then normalise to the canonical catalog label."""
     for pattern, compound in _COMPOUND_OVERRIDES:
         if pattern.search(name):
             return compound
+    if _count_red_varietals(name) >= 2:
+        return 'Red Blend'
     return _normalise_varietal(varietal)
 
 
@@ -508,6 +536,8 @@ def _infer_varietal(name: str) -> Optional[str]:
     for pattern, compound in _COMPOUND_OVERRIDES:
         if pattern.search(name):
             return compound
+    if _count_red_varietals(name) >= 2:
+        return 'Red Blend'
     lower = name.lower()
     for kw in _CATALOG_KEYWORDS:
         if kw in lower:
