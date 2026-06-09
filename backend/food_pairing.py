@@ -294,6 +294,58 @@ FOOD_PAIRING: dict[str, dict] = {
         },
     },
 
+    # Smoked & BBQ — charred bark, sweet rubs, slow-cook richness
+    "smoked_bbq": {
+        "is_sweet_pairing": False,
+        "congruent": {
+            # Bold wine to match the smoke and charred-sweet intensity — Zinfandel/Malbec/Syrah territory
+            "multipliers": {
+                "tannin": 1.4,   # Fat and char absorb tannin well — reward grippy reds
+                "body":   1.5,   # Big flavours need big wine
+            },
+            "boosts": {
+                "aromatics": 0.5,  # Spicy/fruity notes complement the smoky rub
+            },
+        },
+        "contrast": {
+            # Acid-bright wine cuts through the sweet-smoky fat — think GSM rosé or Grenache
+            "multipliers": {
+                "tannin": 0.5,   # Ease back on grip — freshness does the work
+                "body":   0.7,   # Lighter frame lets the acidity lead
+            },
+            "boosts": {
+                "acidity": 1.0,  # Crispness slices through the richness and sweetness of the rub
+            },
+        },
+    },
+
+    # Vegetarian & Earthy — mushrooms, roasted root veg, lentils, legumes
+    "earthy_veg": {
+        "is_sweet_pairing": False,
+        "congruent": {
+            # Earthy, structured wine echoes the umami and rootiness — Pinot Noir/Nebbiolo territory
+            "multipliers": {
+                "tannin": 0.9,   # Moderate grip suits earthy umami — not crushing
+                "body":   1.1,   # Medium-full body matches the heartiness of roasted veg
+            },
+            "boosts": {
+                "aromatics": 0.8,  # Forest floor / earthy/spice notes complement mushroom and root veg
+                "acidity":   0.3,  # Light crispness prevents the pairing from feeling heavy
+            },
+        },
+        "contrast": {
+            # Crisp aromatic white lifts the earthiness — Riesling / Grüner Veltliner style
+            "multipliers": {
+                "tannin": 0.2,   # Suppress grip — brightness leads
+                "body":   0.6,   # Lighter frame to contrast the hearty dish
+            },
+            "boosts": {
+                "acidity":   1.0,  # Razor freshness cuts through the earthiness
+                "aromatics": 0.5,  # Aromatic whites (Riesling, Grüner) lift and frame the dish
+            },
+        },
+    },
+
     # No food — palate dial stays exactly where the user set it
     "none": {
         "is_sweet_pairing": False,

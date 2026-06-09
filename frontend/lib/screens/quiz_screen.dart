@@ -122,6 +122,22 @@ class _QuizScreenState extends State<QuizScreen> {
       'brave_comment': "Let the Cellar Fox decide what works here.",
     },
     {
+      'label': 'Smoked BBQ or Grilled Meats',
+      'id': 'smoked_bbq',
+      'emoji': '🔥',
+      'comment': "Find a bold, smoky red to match the char.",
+      'contrast_comment': "Find a bright wine to cut through the sweetness and smoke.",
+      'brave_comment': "Let the Cellar Fox decide what pairs best here.",
+    },
+    {
+      'label': 'Mushrooms, Root Veg or Legumes',
+      'id': 'earthy_veg',
+      'emoji': '🍄',
+      'comment': "Find an earthy wine to echo the roots and mushrooms.",
+      'contrast_comment': "Find a crisp aromatic white to lift the earthiness.",
+      'brave_comment': "Let the Cellar Fox decide what works here.",
+    },
+    {
       'label': 'Cheese & Charcuterie',
       'id': 'charcuterie',
       'emoji': '🍖',

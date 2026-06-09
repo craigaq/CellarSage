@@ -300,7 +300,7 @@ class _PickCard extends StatelessWidget {
                     ),
                     if (pick.tier == 4)
                       Text(
-                        'Lowest price found',
+                        'Best value for money',
                         style: WwText.badgeLabel().copyWith(
                           fontSize: 9,
                           fontWeight: FontWeight.w400,
