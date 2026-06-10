@@ -751,7 +751,7 @@ class _QuizScreenState extends State<QuizScreen> {
           // Beverage toggle
           Container(
             decoration: BoxDecoration(
-              border: Border.all(color: WwColors.borderLight),
+              border: Border.all(color: WwColors.borderMedium),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -763,7 +763,7 @@ class _QuizScreenState extends State<QuizScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
                         color: _beverageType == 'wine'
-                          ? WwColors.primary.withOpacity(0.1)
+                          ? WwColors.violet.withOpacity(0.1)
                           : Colors.transparent,
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(12),
@@ -774,7 +774,7 @@ class _QuizScreenState extends State<QuizScreen> {
                         '🍷 Wine',
                         style: WwText.bodyMedium(
                           color: _beverageType == 'wine'
-                            ? WwColors.primary
+                            ? WwColors.violet
                             : WwColors.textSecondary,
                         ),
                         textAlign: TextAlign.center,
@@ -782,7 +782,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     ),
                   ),
                 ),
-                Container(width: 1, color: WwColors.borderLight),
+                Container(width: 1, color: WwColors.borderMedium),
                 Expanded(
                   child: GestureDetector(
                     onTap: () => setState(() => _beverageType = 'beer'),
@@ -790,7 +790,7 @@ class _QuizScreenState extends State<QuizScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
                         color: _beverageType == 'beer'
-                          ? WwColors.primary.withOpacity(0.1)
+                          ? WwColors.violet.withOpacity(0.1)
                           : Colors.transparent,
                         borderRadius: const BorderRadius.only(
                           topRight: Radius.circular(12),
@@ -801,7 +801,7 @@ class _QuizScreenState extends State<QuizScreen> {
                         '🍺 Beer',
                         style: WwText.bodyMedium(
                           color: _beverageType == 'beer'
-                            ? WwColors.primary
+                            ? WwColors.violet
                             : WwColors.textSecondary,
                         ),
                         textAlign: TextAlign.center,
