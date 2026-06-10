@@ -103,6 +103,37 @@ class WineRecommendation {
   }
 }
 
+class BeerRecommendation {
+  final String name;
+  final String skuId;
+  final double score;
+  final Map<String, double> attributeScores;
+  final Map<String, double> beerProfile;
+  final String beerStyle;
+
+  BeerRecommendation({
+    required this.name,
+    required this.skuId,
+    required this.score,
+    required this.attributeScores,
+    required this.beerProfile,
+    required this.beerStyle,
+  });
+
+  factory BeerRecommendation.fromJson(Map<String, dynamic> json) {
+    return BeerRecommendation(
+      name:    json['name']    as String,
+      skuId:   (json['sku_id'] as String?) ?? '',
+      score:   (json['score']  as num).toDouble(),
+      attributeScores: (json['attribute_scores'] as Map<String, dynamic>)
+          .map((k, v) => MapEntry(k, (v as num).toDouble())),
+      beerProfile: ((json['beer_profile'] as Map<String, dynamic>?) ?? {})
+          .map((k, v) => MapEntry(k, (v as num).toDouble())),
+      beerStyle: (json['beer_style'] as String?) ?? 'Lager',
+    );
+  }
+}
+
 class BuyOption {
   final String name;
   final double price;

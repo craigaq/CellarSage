@@ -39,6 +39,7 @@ class _QuizScreenState extends State<QuizScreen> {
   bool _prefOrganic = false;
   String _overrideMode = 'use_pairing_logic';
   String _pairingMode = 'congruent'; // 'congruent' | 'contrast' | 'brave'
+  String _beverageType = 'wine'; // 'wine' | 'beer'
 
   // --- Results state ---
   List<WineRecommendation>? _results;
@@ -447,30 +448,60 @@ class _QuizScreenState extends State<QuizScreen> {
       _conflictAlert = null;
     });
     try {
-      final result = await ApiService().recommend(
-        crispnessAcidity: _crispness,
-        weightBody: _weight,
-        textureTannin: _texture,
-        flavorIntensity: _flavor,
-        foodPairing: _foodPairing,
-        prefDry: _prefDry,
-        overrideMode: _overrideMode,
-        pairingMode: _pairingMode,
-      );
-      if (generation != _fetchGeneration || !mounted) return;
-      setState(() {
-        _results = result.recommendations;
-        _conflictAlert = result.alert;
-        _loading = false;
-        _selectedResultIndex = 0;
-      });
-      // Palate conflict alert (shown after results load)
-      if (result.alert != null && mounted) {
-        await showConflictAlert(
-          context,
-          result.alert!,
-          _applyConflictAdjustment,
+      if (_beverageType == 'beer') {
+        final result = await ApiService().recommendBeer(
+          crispnessAcidity: _crispness,
+          weightBody: _weight,
+          textureTannin: _texture,
+          flavorIntensity: _flavor,
+          foodPairing: _foodPairing,
+          prefDry: _prefDry,
+          overrideMode: _overrideMode,
+          pairingMode: _pairingMode,
         );
+        if (generation != _fetchGeneration || !mounted) return;
+        // Convert BeerRecommendation to WineRecommendation for uniform display
+        final wineResults = result.recommendations.map((beer) {
+          return WineRecommendation(
+            name: beer.name,
+            skuId: beer.skuId,
+            score: beer.score,
+            attributeScores: beer.attributeScores,
+            wineProfile: beer.beerProfile,
+            rawMetrics: {'beer_style': beer.beerStyle},
+          );
+        }).toList();
+        setState(() {
+          _results = wineResults;
+          _loading = false;
+          _selectedResultIndex = 0;
+        });
+      } else {
+        final result = await ApiService().recommend(
+          crispnessAcidity: _crispness,
+          weightBody: _weight,
+          textureTannin: _texture,
+          flavorIntensity: _flavor,
+          foodPairing: _foodPairing,
+          prefDry: _prefDry,
+          overrideMode: _overrideMode,
+          pairingMode: _pairingMode,
+        );
+        if (generation != _fetchGeneration || !mounted) return;
+        setState(() {
+          _results = result.recommendations;
+          _conflictAlert = result.alert;
+          _loading = false;
+          _selectedResultIndex = 0;
+        });
+        // Palate conflict alert (shown after results load)
+        if (result.alert != null && mounted) {
+          await showConflictAlert(
+            context,
+            result.alert!,
+            _applyConflictAdjustment,
+          );
+        }
       }
     } catch (e) {
       if (generation != _fetchGeneration || !mounted) return;
@@ -712,9 +743,74 @@ class _QuizScreenState extends State<QuizScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Answer 7 quick questions about your palate and we\'ll find wines that actually match how you think.',
+            'Answer 7 quick questions about your palate and we\'ll find ${_beverageType == 'wine' ? 'wines' : 'beers'} that actually match how you think.',
             style: WwText.bodyLarge(color: WwColors.textSecondary),
             textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          // Beverage toggle
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: WwColors.borderLight),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _beverageType = 'wine'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _beverageType == 'wine'
+                          ? WwColors.primary.withOpacity(0.1)
+                          : Colors.transparent,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(12),
+                          bottomLeft: Radius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        '🍷 Wine',
+                        style: WwText.bodyMedium(
+                          color: _beverageType == 'wine'
+                            ? WwColors.primary
+                            : WwColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ),
+                Container(width: 1, color: WwColors.borderLight),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _beverageType = 'beer'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _beverageType == 'beer'
+                          ? WwColors.primary.withOpacity(0.1)
+                          : Colors.transparent,
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(12),
+                          bottomRight: Radius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        '🍺 Beer',
+                        style: WwText.bodyMedium(
+                          color: _beverageType == 'beer'
+                            ? WwColors.primary
+                            : WwColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 32),
           if (_savedProfiles.isNotEmpty) ...[

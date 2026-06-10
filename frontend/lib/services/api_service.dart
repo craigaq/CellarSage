@@ -75,6 +75,44 @@ class ApiService {
     throw Exception('Server returned status ${response.statusCode}');
   }
 
+  Future<({
+    List<BeerRecommendation> recommendations,
+  })> recommendBeer({
+    required int crispnessAcidity,
+    required int weightBody,
+    required int textureTannin,
+    required int flavorIntensity,
+    required String foodPairing,
+    bool prefDry = false,
+    String overrideMode = 'use_pairing_logic',
+    String pairingMode = 'congruent',
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$_baseUrl/beer-recommend'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'crispness_acidity': crispnessAcidity,
+        'weight_body': weightBody,
+        'texture_tannin': textureTannin,
+        'flavor_intensity': flavorIntensity,
+        'food_pairing': foodPairing,
+        'pref_dry': prefDry,
+        'override_mode': overrideMode,
+        'pairing_mode': pairingMode,
+      }),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final recommendations = (data['recommendations'] as List)
+          .map((r) => BeerRecommendation.fromJson(r as Map<String, dynamic>))
+          .toList();
+      return (
+        recommendations: recommendations,
+      );
+    }
+    throw Exception('Server returned status ${response.statusCode}');
+  }
+
   Future<({GastroClash? gastroClash, PalateParadox? palateParadox})> checkPairing({
     required String foodType,
     required int crispnessAcidity,
