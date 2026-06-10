@@ -217,12 +217,11 @@ def _call_actor(wine_names: list[str]) -> list[dict]:
     return run_actor(
         actor_id=_ACTOR_ID,
         actor_input={
-            'wineNames':           wine_names,
+            'wines':               wine_names,
             'searchMode':          'name_and_vintage',
             'maxResultsPerSearch': _MAX_RESULTS,
             'includeTasteProfile': True,
             'includeReviews':      False,
-            'countryCode':         'AU',
             'shipTo':              'AU',
         },
         max_items=len(wine_names) * _MAX_RESULTS,
