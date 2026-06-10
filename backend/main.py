@@ -24,6 +24,7 @@ import urllib.parse
 
 from recommendation_service import (
     RecommendationService, WineProfile, UserPreferences,
+    BeerRecommendationService, BeerProfile, ScoredBeer,
     check_food_pairing_conflicts,
     resolve_pairing_conflict,
 )
@@ -70,10 +71,22 @@ app.add_middleware(
 # Reload by calling _reload_service() (e.g. after /internal/flush-cache).
 _service = RecommendationService(load_catalog_from_db())
 
+# Beer catalog: loaded from DB at startup
+def _load_beer_catalog():
+    from wine_catalog import load_beer_catalog_from_db
+    try:
+        return load_beer_catalog_from_db()
+    except Exception as e:
+        logging.getLogger("cellar_sage").warning("Could not load beer catalog: %s", e)
+        return []
+
+_beer_service = BeerRecommendationService(_load_beer_catalog())
+
 
 def _reload_service() -> None:
-    global _service
+    global _service, _beer_service
     _service = RecommendationService(load_catalog_from_db())
+    _beer_service = BeerRecommendationService(_load_beer_catalog())
 
 
 # ---------------------------------------------------------------------------
@@ -113,6 +126,20 @@ class RecommendResponse(BaseModel):
     conflict_alert: Optional[dict] = None
     gastro_clash: Optional[dict] = None
     pairing_conflict: Optional[dict] = None
+
+
+class BeerResult(BaseModel):
+    name: str
+    sku_id: str
+    score: float
+    attribute_scores: dict[str, float]
+    beer_profile: dict[str, float]   # normalised 1-5 attribute values
+    beer_style: str
+
+
+class BeerRecommendResponse(BaseModel):
+    recommendations: list[BeerResult]
+    ui_labels: dict[str, str]  # Reuse wine UI labels for now
 
 
 class NearbyRequest(BaseModel):
@@ -389,6 +416,52 @@ def recommend(req: RecommendRequest):
             else None
         ),
         pairing_conflict=dataclasses.asdict(paradox) if paradox else None,
+    )
+
+
+@app.post("/beer-recommend", response_model=BeerRecommendResponse)
+def beer_recommend(req: RecommendRequest):
+    """Beer pairing recommendation — parallel to /recommend."""
+    try:
+        prefs = UserPreferences(
+            crispness_acidity=req.crispness_acidity,
+            weight_body=req.weight_body,
+            texture_tannin=req.texture_tannin,
+            flavor_intensity=req.flavor_intensity,
+            food_pairing=req.food_pairing,
+            pref_dry=req.pref_dry,
+            override_mode=req.override_mode,
+            pairing_mode=req.pairing_mode,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    # Score beers without middleware (MVP — no geo-gating, no filtering)
+    results = _beer_service.recommend(prefs, top_n=req.top_n)
+
+    def _beer_profile_dict(beer: BeerProfile) -> dict[str, float]:
+        """Map beer attributes to UI labels."""
+        return {
+            "Bitterness": min(5.0, max(1.0, beer.bitterness)),
+            "Weight": min(5.0, max(1.0, beer.body)),
+            "Flavor Intensity": min(5.0, max(1.0, beer.aromatics)),
+            "Sweetness": min(5.0, max(1.0, beer.sweetness)),
+            "Carbonation": min(5.0, max(1.0, beer.carbonation)),
+        }
+
+    return BeerRecommendResponse(
+        recommendations=[
+            BeerResult(
+                name=r.beer.name,
+                sku_id=r.beer.sku_id,
+                score=r.score,
+                attribute_scores=r.attribute_scores,
+                beer_profile=_beer_profile_dict(r.beer),
+                beer_style=r.beer.beer_style,
+            )
+            for r in results
+        ],
+        ui_labels=TECHNICAL_TO_UI,
     )
 
 

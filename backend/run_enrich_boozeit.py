@@ -8,5 +8,5 @@ load_dotenv()
 from sync.enrich_vivino import enrich_vivino
 
 # Boozeit added 607 new wines — run a large batch to cover as many as possible
-enriched = enrich_vivino(limit=607)
+enriched = enrich_vivino(limit=624)
 print(f"\nEnriched: {enriched} wines")

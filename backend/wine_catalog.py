@@ -585,3 +585,54 @@ def load_catalog_from_db() -> list[WineProfile]:
     except Exception as exc:
         log.warning("[Catalog] DB load failed, using bundled catalog: %s", exc)
         return WINE_DATABASE
+
+
+def load_beer_catalog_from_db() -> list:
+    """Return beer profiles from the DB. Returns empty list if beers table doesn't exist."""
+    import os, logging
+    from recommendation_service import BeerProfile
+
+    log = logging.getLogger("cellar_sage")
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        log.warning("[Beer Catalog] No DATABASE_URL set")
+        return []
+    try:
+        import psycopg2, psycopg2.extras
+        conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
+        with conn, conn.cursor() as cur:
+            # Check if beers table exists
+            cur.execute(
+                "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name='beers')"
+            )
+            if not cur.fetchone()["exists"]:
+                log.info("[Beer Catalog] beers table not found — returning empty catalog")
+                return []
+
+            cur.execute("SELECT * FROM beers ORDER BY id")
+            rows = cur.fetchall()
+
+        if not rows:
+            log.info("[Beer Catalog] beers table is empty")
+            return []
+
+        profiles = [
+            BeerProfile(
+                name=r["name"],
+                ibu_bitterness=float(r["ibu_bitterness"]),
+                body=float(r["body"]),
+                malt_sweetness=int(r["malt_sweetness"]),
+                hop_intensity=int(r["hop_intensity"]),
+                abv_percentage=float(r["abv_percentage"]),
+                carbonation_level=int(r["carbonation_level"]),
+                beer_style=r["beer_style"] or "Lager",
+                sku_id=r["sku_id"] or "",
+                location_tag=r["location_tag"] or "",
+            )
+            for r in rows
+        ]
+        log.info("[Beer Catalog] Loaded %d beers from DB", len(profiles))
+        return profiles
+    except Exception as exc:
+        log.warning("[Beer Catalog] DB load failed: %s", exc)
+        return []

@@ -86,6 +86,60 @@ class WineProfile:
         self.alcohol_abv = self.abv_percentage
 
 
+@dataclass
+class BeerProfile:
+    """Technical attribute profile for a beer.
+
+    Attributes
+    ──────────
+    name                — Beer name / brand.
+    ibu_bitterness      — International Bitterness Units (0–100+); analogous to wine acidity.
+    body                — 1-5 expert rating (Light → Full); shared axis with wine.
+    malt_sweetness      — 1-5 malt character scale (dry malt → sweet malt).
+    hop_intensity       — 1-10 hop aroma intensity (clean → intensely hoppy).
+    abv_percentage      — Alcohol by Volume %.
+    carbonation_level   — 1-5 carbonation (flat → highly effervescent).
+    beer_style          — Category: IPA, Lager, Stout, Porter, Sour, Wheat, Pilsner, etc.
+    sku_id              — Unique identifier for inventory tracking.
+    location_tag        — "Local" | "National" | "International".
+
+    Internal scoring fields (derived in __post_init__)
+    ──────────────────────────────────────────────────
+    bitterness   — IBU normalised to 1-5 range (linear: IBU/20, clamped to 1.0-5.0).
+    body, aromatics, alcohol_abv — same as wine scoring semantics.
+    sweetness    — Float cast of malt_sweetness (1-5 → 1.0-5.0).
+    carbonation  — Float cast of carbonation_level (1-5 → 1.0-5.0).
+    """
+    name:               str
+    ibu_bitterness:     float       # IBUs: 0–100+
+    body:               float       # 1-5 expert rating
+    malt_sweetness:     int         # 1-5 malt character
+    hop_intensity:      int         # 1-10
+    abv_percentage:     float = 5.0
+    carbonation_level:  int = 3
+    beer_style:         str = "Lager"
+    sku_id:             str = ""
+    location_tag:       str = ""
+    # ── Derived scoring fields (populated by __post_init__) ──
+    bitterness:   float = field(init=False, default=0.0)
+    aromatics:    float = field(init=False, default=0.0)
+    sweetness:    float = field(init=False, default=0.0)
+    carbonation:  float = field(init=False, default=0.0)
+    alcohol_abv:  float = field(init=False, default=0.0)
+
+    def __post_init__(self) -> None:
+        # Normalise IBUs to 1-5 range: 0 IBU → 1.0, 100 IBU → 5.0, clamped
+        self.bitterness   = round(min(5.0, max(1.0, 1.0 + (self.ibu_bitterness / 20.0))), 2)
+        # Hop intensity halved (1-10 → 0.5-5.0)
+        self.aromatics    = self.hop_intensity / 2.0
+        # Malt sweetness as-is (1-5 → 1.0-5.0)
+        self.sweetness    = float(self.malt_sweetness)
+        # Carbonation as-is (1-5 → 1.0-5.0)
+        self.carbonation  = float(self.carbonation_level)
+        # Alias for compatibility
+        self.alcohol_abv  = self.abv_percentage
+
+
 # Wines the Cellar Fox targets in "Find a Middle Ground" mode.
 # These varietals are technically dry but aromatically intense enough
 # to stand in for off-dry pairings with spicy food.
@@ -583,6 +637,148 @@ class RecommendationService:
         overall = sum(attribute_scores.values()) / len(attribute_scores)
         return ScoredWine(
             wine=wine,
+            score=round(overall, 4),
+            attribute_scores=attribute_scores,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Beer Recommendation Engine — parallel to Wine
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ScoredBeer:
+    """A beer together with its computed recommendation score."""
+    beer: BeerProfile
+    score: float
+    attribute_scores: dict[str, float] = field(default_factory=dict)
+
+
+# Beer preference mapping: maps UserPreferences field names to beer attributes
+_BEER_PREF_FIELD_TO_ATTR: dict[str, str] = {
+    "crispness_acidity": "bitterness",  # IBUs replace wine acidity for cutting fat
+    "weight_body": "body",              # Shared axis
+    "flavor_intensity": "aromatics",    # Hop intensity replaces wine aromatics
+}
+
+# Ordered tuple of beer attribute names for scoring
+_BEER_ATTRS: tuple[str, ...] = (
+    "bitterness",
+    "body",
+    "aromatics",
+    "sweetness",
+    "carbonation",
+)
+
+# Per-attribute Gaussian sigma values for beer (tuned for beer palate sensitivity)
+_BEER_ATTR_SIGMA: dict[str, float] = {
+    "bitterness":   1.2,  # IBUs are polarising — moderate tolerance
+    "body":         1.5,  # Broader tolerance
+    "aromatics":    1.5,  # Broader tolerance
+    "sweetness":    1.3,  # Malt sweetness is noticeable
+    "carbonation":  1.4,  # Fizz level is moderately polarising
+}
+
+
+class BeerRecommendationService:
+    """
+    Scores a list of beers against user preferences and returns ranked results.
+
+    Uses the same UserPreferences input as wine but maps attributes differently:
+    - crispness_acidity → bitterness (IBUs)
+    - weight_body → body (shared)
+    - flavor_intensity → aromatics (hop intensity)
+    Plus derived attributes: sweetness, carbonation
+
+    Usage
+    -----
+    from beer_pairing import FOOD_PAIRING_BEER
+    service = BeerRecommendationService(beers)
+    results = service.recommend(preferences, top_n=5)
+    """
+
+    def __init__(self, beer_catalog: list[BeerProfile]) -> None:
+        self.beer_catalog = beer_catalog
+
+    def recommend(
+        self,
+        preferences: UserPreferences,
+        top_n: int | None = None,
+        catalog: list[BeerProfile] | None = None,
+    ) -> list[ScoredBeer]:
+        """Score beers and return ranked results."""
+        beers = catalog if catalog is not None else self.beer_catalog
+        pref_weights, pairing_cfg = self._build_beer_scoring_context(preferences)
+
+        scored = sorted(
+            (self._score_beer(beer, pref_weights, pairing_cfg) for beer in beers),
+            key=lambda s: s.score,
+            reverse=True,
+        )
+        return scored[:top_n] if top_n is not None else scored
+
+    def score_single(
+        self,
+        beer: BeerProfile,
+        preferences: UserPreferences,
+    ) -> ScoredBeer:
+        """Score a single beer against the given preferences."""
+        pref_weights, pairing_cfg = self._build_beer_scoring_context(preferences)
+        return self._score_beer(beer, pref_weights, pairing_cfg)
+
+    @staticmethod
+    def _build_beer_scoring_context(
+        preferences: UserPreferences,
+    ) -> tuple[dict[str, float], dict[str, dict[str, float]]]:
+        """Derive pref_weights and pairing_cfg for beer from UserPreferences."""
+        from beer_pairing import FOOD_PAIRING_BEER
+
+        food_entry = FOOD_PAIRING_BEER.get(preferences.food_pairing, FOOD_PAIRING_BEER["none"])
+        pref_weights = {
+            attr: _normalise(getattr(preferences, pref_field))
+            for pref_field, attr in _BEER_PREF_FIELD_TO_ATTR.items()
+        }
+
+        # Add derived attributes — user doesn't directly dial these
+        # sweetness and carbonation use a neutral 0.6 (middle) default
+        pref_weights["sweetness"] = 0.6
+        pref_weights["carbonation"] = 0.6
+
+        mode = preferences.pairing_mode if preferences.pairing_mode in ("congruent", "contrast") else "congruent"
+        pairing_cfg = food_entry.get(mode, food_entry["congruent"])
+        return pref_weights, pairing_cfg
+
+    @staticmethod
+    def _score_beer(
+        beer: BeerProfile,
+        pref_weights: dict[str, float],
+        pairing_cfg: dict,
+    ) -> ScoredBeer:
+        """Score a single beer using the same formula as wine but with beer attributes."""
+        attribute_scores: dict[str, float] = {}
+
+        for attr in _BEER_ATTRS:
+            beer_value = getattr(beer, attr, 0.0)
+            pref_weight = pref_weights.get(attr, 0.6)
+
+            # Use beer-specific Gaussian sigma
+            sigma = _BEER_ATTR_SIGMA.get(attr, 1.0)
+            user_input_scaled = pref_weight * 5.0
+            diff = beer_value - user_input_scaled
+            match_score = _math.exp(-(diff ** 2) / (2 * sigma ** 2))
+
+            # Apply food pairing modifiers
+            multiplier = pairing_cfg.get("multipliers", {}).get(attr, 1.0)
+            boost = pairing_cfg.get("boosts", {}).get(attr, 0.0)
+
+            w_final = pref_weight * match_score
+            adjusted = (w_final * multiplier) + (boost * beer_value / 5.0)
+
+            attribute_scores[attr] = round(adjusted, 4)
+
+        overall = sum(attribute_scores.values()) / len(attribute_scores)
+        return ScoredBeer(
+            beer=beer,
             score=round(overall, 4),
             attribute_scores=attribute_scores,
         )

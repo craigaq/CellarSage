@@ -1,0 +1,17 @@
+INFO:     Started server process [12316]
+INFO:     Waiting for application startup.
+15:24:17  cellar_sage.validator  [Validator] Starting catalog validation — 221 entries
+15:24:46  cellar_sage.validator  [Validator] VALIDATED    Wine Selectors                  brand=Katnook Estate                       url=https://www.wineselectors.com.au/wine-shop/search?q=Katnook+Estate
+15:24:46  cellar_sage.validator  [Validator] VALIDATED    Wine Selectors                  brand=Leeuwin Estate                       url=https://www.wineselectors.com.au/wine-shop/search?q=Leeuwin+Estate
+15:24:46  cellar_sage.validator  [Validator] NOT_FOUND    Wine Selectors                  brand=Langmeil Freedom                     url=https://www.wineselectors.com.au/wine-shop/search?q=Langmeil+Freedom
+15:24:46  cellar_sage.validator  [Validator] NOT_FOUND    Wine Selectors                  brand=Shaw + Smith                         url=https://www.wineselectors.com.au/wine-shop/search?q=Shaw+%2B+Smith
+15:24:46  cellar_sage.validator  [Validator] NOT_FOUND    Wine Selectors                  brand=Yangarra Old Vine                    url=https://www.wineselectors.com.au/wine-shop/search?q=Yangarra+Old+Vine
+15:24:47  cellar_sage.validator  [Validator] VALIDATED    Wine Selectors                  brand=Henschke                             url=https://www.wineselectors.com.au/wine-shop/search?q=Henschke
+15:24:47  cellar_sage.validator  [Validator] NOT_FOUND    Wine Selectors                  brand=Leeuwin Estate Art Series            url=https://www.wineselectors.com.au/wine-shop/search?q=Leeuwin+Estate+Art+Series
+15:24:47  cellar_sage.validator  [Validator] NOT_FOUND    Wine Selectors                  brand=Achaval Ferrer                       url=https://www.wineselectors.com.au/wine-shop/search?q=Achaval+Ferrer
+15:24:47  cellar_sage.validator  [Validator] NOT_FOUND    Wine Selectors                  brand=Yalumba Eden Valley Viognier         url=https://www.wineselectors.com.au/wine-shop/search?q=Yalumba+Eden+Valley+Viognier
+15:24:47  cellar_sage.validator  [Validator] NOT_FOUND    Wine Selectors                  brand=Domaine Huet Vouvray Sec             url=https://www.wineselectors.com.au/wine-shop/search?q=Domaine+Huet+Vouvray+Sec
+15:24:48  cellar_sage.validator  [Validator] Catalog validation complete — VALIDATED=3  NOT_FOUND=7  SKIPPED=211
+15:24:48  cellar_sage  [Startup] Merchant validation complete: {'VALIDATED': 3, 'NOT_FOUND': 7, 'SKIPPED': 211}
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8002 (Press CTRL+C to quit)
