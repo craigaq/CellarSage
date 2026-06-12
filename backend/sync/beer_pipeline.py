@@ -1,0 +1,335 @@
+"""
+Beer scraping pipeline — Boozeit (direct Shopify JSON) + Liquorland (Apify actor).
+
+Parallel to the wine sync but self-contained: beer product titles, pack
+formats, and attribute estimation differ enough from wine that sharing the
+varietal normalizer would hurt both.
+
+Flow per retailer:
+  fetch → parse (clean name, pack, ABV) → infer style → match/insert into
+  `beers` → upsert `beer_merchant_offers`.
+
+Attribute estimation for NEW beers (retailers don't publish IBU/body):
+  classify style from title/description, then inherit that style's typical
+  attribute vector from beer_pairing.STYLE_TRAITS; ABV from the listing.
+
+Run: python -m sync.beer_pipeline            (Boozeit only — free, no actor)
+     python -m sync.beer_pipeline --liquorland  (also runs the Apify actor)
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import re
+import time
+import urllib.error
+import urllib.request
+
+log = logging.getLogger(__name__)
+
+_BOOZEIT_BASE = "https://www.boozeit.com.au"
+_PAGE_SIZE = 250
+_CRAWL_DELAY = 0.5
+
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json",
+    "Accept-Language": "en-AU,en;q=0.9",
+}
+
+# ── Style inference ───────────────────────────────────────────────────────────
+# Ordered: first match wins. Checked against title + product_type + body text.
+# Beer-world traps handled: "Victoria Bitter" is a lager, "draught" means
+# lager in AU retail, ginger beer / cider / seltzer are not beer at all.
+
+_NOT_BEER_RE = re.compile(
+    r"ginger\s+beer|cider|seltzer|hard\s+(lemonade|rated)|premix|rtd|"
+    r"vodka|whisky|whiskey|gin\b|rum\b|tequila|brandy|liqueur|soda",
+    re.IGNORECASE,
+)
+
+_STYLE_RULES: list[tuple[str, str]] = [
+    (r"hazy|neipa|new\s+england", "Hazy IPA"),
+    (r"black\s+ipa|cascadian", "Black IPA"),
+    (r"\bipa\b|india\s+pale", "IPA"),
+    (r"\bxpa\b|extra\s+pale", "Pale Ale"),
+    (r"pale\s+ale", "Pale Ale"),
+    (r"pilsner|pilsener|\bpils\b", "Pilsner"),
+    (r"stout", "Stout"),
+    (r"porter", "Porter"),
+    (r"wheat|hefe|weiss|weizen|witbier|white\s+ale", "Wheat"),
+    (r"sour|gose|berliner", "Sour"),
+    (r"amber|red\s+ale|red\s+ipa", "Amber Ale"),
+    (r"brown\s+ale|dark\s+ale|toohey'?s\s+old", "Brown Ale"),
+    (r"golden\s+ale|summer\s+ale|blonde|k[oö]lsch", "Golden Ale"),
+    (r"barley\s*wine|strong\s+ale|imperial|double\s+\w+\s*ale", "Strong Ale"),
+    (r"sparkling\s+ale|session\s+ale|\bale\b", "Ale"),
+    # AU retail reality: "bitter" and "draught" on a macro label mean lager.
+    (r"lager|draught|\bbitter\b|pale\s+lager|dry\b", "Lager"),
+]
+
+_ABV_RE = re.compile(r"(\d{1,2}(?:\.\d)?)\s*%")
+
+# Tokens stripped from titles to get a clean beer name for matching/display.
+_PACK_NOISE_RE = re.compile(
+    r"\b(cans?|bottles?|stubbies|longneck|\d+\s*ml|\d+\s*x\s*\d+\s*ml|"
+    r"\d+\s*(pack|block|case)|case\s+of\s+\d+|carton|slab|single)\b",
+    re.IGNORECASE,
+)
+
+
+def infer_style(text: str) -> str | None:
+    """Return a canonical style for the product text, or None if not a beer."""
+    if _NOT_BEER_RE.search(text):
+        return None
+    for pattern, style in _STYLE_RULES:
+        if re.search(pattern, text, re.IGNORECASE):
+            return style
+    return None  # unrecognised — safer to skip than to guess Lager
+
+
+def extract_abv(text: str) -> float | None:
+    m = _ABV_RE.search(text)
+    if m:
+        abv = float(m.group(1))
+        if 0.5 <= abv <= 15.0:
+            return abv
+    return None
+
+
+def clean_name(title: str) -> str:
+    """Strip pack-format noise from a retail title."""
+    name = _PACK_NOISE_RE.sub(" ", title)
+    return re.sub(r"\s{2,}", " ", name).strip(" -–—")
+
+
+def _norm_tokens(name: str) -> set[str]:
+    return set(re.sub(r"[^a-z0-9 ]", " ", name.lower()).split())
+
+
+# ── Boozeit fetcher ───────────────────────────────────────────────────────────
+
+def fetch_boozeit_beers() -> list[dict]:
+    """Paginate Boozeit's beer collection; one offer per product (cheapest variant)."""
+    products: list[dict] = []
+    page = 1
+    while True:
+        url = f"{_BOOZEIT_BASE}/collections/beer/products.json?limit={_PAGE_SIZE}&page={page}"
+        if page > 1:
+            time.sleep(_CRAWL_DELAY)
+        req = urllib.request.Request(url, headers=_HEADERS)
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                items = json.loads(r.read().decode("utf-8")).get("products", [])
+        except (urllib.error.HTTPError, Exception) as e:  # noqa: BLE001
+            log.warning("boozeit beer: page %d failed: %s", page, e)
+            break
+        if not items:
+            break
+        products.extend(items)
+        log.info("boozeit beer: page %d -> %d items (total %d)", page, len(items), len(products))
+        if len(items) < _PAGE_SIZE:
+            break
+        page += 1
+
+    offers: list[dict] = []
+    for p in products:
+        title = (p.get("title") or "").strip()
+        if not title:
+            continue
+        blob = " ".join([title, p.get("product_type") or "", p.get("body_html") or ""])
+        style = infer_style(blob)
+        if style is None:
+            continue
+
+        # Cheapest available variant = the entry-level pack for this product.
+        variants = [v for v in (p.get("variants") or []) if v.get("price")]
+        if not variants:
+            continue
+        try:
+            best = min(variants, key=lambda v: float(v["price"]))
+            price = float(best["price"])
+        except (ValueError, TypeError):
+            continue
+        if price <= 0:
+            continue
+
+        handle = p.get("handle", "")
+        offers.append({
+            "raw_title": title,
+            "name": clean_name(title),
+            "style": style,
+            "abv": extract_abv(blob),
+            "price": price,
+            "package_info": (best.get("title") or "").strip() or None,
+            "url": f"{_BOOZEIT_BASE}/products/{handle}" if handle else None,
+            "retailer": "boozeit",
+        })
+
+    log.info("boozeit beer: %d products -> %d beer offers", len(products), len(offers))
+    return offers
+
+
+# ── Liquorland fetcher (Apify actor, /beer category) ──────────────────────────
+
+def fetch_liquorland_beers(pages: int = 4) -> list[dict]:
+    """Fetch Liquorland's /beer category via the same actor the wine sync uses."""
+    from .scraper import run_actor
+
+    raw: list = []
+    for page in range(1, pages + 1):
+        items = run_actor(
+            actor_id="dromb/liquorland-au-catalog-product-lookup-unofficial",
+            actor_input={
+                "operation": "category",
+                "path": "/beer",
+                "show": 50,
+                "includeRaw": False,
+                "page": page,
+            },
+            max_items=50,
+        )
+        raw.extend(items)
+        log.info("liquorland beer: page %d -> %d items (total %d)", page, len(items), len(raw))
+        if len(items) < 50:
+            break
+
+    offers: list[dict] = []
+    for item in raw:
+        title = (item.get("title") or item.get("name") or item.get("product_name") or "").strip()
+        if not title:
+            continue
+        blob = " ".join([title, str(item.get("description") or "")])
+        style = infer_style(blob)
+        if style is None:
+            continue
+        price = (item.get("current_price") or item.get("discount_price")
+                 or item.get("price") or item.get("currentPrice"))
+        try:
+            price = float(price)
+        except (TypeError, ValueError):
+            continue
+        if price <= 0:
+            continue
+        offers.append({
+            "raw_title": title,
+            "name": clean_name(title),
+            "style": style,
+            "abv": extract_abv(blob),
+            "price": price,
+            "package_info": (item.get("size") or item.get("packSize") or None),
+            "url": (item.get("source_url") or item.get("url")
+                    or item.get("productUrl") or item.get("link")),
+            "retailer": "liquorland",
+        })
+
+    log.info("liquorland beer: %d raw -> %d beer offers", len(raw), len(offers))
+    return offers
+
+
+# ── Matching + upsert ─────────────────────────────────────────────────────────
+
+def _style_defaults(style: str, abv: float | None) -> dict:
+    """Derive seedable attributes for a new beer from its style's typical profile."""
+    from beer_pairing import style_traits
+
+    typ = style_traits(style)["typical"]
+    return {
+        # bitterness 1-5 → IBU via the inverse of BeerProfile's IBU/20 mapping
+        "ibu": round((typ["bitterness"] - 1.0) * 20.0),
+        "body": round(typ["body"], 1),
+        "malt_sweetness": max(1, min(5, round(typ["sweetness"]))),
+        "hop_intensity": max(1, min(10, round(typ["aromatics"] * 2))),
+        "abv": abv if abv is not None else 4.7,
+        "carbonation": max(1, min(5, round(typ["carbonation"]))),
+    }
+
+
+def upsert_beer_offers(offers: list[dict]) -> tuple[int, int, int]:
+    """Match offers to the beers table (insert new beers as needed), upsert offers.
+
+    Returns (beers_matched, beers_created, offers_upserted).
+    """
+    import psycopg2
+    import psycopg2.extras
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    conn = psycopg2.connect(os.environ["DATABASE_URL"], cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = conn.cursor()
+
+    cur.execute("SELECT id, name, beer_style FROM beers")
+    catalog = [(r["id"], r["name"], _norm_tokens(r["name"])) for r in cur.fetchall()]
+
+    matched = created = upserted = 0
+    for o in offers:
+        offer_tokens = _norm_tokens(o["name"])
+        beer_id = None
+        # Existing beer whose full name is contained in the offer title
+        # (e.g. catalog "Coopers Pale Ale" ⊆ "Coopers Original Pale Ale 375ml").
+        best_len = 0
+        for cid, _cname, ctokens in catalog:
+            if ctokens and ctokens <= offer_tokens and len(ctokens) > best_len:
+                beer_id, best_len = cid, len(ctokens)
+
+        if beer_id is not None:
+            matched += 1
+        else:
+            d = _style_defaults(o["style"], o["abv"])
+            cur.execute(
+                """INSERT INTO beers (name, ibu_bitterness, body, malt_sweetness,
+                                      hop_intensity, abv_percentage, carbonation_level,
+                                      beer_style, location_tag)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+                (o["name"], d["ibu"], d["body"], d["malt_sweetness"],
+                 d["hop_intensity"], d["abv"], d["carbonation"], o["style"], "National"),
+            )
+            beer_id = cur.fetchone()["id"]
+            catalog.append((beer_id, o["name"], _norm_tokens(o["name"])))
+            created += 1
+
+        cur.execute(
+            """INSERT INTO beer_merchant_offers (beer_id, retailer, price, url, package_info, scraped_at)
+               VALUES (%s,%s,%s,%s,%s,NOW())
+               ON CONFLICT (beer_id, retailer)
+               DO UPDATE SET price = EXCLUDED.price, url = EXCLUDED.url,
+                             package_info = EXCLUDED.package_info, scraped_at = NOW()""",
+            (beer_id, o["retailer"], o["price"], o["url"], o["package_info"]),
+        )
+        upserted += 1
+
+    conn.commit()
+    conn.close()
+    return matched, created, upserted
+
+
+def main() -> None:
+    import sys
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
+
+    offers = fetch_boozeit_beers()
+    if "--liquorland" in sys.argv:
+        try:
+            offers += fetch_liquorland_beers()
+        except Exception as e:  # noqa: BLE001
+            log.error("liquorland beer fetch failed (continuing with boozeit): %s", e)
+
+    if not offers:
+        log.error("No beer offers scraped — aborting upsert")
+        return
+
+    matched, created, upserted = upsert_beer_offers(offers)
+    log.info("DONE: %d offers | matched %d existing beers, created %d new, upserted %d offers",
+             len(offers), matched, created, upserted)
+
+
+if __name__ == "__main__":
+    main()

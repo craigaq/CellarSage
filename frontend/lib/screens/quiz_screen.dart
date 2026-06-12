@@ -487,27 +487,46 @@ class _QuizScreenState extends State<QuizScreen> {
           styleAnchors: _styleAnchors.toList(),
         );
         if (generation != _fetchGeneration || !mounted) return;
-        // Convert BeerRecommendation to WineRecommendation for uniform display.
-        // Profile keys are remapped to the beer dial labels so the palate
-        // comparison rows line up; varietal carries the beer style so style
-        // shows everywhere a varietal would.
-        final wineResults = result.recommendations.map((beer) {
+        // Mirror the wine flow's varietal-level results: group ranked beers
+        // by STYLE (Amber Ale, IPA, …). The style becomes the recommendation;
+        // the individual beers of that style become its "Top Picks" list —
+        // the beer equivalent of wine's varietal → bottles drill-down.
+        final styleOrder = <String>[];
+        final byStyle = <String, List<BeerRecommendation>>{};
+        for (final beer in result.recommendations) {
+          if (!byStyle.containsKey(beer.beerStyle)) {
+            styleOrder.add(beer.beerStyle);
+            byStyle[beer.beerStyle] = [];
+          }
+          byStyle[beer.beerStyle]!.add(beer);
+        }
+        final wineResults = styleOrder.map((style) {
+          final beers = byStyle[style]!;
+          final top = beers.first; // best-scoring beer of this style
           return WineRecommendation(
-            name: beer.name,
-            skuId: beer.skuId,
-            score: beer.score,
-            attributeScores: beer.attributeScores,
+            name: style,
+            skuId: top.skuId,
+            score: top.score,
+            attributeScores: top.attributeScores,
             wineProfile: {
-              _beerAttrOrder[0]: beer.beerProfile['Bitterness'] ?? 3.0,
-              _beerAttrOrder[1]: beer.beerProfile['Weight'] ?? 3.0,
-              _beerAttrOrder[2]: beer.beerProfile['Carbonation'] ?? 3.0,
-              _beerAttrOrder[3]: beer.beerProfile['Flavor Intensity'] ?? 3.0,
+              _beerAttrOrder[0]: top.beerProfile['Bitterness'] ?? 3.0,
+              _beerAttrOrder[1]: top.beerProfile['Weight'] ?? 3.0,
+              _beerAttrOrder[2]: top.beerProfile['Carbonation'] ?? 3.0,
+              _beerAttrOrder[3]: top.beerProfile['Flavor Intensity'] ?? 3.0,
             },
             rawMetrics: {
-              'varietal': beer.beerStyle,
-              'beer_style': beer.beerStyle,
-              'pairing_explanation': beer.pairingExplanation,
-              'flavor_tags': beer.flavorTags,
+              'varietal': style,
+              'beer_style': style,
+              'pairing_explanation': top.pairingExplanation,
+              'flavor_tags': top.flavorTags,
+              'beer_picks': beers
+                  .take(4)
+                  .map((b) => {
+                        'name': b.name,
+                        'score': b.score,
+                        'offers': b.buyOptions,
+                      })
+                  .toList(),
             },
           );
         }).toList();
@@ -975,31 +994,33 @@ class _QuizScreenState extends State<QuizScreen> {
             style: WwText.bodyMedium(),
           ),
           const SizedBox(height: 16),
-          // Dry preference toggle — activates Palate Paradox detection
-          Card(
-            child: SwitchListTile(
-              secondary: const Text('🍷', style: TextStyle(fontSize: 22)),
-              title: const Text('I prefer dry wines'),
-              subtitle: const Text('The Cellar Fox will flag sweet-pairing conflicts'),
-              value: _prefDry,
-              onChanged: (v) => setState(() {
-                _prefDry = v;
-                _overrideMode = 'use_pairing_logic';
-              }),
+          // Wine-only preference toggles — dry drives the Palate Paradox and
+          // organic filters the wine catalog; neither applies to beer.
+          if (!_isBeer) ...[
+            Card(
+              child: SwitchListTile(
+                secondary: const Text('🍷', style: TextStyle(fontSize: 22)),
+                title: const Text('I prefer dry wines'),
+                subtitle: const Text('The Cellar Fox will flag sweet-pairing conflicts'),
+                value: _prefDry,
+                onChanged: (v) => setState(() {
+                  _prefDry = v;
+                  _overrideMode = 'use_pairing_logic';
+                }),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          // Organic preference toggle — prioritises organic/preservative-free wines
-          Card(
-            child: SwitchListTile(
-              secondary: const Text('🌿', style: TextStyle(fontSize: 22)),
-              title: const Text('I prefer organic wines'),
-              subtitle: const Text('Organic & preservative-free where possible, best available otherwise'),
-              value: _prefOrganic,
-              onChanged: (v) => setState(() => _prefOrganic = v),
+            const SizedBox(height: 8),
+            Card(
+              child: SwitchListTile(
+                secondary: const Text('🌿', style: TextStyle(fontSize: 22)),
+                title: const Text('I prefer organic wines'),
+                subtitle: const Text('Organic & preservative-free where possible, best available otherwise'),
+                value: _prefOrganic,
+                onChanged: (v) => setState(() => _prefOrganic = v),
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
+          ],
 
           // "Just sipping" sits directly below the dry-wine toggle
           _FoodCard(
@@ -1044,6 +1065,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     child: _PairingPhilosophyPicker(
                       value: _pairingMode,
                       onChanged: (v) => setState(() => _pairingMode = v),
+                      isBeer: _isBeer,
                     ),
                   )
                 : const SizedBox.shrink(),
@@ -1147,10 +1169,12 @@ class _QuizScreenState extends State<QuizScreen> {
   // ---------------------------------------------------------------------------
 
   Widget _buildLivingPalate() {
-    // Rows in quiz-step order: Acidity→Body→Tannin→Flavour
-    // activeAxis index into axisNames/axisValues below
+    // Rows in quiz-step order: dial 1 → dial 4. Labels follow the beverage —
+    // beer mode re-purposes the acidity dial as bitterness and tannin as fizz.
     final activeAxis = const {1: 0, 2: 1, 3: 2, 4: 3}[_currentPage];
-    const axisNames = ['Acidity', 'Body', 'Tannin', 'Flavour'];
+    final axisNames = _isBeer
+        ? const ['Bitterness', 'Body', 'Fizz', 'Aroma']
+        : const ['Acidity', 'Body', 'Tannin', 'Flavour'];
     final axisValues = [_crispness, _weight, _texture, _flavor];
 
     return Container(
@@ -1316,6 +1340,14 @@ class _QuizScreenState extends State<QuizScreen> {
                 weight: _weight,
                 flavorIntensity: _flavor,
                 texture: _texture,
+                labels: _isBeer
+                    ? const [
+                        'Bitterness\n(Hops)',
+                        'Weight\n(Body)',
+                        'Flavor Intensity\n(Aroma)',
+                        'Carbonation\n(Fizz)',
+                      ]
+                    : null,
               ),
             ),
           ),
@@ -1507,7 +1539,7 @@ class _QuizScreenState extends State<QuizScreen> {
           Text('Your Top Matches', style: WwText.headlineLarge()),
           const SizedBox(height: 4),
           Text(
-            'The Cellar Fox found your top ${top3.length} ${_isBeer ? 'beers' : 'varietals'}. Tap to explore each.',
+            'The Cellar Fox found your top ${top3.length} ${_isBeer ? 'beer styles' : 'varietals'}. Tap to explore each.',
             style: WwText.bodyMedium(),
           ),
           if (nearTie) ...[
@@ -1883,7 +1915,7 @@ class _WineResultCardState extends State<_WineResultCard> {
                     SizedBox(
                       width: 60,
                       child: Text(
-                        'Wine',
+                        widget.isBeer ? 'Beer' : 'Wine',
                         textAlign: TextAlign.center,
                         style: WwText.bodySmall(color: WwColors.violet)
                             .copyWith(fontWeight: FontWeight.w600),
@@ -2003,6 +2035,84 @@ class _WineResultCardState extends State<_WineResultCard> {
                     varietal: widget.wine.varietal,
                     onRetry: _loadBuyOptions,
                   ),
+                ] else ...[
+                  // Beer: the style's best-matching beers (no retailer offers yet).
+                  const SizedBox(height: 14),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Text('🍺', style: TextStyle(fontSize: 16)),
+                      const SizedBox(width: 6),
+                      Text('Top Picks', style: WwText.titleMedium()),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ...((widget.wine.rawMetrics['beer_picks'] as List?) ?? const [])
+                      .asMap()
+                      .entries
+                      .map((entry) {
+                    final pick = entry.value as Map;
+                    final pct = ((pick['score'] as num) * 100).clamp(0, 100);
+                    final offers = (pick['offers'] as List?) ?? const [];
+                    final cheapest = offers.isNotEmpty ? offers.first as Map : null;
+                    final offerUrl = (cheapest?['url'] as String?) ?? '';
+                    return InkWell(
+                      onTap: offerUrl.isEmpty
+                          ? null
+                          : () => launchUrl(
+                                Uri.parse(offerUrl),
+                                mode: LaunchMode.externalApplication,
+                              ),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 22,
+                              height: 22,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: WwColors.violet.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                '${entry.key + 1}',
+                                style: WwText.bodySmall(color: WwColors.violet)
+                                    .copyWith(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    pick['name'] as String,
+                                    style: WwText.bodyMedium(),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (cheapest != null)
+                                    Text(
+                                      '\$${(cheapest['price'] as num).toStringAsFixed(2)}'
+                                      '${(cheapest['package_info'] as String?)?.isNotEmpty == true ? ' (${cheapest['package_info']})' : ''}'
+                                      ' @ ${cheapest['retailer']} →',
+                                      style: WwText.bodySmall(color: WwColors.violet),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              '${pct.toStringAsFixed(0)}%',
+                              style: WwText.bodySmall(color: WwColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
                 ],
               ],
             ],
@@ -2329,10 +2439,12 @@ class _ScoreDots extends StatelessWidget {
 class _PairingPhilosophyPicker extends StatelessWidget {
   final String value; // 'congruent' | 'contrast' | 'brave'
   final ValueChanged<String> onChanged;
+  final bool isBeer;
 
   const _PairingPhilosophyPicker({
     required this.value,
     required this.onChanged,
+    this.isBeer = false,
   });
 
   static const _options = [
@@ -2380,7 +2492,15 @@ class _PairingPhilosophyPicker extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         _PhilosophyCard(
-          option: braveOption,
+          option: isBeer
+              ? (
+                  id: braveOption.id,
+                  icon: braveOption.icon,
+                  label: braveOption.label,
+                  description:
+                      "Let the Cellar Fox decide. Your palate steps aside — the food picks the beer.",
+                )
+              : braveOption,
           selected: value == braveOption.id,
           onTap: () => onChanged(braveOption.id),
           fullWidth: true,

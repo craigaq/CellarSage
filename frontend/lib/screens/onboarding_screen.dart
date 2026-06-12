@@ -151,7 +151,7 @@ class _CardIntroduction extends StatelessWidget {
               const SizedBox(height: 18),
 
               Text(
-                "I'm the Sage Fox — your algorithmic guide to finding the right bottle, every time.",
+                "I'm the Sage Fox — your algorithmic guide to finding the right pour, every time.",
                 textAlign: TextAlign.center,
                 style: WwText.bodyLarge(color: WwColors.textSecondary),
               ),
@@ -186,21 +186,56 @@ class _CardPalatePromise extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(
-                width: 220,
-                height: 220,
-                child: PalateDial(
-                  crispness: 3,
-                  weight: 3,
-                  flavorIntensity: 4,
-                  texture: 2,
-                ),
+              // Wine + beer palate dials side by side — one app, two palates.
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: 150,
+                          child: PalateDial(
+                            crispness: 3,
+                            weight: 3,
+                            flavorIntensity: 4,
+                            texture: 2,
+                            labels: const ['Crisp', 'Body', 'Flavour', 'Tannin'],
+                            titleFontSize: 9,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text('🍷 Wine', style: WwText.bodyMedium()),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: 150,
+                          child: PalateDial(
+                            crispness: 4,
+                            weight: 2,
+                            flavorIntensity: 3,
+                            texture: 4,
+                            labels: const ['Hops', 'Body', 'Aroma', 'Fizz'],
+                            titleFontSize: 9,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text('🍺 Beer', style: WwText.bodyMedium()),
+                      ],
+                    ),
+                  ),
+                ],
               ),
 
-              const SizedBox(height: 36),
+              const SizedBox(height: 32),
 
               Text(
-                "I'll help you speak\n'Wine' like a pro.",
+                "I'll help you speak\n'Wine' & 'Beer' like a pro.",
                 textAlign: TextAlign.center,
                 style: WwText.headlineLarge(),
               ),
@@ -212,15 +247,15 @@ class _CardPalatePromise extends StatelessWidget {
                 text: TextSpan(
                   style: WwText.bodyLarge(color: WwColors.textSecondary),
                   children: [
-                    const TextSpan(text: 'Whether you like it '),
+                    const TextSpan(text: 'Whether you like your wine '),
                     TextSpan(
                       text: 'Zingy (High Acidity)',
                       style: WwText.bodyLarge(color: WwColors.violet)
                           .copyWith(fontStyle: FontStyle.italic),
                     ),
-                    const TextSpan(text: ' or '),
+                    const TextSpan(text: ' or your beer '),
                     TextSpan(
-                      text: 'Grippy (High Tannin)',
+                      text: 'Hoppy (Big Bitterness)',
                       style: WwText.bodyLarge(color: WwColors.violet)
                           .copyWith(fontStyle: FontStyle.italic),
                     ),

@@ -9,6 +9,14 @@ class PalateDial extends StatelessWidget {
 
   final bool compact;
 
+  /// Axis labels in chart order: [crispness, weight, flavorIntensity, texture].
+  /// Defaults to the wine palate labels; beer mode passes its own
+  /// (Bitterness / Body / Aroma / Carbonation).
+  final List<String>? labels;
+
+  /// Override the axis-label font size (defaults: 11, or 9 in compact mode).
+  final double? titleFontSize;
+
   const PalateDial({
     super.key,
     required this.crispness,
@@ -16,6 +24,8 @@ class PalateDial extends StatelessWidget {
     required this.flavorIntensity,
     required this.texture,
     this.compact = false,
+    this.labels,
+    this.titleFontSize,
   });
 
   @override
@@ -78,18 +88,19 @@ class PalateDial extends StatelessWidget {
           tickBorderData: BorderSide(color: Colors.grey.shade300, width: 0.8),
           gridBorderData: BorderSide(color: Colors.grey.shade300, width: 0.8),
           titleTextStyle: TextStyle(
-            fontSize: compact ? 9 : 11,
+            fontSize: titleFontSize ?? (compact ? 9 : 11),
             fontWeight: FontWeight.w600,
           ),
           getTitle: (index, angle) {
-            final titles = compact
-                ? const ['A', 'B', 'F', 'T']
-                : const [
-                    'Crispness\n(Acidity)',
-                    'Weight\n(Body)',
-                    'Flavor Intensity\n(Aromatics)',
-                    'Texture\n(Tannin)',
-                  ];
+            final titles = labels ??
+                (compact
+                    ? const ['A', 'B', 'F', 'T']
+                    : const [
+                        'Crispness\n(Acidity)',
+                        'Weight\n(Body)',
+                        'Flavor Intensity\n(Aromatics)',
+                        'Texture\n(Tannin)',
+                      ]);
             return RadarChartTitle(
               text: titles[index],
               angle: 0,

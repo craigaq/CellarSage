@@ -83,10 +83,49 @@ def _load_beer_catalog():
 _beer_service = BeerRecommendationService(_load_beer_catalog())
 
 
+def _load_beer_offers() -> dict[str, list[dict]]:
+    """Beer retailer offers keyed by lowercase beer name, cheapest first."""
+    import os
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        return {}
+    try:
+        import psycopg2, psycopg2.extras
+        conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT EXISTS(SELECT 1 FROM information_schema.tables "
+                "WHERE table_name='beer_merchant_offers')"
+            )
+            if not cur.fetchone()["exists"]:
+                return {}
+            cur.execute(
+                """SELECT b.name, o.retailer, o.price, o.url, o.package_info
+                   FROM beer_merchant_offers o JOIN beers b ON b.id = o.beer_id
+                   ORDER BY o.price ASC"""
+            )
+            offers: dict[str, list[dict]] = {}
+            for r in cur.fetchall():
+                offers.setdefault(r["name"].lower(), []).append({
+                    "retailer": r["retailer"],
+                    "price": float(r["price"]) if r["price"] is not None else None,
+                    "url": r["url"] or "",
+                    "package_info": r["package_info"] or "",
+                })
+        return offers
+    except Exception as e:
+        logging.getLogger("cellar_sage").warning("Could not load beer offers: %s", e)
+        return {}
+
+
+_beer_offers = _load_beer_offers()
+
+
 def _reload_service() -> None:
-    global _service, _beer_service
+    global _service, _beer_service, _beer_offers
     _service = RecommendationService(load_catalog_from_db())
     _beer_service = BeerRecommendationService(_load_beer_catalog())
+    _beer_offers = _load_beer_offers()
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +181,7 @@ class BeerResult(BaseModel):
     beer_style: str
     pairing_explanation: str = ""    # Cicerone pairing logic, human-readable
     flavor_tags: list[str] = []      # style-derived descriptors ("chocolate", "citrus hops")
+    buy_options: list[dict] = []     # retailer offers: {retailer, price, url, package_info}
 
 
 class BeerRecommendResponse(BaseModel):
@@ -475,6 +515,7 @@ def beer_recommend(req: RecommendRequest):
                 beer_style=r.beer.beer_style,
                 pairing_explanation=r.explanation,
                 flavor_tags=r.beer.flavor_tags,
+                buy_options=_beer_offers.get(r.beer.name.lower(), [])[:3],
             )
             for r in results
         ],

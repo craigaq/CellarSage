@@ -112,6 +112,7 @@ class BeerRecommendation {
   final String beerStyle;
   final String pairingExplanation;
   final List<String> flavorTags;
+  final List<Map<String, dynamic>> buyOptions; // {retailer, price, url, package_info}
 
   BeerRecommendation({
     required this.name,
@@ -122,6 +123,7 @@ class BeerRecommendation {
     required this.beerStyle,
     this.pairingExplanation = '',
     this.flavorTags = const [],
+    this.buyOptions = const [],
   });
 
   factory BeerRecommendation.fromJson(Map<String, dynamic> json) {
@@ -137,6 +139,9 @@ class BeerRecommendation {
       pairingExplanation: (json['pairing_explanation'] as String?) ?? '',
       flavorTags: ((json['flavor_tags'] as List?) ?? const [])
           .map((t) => t.toString())
+          .toList(),
+      buyOptions: ((json['buy_options'] as List?) ?? const [])
+          .map((o) => Map<String, dynamic>.from(o as Map))
           .toList(),
     );
   }
