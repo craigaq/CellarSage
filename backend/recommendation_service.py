@@ -109,6 +109,11 @@ class BeerProfile:
     body, aromatics, alcohol_abv — same as wine scoring semantics.
     sweetness    — Float cast of malt_sweetness (1-5 → 1.0-5.0).
     carbonation  — Float cast of carbonation_level (1-5 → 1.0-5.0).
+    roast        — 1-5 roasted-malt character, derived from beer_style
+                   (pale lager 1.0 → stout 4.5). Cicerone roast↔char bridge.
+    alcohol      — ABV normalised to 1-5 (~3.5% → 1.0, ~9% → 5.0). Used for
+                   interaction penalties (alcohol amplifies chilli heat).
+    flavor_tags  — style-derived descriptors ("chocolate", "citrus hops", …).
     """
     name:               str
     ibu_bitterness:     float       # IBUs: 0–100+
@@ -126,8 +131,13 @@ class BeerProfile:
     sweetness:    float = field(init=False, default=0.0)
     carbonation:  float = field(init=False, default=0.0)
     alcohol_abv:  float = field(init=False, default=0.0)
+    roast:        float = field(init=False, default=1.0)
+    alcohol:      float = field(init=False, default=2.0)
+    flavor_tags:  list[str] = field(init=False, default_factory=list)
 
     def __post_init__(self) -> None:
+        from beer_pairing import style_traits
+
         # Normalise IBUs to 1-5 range: 0 IBU → 1.0, 100 IBU → 5.0, clamped
         self.bitterness   = round(min(5.0, max(1.0, 1.0 + (self.ibu_bitterness / 20.0))), 2)
         # Hop intensity halved (1-10 → 0.5-5.0)
@@ -138,6 +148,12 @@ class BeerProfile:
         self.carbonation  = float(self.carbonation_level)
         # Alias for compatibility
         self.alcohol_abv  = self.abv_percentage
+        # ABV → 1-5 scale: 3.5% → 1.0, 9.0% → 5.0, clamped
+        self.alcohol      = round(min(5.0, max(1.0, 1.0 + (self.abv_percentage - 3.5) / 1.375)), 2)
+        # Style-derived roast level and flavour tags
+        traits = style_traits(self.beer_style)
+        self.roast        = traits["roast"]
+        self.flavor_tags  = list(traits["tags"])
 
 
 # Wines the Cellar Fox targets in "Find a Middle Ground" mode.
@@ -652,49 +668,68 @@ class ScoredBeer:
     beer: BeerProfile
     score: float
     attribute_scores: dict[str, float] = field(default_factory=dict)
+    explanation: str = ""
 
 
-# Beer preference mapping: maps UserPreferences field names to beer attributes
+# Maps user palate dials (UserPreferences fields) to beer attributes.
+# Beer mode re-labels the four wine dials in the UI:
+#   crispness_acidity → bitterness preference (smooth → hop-bitter)
+#   weight_body       → body (shared axis)
+#   texture_tannin    → carbonation preference (smooth → spritzy)
+#   flavor_intensity  → hop/flavour aromatic intensity
 _BEER_PREF_FIELD_TO_ATTR: dict[str, str] = {
-    "crispness_acidity": "bitterness",  # IBUs replace wine acidity for cutting fat
-    "weight_body": "body",              # Shared axis
-    "flavor_intensity": "aromatics",    # Hop intensity replaces wine aromatics
+    "crispness_acidity": "bitterness",
+    "weight_body":       "body",
+    "texture_tannin":    "carbonation",
+    "flavor_intensity":  "aromatics",
 }
 
-# Ordered tuple of beer attribute names for scoring
+# All scorable beer attributes (1-5 scale each).
 _BEER_ATTRS: tuple[str, ...] = (
-    "bitterness",
-    "body",
-    "aromatics",
-    "sweetness",
-    "carbonation",
+    "bitterness", "body", "aromatics", "sweetness", "carbonation", "roast", "alcohol",
 )
 
-# Per-attribute Gaussian sigma values for beer (tuned for beer palate sensitivity)
+# Per-attribute Gaussian sigma (tolerance) for target fit.
 _BEER_ATTR_SIGMA: dict[str, float] = {
-    "bitterness":   1.2,  # IBUs are polarising — moderate tolerance
-    "body":         1.5,  # Broader tolerance
-    "aromatics":    1.5,  # Broader tolerance
-    "sweetness":    1.3,  # Malt sweetness is noticeable
-    "carbonation":  1.4,  # Fizz level is moderately polarising
+    "bitterness":   1.0,  # polarising — tight tolerance
+    "body":         1.1,
+    "aromatics":    1.3,
+    "sweetness":    1.1,
+    "carbonation":  1.2,
+    "roast":        1.0,  # roast↔char bridges are specific
+    "alcohol":      1.2,
 }
+
+# How much the food's ideal profile outweighs the user's palate dial when a
+# food is selected. Cicerone logic: the dish sets the frame, the palate tunes it.
+_FOOD_TARGET_WEIGHT = 0.65
+
+# Attributes used to estimate a beer's overall intensity (Cicerone rule #1:
+# match the strength of beer and dish).
+_INTENSITY_ATTRS: tuple[str, ...] = ("bitterness", "body", "roast", "alcohol", "aromatics")
 
 
 class BeerRecommendationService:
     """
-    Scores a list of beers against user preferences and returns ranked results.
+    Cicerone-aligned beer scoring (three-step method).
 
-    Uses the same UserPreferences input as wine but maps attributes differently:
-    - crispness_acidity → bitterness (IBUs)
-    - weight_body → body (shared)
-    - flavor_intensity → aromatics (hop intensity)
-    Plus derived attributes: sweetness, carbonation
+    1. Match intensity — beers are penalised when their overall intensity is
+       far from the dish's intensity.
+    2. Find harmonies — Gaussian fit against food-derived attribute targets
+       (blended with the user's palate dials and optional style anchors),
+       plus a classic-style affinity bonus (stout+BBQ, pilsner+fish, …).
+    3. Consider interactions — directional `avoid` penalties for chemistry the
+       fit can't see (bitterness amplifies capsaicin, alcohol fans chilli heat,
+       hops clash with fish oils).
+
+    Optional `style_anchors` (e.g. ["IPA", "Stout"]) are styles the user
+    already enjoys; they pull palate targets toward those styles' typical
+    profiles and give those styles a small affinity bump.
 
     Usage
     -----
-    from beer_pairing import FOOD_PAIRING_BEER
     service = BeerRecommendationService(beers)
-    results = service.recommend(preferences, top_n=5)
+    results = service.recommend(preferences, top_n=5, style_anchors=["IPA"])
     """
 
     def __init__(self, beer_catalog: list[BeerProfile]) -> None:
@@ -705,13 +740,14 @@ class BeerRecommendationService:
         preferences: UserPreferences,
         top_n: int | None = None,
         catalog: list[BeerProfile] | None = None,
+        style_anchors: list[str] | None = None,
     ) -> list[ScoredBeer]:
         """Score beers and return ranked results."""
         beers = catalog if catalog is not None else self.beer_catalog
-        pref_weights, pairing_cfg = self._build_beer_scoring_context(preferences)
+        ctx = self._build_context(preferences, style_anchors)
 
         scored = sorted(
-            (self._score_beer(beer, pref_weights, pairing_cfg) for beer in beers),
+            (self._score_beer(beer, ctx) for beer in beers),
             key=lambda s: s.score,
             reverse=True,
         )
@@ -721,64 +757,136 @@ class BeerRecommendationService:
         self,
         beer: BeerProfile,
         preferences: UserPreferences,
+        style_anchors: list[str] | None = None,
     ) -> ScoredBeer:
         """Score a single beer against the given preferences."""
-        pref_weights, pairing_cfg = self._build_beer_scoring_context(preferences)
-        return self._score_beer(beer, pref_weights, pairing_cfg)
+        return self._score_beer(beer, self._build_context(preferences, style_anchors))
+
+    # ── Context building ──────────────────────────────────────────────────────
 
     @staticmethod
-    def _build_beer_scoring_context(
+    def _build_context(
         preferences: UserPreferences,
-    ) -> tuple[dict[str, float], dict[str, dict[str, float]]]:
-        """Derive pref_weights and pairing_cfg for beer from UserPreferences."""
-        from beer_pairing import FOOD_PAIRING_BEER
+        style_anchors: list[str] | None,
+    ) -> dict:
+        """Resolve blended targets, weights, and pairing config for scoring."""
+        from beer_pairing import FOOD_PAIRING_BEER, STYLE_TRAITS, canonical_style
 
         food_entry = FOOD_PAIRING_BEER.get(preferences.food_pairing, FOOD_PAIRING_BEER["none"])
-        pref_weights = {
-            attr: _normalise(getattr(preferences, pref_field))
+        mode = preferences.pairing_mode if preferences.pairing_mode in ("congruent", "contrast") else "congruent"
+        cfg = food_entry.get(mode, food_entry["congruent"])
+
+        # User palate targets from the four dials (1-5 ints, used directly).
+        user_targets: dict[str, float] = {
+            attr: float(getattr(preferences, pref_field))
             for pref_field, attr in _BEER_PREF_FIELD_TO_ATTR.items()
         }
 
-        # Add derived attributes — user doesn't directly dial these
-        # sweetness and carbonation use a neutral 0.6 (middle) default
-        pref_weights["sweetness"] = 0.6
-        pref_weights["carbonation"] = 0.6
+        # Style anchors pull the palate toward styles the user already drinks —
+        # the single most predictive signal in beer (drinkers have style identities).
+        anchor_canons: set[str] = set()
+        if style_anchors:
+            anchor_vecs = []
+            for s in style_anchors:
+                canon = canonical_style(s)
+                anchor_canons.add(canon)
+                traits = STYLE_TRAITS[canon]
+                vec = dict(traits["typical"])
+                vec["roast"] = traits["roast"]
+                anchor_vecs.append(vec)
+            for attr in _BEER_ATTRS:
+                vals = [v[attr] for v in anchor_vecs if attr in v]
+                if not vals:
+                    continue
+                anchor_avg = sum(vals) / len(vals)
+                if attr in user_targets:
+                    user_targets[attr] = 0.5 * user_targets[attr] + 0.5 * anchor_avg
+                else:
+                    user_targets[attr] = anchor_avg  # sweetness / roast / alcohol
 
-        mode = preferences.pairing_mode if preferences.pairing_mode in ("congruent", "contrast") else "congruent"
-        pairing_cfg = food_entry.get(mode, food_entry["congruent"])
-        return pref_weights, pairing_cfg
+        # Blend food targets (lead) with user targets (tune) per attribute.
+        food_targets: dict[str, float] = cfg.get("targets", {})
+        targets: dict[str, float] = {}
+        weights: dict[str, float] = {}
+        for attr in _BEER_ATTRS:
+            f_t = food_targets.get(attr)
+            u_t = user_targets.get(attr)
+            if f_t is not None and u_t is not None:
+                targets[attr] = _FOOD_TARGET_WEIGHT * f_t + (1 - _FOOD_TARGET_WEIGHT) * u_t
+            elif f_t is not None:
+                targets[attr] = f_t
+            elif u_t is not None:
+                targets[attr] = u_t
+            else:
+                continue  # nothing constrains this attribute
+            weights[attr] = cfg.get("weights", {}).get(attr, 1.0)
+
+        return {
+            "targets": targets,
+            "weights": weights,
+            "styles": cfg.get("styles", {}),
+            "avoid": cfg.get("avoid", []),
+            "why": cfg.get("why", ""),
+            "food_intensity": food_entry.get("intensity"),
+            "anchor_canons": anchor_canons,
+        }
+
+    # ── Scoring ───────────────────────────────────────────────────────────────
 
     @staticmethod
-    def _score_beer(
-        beer: BeerProfile,
-        pref_weights: dict[str, float],
-        pairing_cfg: dict,
-    ) -> ScoredBeer:
-        """Score a single beer using the same formula as wine but with beer attributes."""
+    def _score_beer(beer: BeerProfile, ctx: dict) -> ScoredBeer:
+        from beer_pairing import STYLE_HOOKS, canonical_style
+
+        canon = canonical_style(beer.beer_style)
+
+        # Step 2a: weighted Gaussian fit against blended targets.
         attribute_scores: dict[str, float] = {}
-
-        for attr in _BEER_ATTRS:
+        fit_sum = 0.0
+        weight_sum = 0.0
+        for attr, target in ctx["targets"].items():
             beer_value = getattr(beer, attr, 0.0)
-            pref_weight = pref_weights.get(attr, 0.6)
+            sigma = _BEER_ATTR_SIGMA.get(attr, 1.2)
+            fit = _math.exp(-((beer_value - target) ** 2) / (2 * sigma ** 2))
+            w = ctx["weights"].get(attr, 1.0)
+            fit_sum += w * fit
+            weight_sum += w
+            attribute_scores[attr] = round(fit, 4)
+        base = fit_sum / weight_sum if weight_sum else 0.5
 
-            # Use beer-specific Gaussian sigma
-            sigma = _BEER_ATTR_SIGMA.get(attr, 1.0)
-            user_input_scaled = pref_weight * 5.0
-            diff = beer_value - user_input_scaled
-            match_score = _math.exp(-(diff ** 2) / (2 * sigma ** 2))
+        # Step 2b: classic-style affinity (the Cicerone pairing canon) and a
+        # small bump for styles the user told us they already enjoy.
+        affinity = ctx["styles"].get(canon, 0.0)
+        style_bonus = 0.12 * affinity
+        anchor_bonus = 0.08 if canon in ctx["anchor_canons"] else 0.0
 
-            # Apply food pairing modifiers
-            multiplier = pairing_cfg.get("multipliers", {}).get(attr, 1.0)
-            boost = pairing_cfg.get("boosts", {}).get(attr, 0.0)
+        # Step 3: directional interaction penalties.
+        penalty = 0.0
+        penalty_reason = ""
+        for rule in ctx["avoid"]:
+            value = getattr(beer, rule["attr"], 0.0)
+            if value > rule["above"]:
+                penalty += rule["penalty"] * min(2.0, value - rule["above"])
+                penalty_reason = rule["reason"]
 
-            w_final = pref_weight * match_score
-            adjusted = (w_final * multiplier) + (boost * beer_value / 5.0)
+        # Step 1: intensity match (applied last, but conceptually first).
+        food_intensity = ctx["food_intensity"]
+        if food_intensity is not None:
+            beer_intensity = sum(getattr(beer, a) for a in _INTENSITY_ATTRS) / len(_INTENSITY_ATTRS)
+            gap = abs(beer_intensity - food_intensity)
+            penalty += min(0.18, 0.06 * max(0.0, gap - 1.2))
 
-            attribute_scores[attr] = round(adjusted, 4)
+        score = max(0.0, min(1.0, base + style_bonus + anchor_bonus - penalty))
 
-        overall = sum(attribute_scores.values()) / len(attribute_scores)
+        # Human-readable pairing logic for the UI.
+        explanation = ctx["why"]
+        if affinity >= 0.7 and canon in STYLE_HOOKS:
+            explanation = f"{explanation} And {STYLE_HOOKS[canon]}."
+        elif penalty_reason and penalty > 0.05:
+            explanation = f"{explanation} (Heads-up: {penalty_reason}.)"
+
         return ScoredBeer(
             beer=beer,
-            score=round(overall, 4),
+            score=round(score, 4),
             attribute_scores=attribute_scores,
+            explanation=explanation,
         )

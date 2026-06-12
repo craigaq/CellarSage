@@ -110,6 +110,8 @@ class BeerRecommendation {
   final Map<String, double> attributeScores;
   final Map<String, double> beerProfile;
   final String beerStyle;
+  final String pairingExplanation;
+  final List<String> flavorTags;
 
   BeerRecommendation({
     required this.name,
@@ -118,6 +120,8 @@ class BeerRecommendation {
     required this.attributeScores,
     required this.beerProfile,
     required this.beerStyle,
+    this.pairingExplanation = '',
+    this.flavorTags = const [],
   });
 
   factory BeerRecommendation.fromJson(Map<String, dynamic> json) {
@@ -130,6 +134,10 @@ class BeerRecommendation {
       beerProfile: ((json['beer_profile'] as Map<String, dynamic>?) ?? {})
           .map((k, v) => MapEntry(k, (v as num).toDouble())),
       beerStyle: (json['beer_style'] as String?) ?? 'Lager',
+      pairingExplanation: (json['pairing_explanation'] as String?) ?? '',
+      flavorTags: ((json['flavor_tags'] as List?) ?? const [])
+          .map((t) => t.toString())
+          .toList(),
     );
   }
 }

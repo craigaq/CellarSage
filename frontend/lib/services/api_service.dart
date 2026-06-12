@@ -86,6 +86,7 @@ class ApiService {
     bool prefDry = false,
     String overrideMode = 'use_pairing_logic',
     String pairingMode = 'congruent',
+    List<String> styleAnchors = const [],
   }) async {
     final response = await _client.post(
       Uri.parse('$_baseUrl/beer-recommend'),
@@ -99,6 +100,7 @@ class ApiService {
         'pref_dry': prefDry,
         'override_mode': overrideMode,
         'pairing_mode': pairingMode,
+        if (styleAnchors.isNotEmpty) 'style_anchors': styleAnchors,
       }),
     );
     if (response.statusCode == 200) {

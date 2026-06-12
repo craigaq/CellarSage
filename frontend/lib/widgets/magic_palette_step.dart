@@ -57,7 +57,29 @@ const _flavor = [
   _Card('🌶️', 'Flavour Bomb!', 'Intense and powerful. Spice, concentration, off the charts'),
 ];
 
+// ---------------------------------------------------------------------------
+// Beer-mode card sets (Cicerone-aligned axes)
+// ---------------------------------------------------------------------------
+
+const _bitterness = [
+  _Card('🍯', 'Soft & Smooth', 'No bite at all. Mellow, malty and easygoing'),
+  _Card('🍞', 'Gentle Malt', 'A whisper of hops over a bready, friendly base'),
+  _Card('🍺', 'Classic Balance', 'Malt and hops shaking hands. The session sweet spot'),
+  _Card('🌿', 'Hop Forward', 'A proper bitter snap. Pale ale territory'),
+  _Card('🌲', 'Hop Monster!', 'Pine-resin punch. Double IPA bravado — bring it on'),
+];
+
+const _carbonation = [
+  _Card('🥛', 'Smooth & Still', 'Barely a bubble. Velvety, nitro-pour calm'),
+  _Card('🫖', 'Soft Sparkle', 'A gentle prickle. Easy on the palate'),
+  _Card('🫧', 'Lively Bubbles', 'Classic fizz that lifts every sip'),
+  _Card('⚡', 'Snappy Spritz', 'Bright, scrubbing carbonation. Crisp as a high-five'),
+  _Card('🍾', 'Champagne Fizz!', 'Maximum sparkle. A fireworks show on the tongue'),
+];
+
 List<_Card> _cardsFor(String title) {
+  if (title.contains('Bitterness')) return _bitterness;
+  if (title.contains('Carbonation')) return _carbonation;
   if (title.contains('Crisp') || title.contains('Acidity')) return _crispness;
   if (title.contains('Weight') || title.contains('Body')) return _weight;
   if (title.contains('Texture') || title.contains('Tannin')) return _texture;

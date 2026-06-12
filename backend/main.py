@@ -109,6 +109,11 @@ class RecommendRequest(BaseModel):
         "congruent",
         description="Pairing philosophy: congruent (match the dish) | contrast (balance the dish) | brave (food chooses the wine)",
     )
+    style_anchors: Optional[list[str]] = Field(
+        None,
+        max_length=8,
+        description="Beer mode only: styles the user already enjoys (e.g. ['IPA', 'Stout']); ignored for wine",
+    )
 
 
 class WineResult(BaseModel):
@@ -135,6 +140,8 @@ class BeerResult(BaseModel):
     attribute_scores: dict[str, float]
     beer_profile: dict[str, float]   # normalised 1-5 attribute values
     beer_style: str
+    pairing_explanation: str = ""    # Cicerone pairing logic, human-readable
+    flavor_tags: list[str] = []      # style-derived descriptors ("chocolate", "citrus hops")
 
 
 class BeerRecommendResponse(BaseModel):
@@ -437,7 +444,9 @@ def beer_recommend(req: RecommendRequest):
         raise HTTPException(status_code=422, detail=str(exc))
 
     # Score beers without middleware (MVP — no geo-gating, no filtering)
-    results = _beer_service.recommend(prefs, top_n=req.top_n)
+    results = _beer_service.recommend(
+        prefs, top_n=req.top_n, style_anchors=req.style_anchors,
+    )
 
     def _beer_profile_dict(beer: BeerProfile) -> dict[str, float]:
         """Map beer attributes to UI labels."""
@@ -447,6 +456,7 @@ def beer_recommend(req: RecommendRequest):
             "Flavor Intensity": min(5.0, max(1.0, beer.aromatics)),
             "Sweetness": min(5.0, max(1.0, beer.sweetness)),
             "Carbonation": min(5.0, max(1.0, beer.carbonation)),
+            "Roast": min(5.0, max(1.0, beer.roast)),
         }
 
     return BeerRecommendResponse(
@@ -458,6 +468,8 @@ def beer_recommend(req: RecommendRequest):
                 attribute_scores=r.attribute_scores,
                 beer_profile=_beer_profile_dict(r.beer),
                 beer_style=r.beer.beer_style,
+                pairing_explanation=r.explanation,
+                flavor_tags=r.beer.flavor_tags,
             )
             for r in results
         ],

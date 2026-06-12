@@ -40,6 +40,19 @@ class _QuizScreenState extends State<QuizScreen> {
   String _overrideMode = 'use_pairing_logic';
   String _pairingMode = 'congruent'; // 'congruent' | 'contrast' | 'brave'
   String _beverageType = 'wine'; // 'wine' | 'beer'
+  final Set<String> _styleAnchors = {}; // beer styles the user already enjoys
+
+  bool get _isBeer => _beverageType == 'beer';
+
+  /// Beer style anchor chips shown on the welcome page in beer mode.
+  static const List<Map<String, String>> _beerStyleOptions = [
+    {'id': 'Lager', 'label': '🍺 Crisp Lager'},
+    {'id': 'Pale Ale', 'label': '🍻 Pale Ale'},
+    {'id': 'IPA', 'label': '🌲 Hoppy IPA'},
+    {'id': 'Stout', 'label': '🌑 Dark & Roasty'},
+    {'id': 'Wheat', 'label': '🍌 Wheat & Fruity'},
+    {'id': 'Sour', 'label': '🍋 Sour & Tart'},
+  ];
 
   // --- Results state ---
   List<WineRecommendation>? _results;
@@ -164,12 +177,23 @@ class _QuizScreenState extends State<QuizScreen> {
     },
   ];
 
-  static const List<String> _attrOrder = [
+  static const List<String> _wineAttrOrder = [
     'Crispness (Acidity)',
     'Weight (Body)',
     'Texture (Tannin)',
     'Flavor Intensity (Aromatics)',
   ];
+
+  // Beer mode re-labels the four palate dials along Cicerone axes:
+  // bitterness (IBU), body, carbonation, hop/flavour intensity.
+  static const List<String> _beerAttrOrder = [
+    'Bitterness (Hops)',
+    'Weight (Body)',
+    'Carbonation (Fizz)',
+    'Flavor Intensity (Aroma)',
+  ];
+
+  List<String> get _attrOrder => _isBeer ? _beerAttrOrder : _wineAttrOrder;
 
   BudgetBracket get _selectedBracket =>
       CurrencyService.getBrackets(_currencyCode)[_budgetIndex];
@@ -184,18 +208,20 @@ class _QuizScreenState extends State<QuizScreen> {
       orElse: () => {},
     );
     if (option.isEmpty) return null;
-    return switch (_pairingMode) {
+    final comment = switch (_pairingMode) {
       'contrast' => option['contrast_comment'] ?? option['comment'],
       'brave' => option['brave_comment'] ?? option['comment'],
       _ => option['comment'],
     };
+    // Food comments are written for wine; swap the word in beer mode.
+    return _isBeer ? comment?.replaceAll('wine', 'beer') : comment;
   }
 
   Map<String, int> get _userPrefs => {
-    'Crispness (Acidity)': _crispness,
-    'Weight (Body)': _weight,
-    'Texture (Tannin)': _texture,
-    'Flavor Intensity (Aromatics)': _flavor,
+    _attrOrder[0]: _crispness,
+    _attrOrder[1]: _weight,
+    _attrOrder[2]: _texture,
+    _attrOrder[3]: _flavor,
   };
 
   bool get _hasConflict =>
@@ -458,17 +484,31 @@ class _QuizScreenState extends State<QuizScreen> {
           prefDry: _prefDry,
           overrideMode: _overrideMode,
           pairingMode: _pairingMode,
+          styleAnchors: _styleAnchors.toList(),
         );
         if (generation != _fetchGeneration || !mounted) return;
-        // Convert BeerRecommendation to WineRecommendation for uniform display
+        // Convert BeerRecommendation to WineRecommendation for uniform display.
+        // Profile keys are remapped to the beer dial labels so the palate
+        // comparison rows line up; varietal carries the beer style so style
+        // shows everywhere a varietal would.
         final wineResults = result.recommendations.map((beer) {
           return WineRecommendation(
             name: beer.name,
             skuId: beer.skuId,
             score: beer.score,
             attributeScores: beer.attributeScores,
-            wineProfile: beer.beerProfile,
-            rawMetrics: {'beer_style': beer.beerStyle},
+            wineProfile: {
+              _beerAttrOrder[0]: beer.beerProfile['Bitterness'] ?? 3.0,
+              _beerAttrOrder[1]: beer.beerProfile['Weight'] ?? 3.0,
+              _beerAttrOrder[2]: beer.beerProfile['Carbonation'] ?? 3.0,
+              _beerAttrOrder[3]: beer.beerProfile['Flavor Intensity'] ?? 3.0,
+            },
+            rawMetrics: {
+              'varietal': beer.beerStyle,
+              'beer_style': beer.beerStyle,
+              'pairing_explanation': beer.pairingExplanation,
+              'flavor_tags': beer.flavorTags,
+            },
           );
         }).toList();
         setState(() {
@@ -600,30 +640,34 @@ class _QuizScreenState extends State<QuizScreen> {
               children: [
                 _buildWelcome(),
                 _buildAttributeStep(
-                  title: 'Crispness (Acidity)',
-                  description:
-                      'How much do you enjoy a fresh, zesty bite in your wine?',
+                  title: _attrOrder[0],
+                  description: _isBeer
+                      ? 'Smooth and malty, or a proper hoppy bite?'
+                      : 'How much do you enjoy a fresh, zesty bite in your wine?',
                   value: _crispness,
                   onChanged: (v) => setState(() => _crispness = v),
                 ),
                 _buildAttributeStep(
-                  title: 'Weight (Body)',
-                  description:
-                      'A light, delicate sip or a rich, full-bodied experience?',
+                  title: _attrOrder[1],
+                  description: _isBeer
+                      ? 'An easy, light session beer or a rich, full-bodied pour?'
+                      : 'A light, delicate sip or a rich, full-bodied experience?',
                   value: _weight,
                   onChanged: (v) => setState(() => _weight = v),
                 ),
                 _buildAttributeStep(
-                  title: 'Texture (Tannin)',
-                  description:
-                      'Do you like that dry, grippy sensation common in red wines?',
+                  title: _attrOrder[2],
+                  description: _isBeer
+                      ? 'Velvety smooth, or lively scrubbing bubbles?'
+                      : 'Do you like that dry, grippy sensation common in red wines?',
                   value: _texture,
                   onChanged: (v) => setState(() => _texture = v),
                 ),
                 _buildAttributeStep(
-                  title: 'Flavor Intensity (Aromatics)',
-                  description:
-                      'Do you prefer subtle, understated flavors or bold, expressive ones?',
+                  title: _attrOrder[3],
+                  description: _isBeer
+                      ? 'Clean and understated, or bursting with hop aroma?'
+                      : 'Do you prefer subtle, understated flavors or bold, expressive ones?',
                   value: _flavor,
                   onChanged: (v) => setState(() => _flavor = v),
                 ),
@@ -676,7 +720,9 @@ class _QuizScreenState extends State<QuizScreen> {
                     width: _currentPage == 7 ? 170 : null,
                     child: FilledButton.icon(
                       onPressed: _goNext,
-                      label: Text(_currentPage == 7 ? 'Find My Wine!' : 'Next'),
+                      label: Text(_currentPage == 7
+                          ? (_isBeer ? 'Find My Beer!' : 'Find My Wine!')
+                          : 'Next'),
                       icon: const Icon(Icons.arrow_forward),
                       iconAlignment: IconAlignment.end,
                     ),
@@ -813,6 +859,48 @@ class _QuizScreenState extends State<QuizScreen> {
             ),
           ),
           const SizedBox(height: 32),
+          // Beer style anchors — the strongest palate signal in beer mode.
+          if (_isBeer) ...[
+            Text(
+              'Which beers do you already enjoy? (optional)',
+              style: WwText.bodySmall(color: WwColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: _beerStyleOptions.map((style) {
+                final id = style['id']!;
+                final selected = _styleAnchors.contains(id);
+                return GestureDetector(
+                  onTap: () => setState(() {
+                    selected ? _styleAnchors.remove(id) : _styleAnchors.add(id);
+                  }),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? WwColors.violet.withValues(alpha: 0.15)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: selected ? WwColors.violet : WwColors.borderMedium,
+                      ),
+                    ),
+                    child: Text(
+                      style['label']!,
+                      style: WwText.bodySmall(
+                        color: selected ? WwColors.violet : WwColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+          ],
           if (_savedProfiles.isNotEmpty) ...[
             const SizedBox(height: 28),
             Row(
@@ -1215,7 +1303,7 @@ class _QuizScreenState extends State<QuizScreen> {
           Text('Your Profile', style: WwText.headlineLarge()),
           const SizedBox(height: 8),
           Text(
-            'Looking good. Hit "Find My Wine!" when you\'re ready.',
+            'Looking good. Hit "Find My ${_isBeer ? 'Beer' : 'Wine'}!" when you\'re ready.',
             style: WwText.bodyMedium(),
           ),
           const SizedBox(height: 40),
@@ -1238,22 +1326,22 @@ class _QuizScreenState extends State<QuizScreen> {
             child: Column(
               children: [
                 _summaryRow(
-                  label: 'Crispness (Acidity)',
+                  label: _attrOrder[0],
                   trailing: _ScoreDots(value: _crispness),
                   targetPage: 1,
                 ),
                 _summaryRow(
-                  label: 'Weight (Body)',
+                  label: _attrOrder[1],
                   trailing: _ScoreDots(value: _weight),
                   targetPage: 2,
                 ),
                 _summaryRow(
-                  label: 'Texture (Tannin)',
+                  label: _attrOrder[2],
                   trailing: _ScoreDots(value: _texture),
                   targetPage: 3,
                 ),
                 _summaryRow(
-                  label: 'Flavor Intensity (Aromatics)',
+                  label: _attrOrder[3],
                   trailing: _ScoreDots(value: _flavor),
                   targetPage: 4,
                 ),
@@ -1400,6 +1488,7 @@ class _QuizScreenState extends State<QuizScreen> {
       userLng: _userLng,
       foodPairing: _foodPairing,
       pairingMode: _pairingMode,
+      isBeer: _isBeer,
       snapshot: PalateSnapshot(
         crispness:   _crispness,
         weight:      _weight,
@@ -1418,7 +1507,7 @@ class _QuizScreenState extends State<QuizScreen> {
           Text('Your Top Matches', style: WwText.headlineLarge()),
           const SizedBox(height: 4),
           Text(
-            'The Cellar Fox found your top ${top3.length} varietals. Tap to explore each.',
+            'The Cellar Fox found your top ${top3.length} ${_isBeer ? 'beers' : 'varietals'}. Tap to explore each.',
             style: WwText.bodyMedium(),
           ),
           if (nearTie) ...[
@@ -1556,6 +1645,7 @@ class _WineResultCard extends StatefulWidget {
   final double? userLng;
   final String foodPairing;
   final String pairingMode;
+  final bool isBeer;
 
   const _WineResultCard({
     super.key,
@@ -1574,6 +1664,7 @@ class _WineResultCard extends StatefulWidget {
     this.snapshot,
     this.foodPairing = 'none',
     this.pairingMode = 'congruent',
+    this.isBeer = false,
   });
 
   static String _foodLabel(String id) => switch (id) {
@@ -1596,6 +1687,11 @@ class _WineResultCard extends StatefulWidget {
     required String foodPairing,
     required String pairingMode,
   }) {
+    // Beer results carry a Cicerone pairing explanation from the backend —
+    // use it verbatim rather than the wine-attribute heuristics below.
+    final beerWhy = wine.rawMetrics['pairing_explanation'] as String?;
+    if (beerWhy != null && beerWhy.isNotEmpty) return beerWhy;
+
     if (wine.attributeScores.isEmpty) return '';
 
     final topAttr = wine.attributeScores.entries
@@ -1709,7 +1805,7 @@ class _WineResultCardState extends State<_WineResultCard> {
         borderRadius: BorderRadius.circular(14),
         onTap: () {
           setState(() => _expanded = !_expanded);
-          if (_expanded) _loadBuyOptions();
+          if (_expanded && !widget.isBeer) _loadBuyOptions();
         },
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -1862,7 +1958,9 @@ class _WineResultCardState extends State<_WineResultCard> {
                     ),
                   );
                 }),
-                if (widget.wine.varietal.isNotEmpty) ...[
+                // Wine-only: varietal explorer + retailer listings. Beer mode
+                // has no merchant offers yet (MVP) — hide to avoid dead ends.
+                if (!widget.isBeer && widget.wine.varietal.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
@@ -1886,24 +1984,26 @@ class _WineResultCardState extends State<_WineResultCard> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 14),
-                const Divider(height: 1),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Text('🛒', style: TextStyle(fontSize: 16)),
-                    const SizedBox(width: 6),
-                    Text('Where to Buy', style: WwText.titleMedium()),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                _WhereToBuySection(
-                  buyLoading: _buyLoading,
-                  buyError: _buyError,
-                  buyOptions: _buyOptions,
-                  varietal: widget.wine.varietal,
-                  onRetry: _loadBuyOptions,
-                ),
+                if (!widget.isBeer) ...[
+                  const SizedBox(height: 14),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Text('🛒', style: TextStyle(fontSize: 16)),
+                      const SizedBox(width: 6),
+                      Text('Where to Buy', style: WwText.titleMedium()),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _WhereToBuySection(
+                    buyLoading: _buyLoading,
+                    buyError: _buyError,
+                    buyOptions: _buyOptions,
+                    varietal: widget.wine.varietal,
+                    onRetry: _loadBuyOptions,
+                  ),
+                ],
               ],
             ],
           ),
