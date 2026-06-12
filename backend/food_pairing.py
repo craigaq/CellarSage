@@ -1,361 +1,387 @@
 """
-Food pairing modifiers applied to attribute scores.
+Wine food pairing — sommelier-aligned model (v2).
 
-Keys are backend IDs (snake_case). The frontend maps UI labels → backend IDs
-before sending them to the API.
+Why v2? The v1 multiplier/boost system could only express "reward attribute"
+or "ignore attribute". It could not express "this attribute is actively BAD
+here", and — because preference weights doubled as importance weights — a
+guest asking for "no tannin" carried 5× less influence than one asking for
+"high acidity". (Proven failure: a crisp-and-silky request ranked Barbera
+above Pinot Grigio.)
 
-Structure per pairing:
-  is_sweet_pairing — True triggers Palate Paradox detection for dry-preferring users
-  congruent        — multipliers/boosts that mirror the dish's dominant character
-  contrast         — multipliers/boosts that create balance against the dish
+The v2 model encodes classical sommelier method (CMS/WSET canon):
 
-Formula applied per attribute (regardless of mode):
-  final_attribute = (base_score * multiplier) + boost
+  1. MATCH INTENSITY  — delicate dishes need delicate wines; bold needs bold.
+     Each food carries an `intensity` (1-5); wines compute their own and are
+     penalised for large mismatches. The sommelier's first rule.
 
-Pairing philosophy:
-  congruent  — "Match the dish." Find a wine that echoes the food's character.
-               Rich food → rich wine. Acidic dish → high-acid wine.
-  contrast   — "Balance the dish." Find a wine that cuts against the food.
-               Rich food → crisp wine to slice through fat.
-               Delicate food → expressive wine to frame it.
+  2. FIND HARMONIES   — encoded two ways:
+       - `targets`: ideal attribute values (1-5) per food/mode. Scoring is a
+         Gaussian fit against these, blended with the user's palate dials.
+       - `varietals`: a classic-pairing affinity map (-1..+1) encoding the
+         canon directly — Sangiovese+tomato, Pinot Noir+salmon, Chardonnay+
+         cream, Gamay+charcuterie, Sauternes+dessert, Shiraz+BBQ.
 
-Cellar Fox's Logic (the reasoning behind each entry):
-  red_meat     — congruent: structure meets richness. contrast: acid cuts fat.
-  poultry      — congruent: delicate meets delicate. contrast: expressive frames the bird.
-  white_fish   — congruent: bright and clean. contrast: textured and expressive (tannin still off-limits).
-  rich_fish    — congruent: freshness balances oily flesh. contrast: body matches body.
-  spicy_food   — congruent: cool and soothe the heat. contrast: amplify the fire.
-  tomato_sauce — congruent: acid meets acid. contrast: smooth rounds out the tang.
-  creamy_sauce — congruent: body matches dairy. contrast: acid cuts the fat.
-  greens       — congruent: bright mirrors fresh. contrast: earthy complements vegetal.
-  charcuterie  — congruent: balanced all-rounder. contrast: acid cuts salt and fat.
-  none         — palate dial stays exactly where the user set it.
+  3. CONSIDER INTERACTIONS — directional chemistry the fit can't capture:
+       - `avoid`: signed penalty rules — tannin reacts metallic with fish
+         oils, tannin scrapes against capsaicin, alcohol fans chilli heat,
+         umami turns heavy tannin bitter.
+
+Newly scored axes (v1 ignored both):
+  sweetness — derived from residual_sugar_gl (graduated, not just the binary
+              style gate). Lets off-dry Riesling beat dry Riesling on spicy
+              food *by degree*.
+  alcohol   — ABV normalised 1-5. Spicy targets low; BBQ tolerates high.
+
+All attribute values are on a 1-5 scale:
+  acidity, body, tannin, aromatics — as before (pH-derived, expert ratings)
+  sweetness — 1.0 bone dry → 5.0 lusciously sweet (RS-derived)
+  alcohol   — ~8% ABV → 1.0, ~15.5%+ → 5.0
+
+Modes remain `congruent` (echo the dish) and `contrast` (balance the dish).
+`is_sweet_pairing` is preserved for Palate Paradox detection.
+
+NOTE (spicy/contrast correction): v1's contrast mode "amplified the fire"
+with bold high-alcohol wines. Canon says the opposite — alcohol and tannin
+both amplify capsaicin. Contrast now means a cold, bone-dry, high-acid
+cleanse; the heat-amplifying pick was bad advice and is gone.
+
+Keys are backend food IDs (snake_case).
 """
 
 FOOD_PAIRING: dict[str, dict] = {
 
-    # Red Meat — fat tames tannin; body provides structure
     "red_meat": {
+        "intensity": 4.2,
         "is_sweet_pairing": False,
         "congruent": {
-            # Big wine for big meat — fat absorbs tannin, body matches richness
-            "multipliers": {
-                "tannin": 1.5,   # Fat from steak/lamb cuts through grippy tannins
-                "body":   1.2,   # Full body matches the richness of the protein
-            },
-            "boosts": {},
+            "targets": {"tannin": 4.5, "body": 4.3, "acidity": 3.2, "aromatics": 3.6,
+                        "sweetness": 1.0, "alcohol": 3.8},
+            "weights": {"tannin": 1.6, "body": 1.4},
+            "varietals": {"Cabernet Sauvignon": 1.0, "Syrah/Shiraz": 0.9, "Malbec": 0.9,
+                          "Tempranillo": 0.7, "Nebbiolo": 0.7, "Red Blend": 0.7,
+                          "Merlot": 0.6, "Mourvèdre": 0.6, "Carménère": 0.6,
+                          "Cabernet Franc": 0.5, "Grenache": 0.4,
+                          "Pinot Grigio": -0.6, "Sauvignon Blanc": -0.6, "Moscato": -1.0},
+            "avoid": [],
+            "why": "Structured tannin locks onto the meat's fat and protein — the fat tames the grip while the body matches the richness.",
         },
         "contrast": {
-            # Acid-driven wine cuts through the fat instead — Pinot Noir / Barbera style
-            "multipliers": {
-                "tannin": 0.5,   # Soften grip — the acid does the heavy lifting here
-                "body":   0.7,   # Lighter frame lets the brightness shine through
-            },
-            "boosts": {
-                "acidity": 1.0,  # Crispness slices through fat like a sommelier's knife
-            },
+            "targets": {"acidity": 4.3, "tannin": 2.3, "body": 2.8, "aromatics": 3.2,
+                        "sweetness": 1.0, "alcohol": 3.2},
+            "weights": {"acidity": 1.6},
+            "varietals": {"Pinot Noir": 1.0, "Barbera": 0.9, "Gamay": 0.8, "Sangiovese": 0.6,
+                          "Cabernet Franc": 0.5},
+            "avoid": [],
+            "why": "Bright acidity slices through the fat instead of wrestling it — lighter frame, electric finish.",
         },
     },
 
-    # White Meat — light to medium; acidity lifts delicate flavours
     "poultry": {
+        "intensity": 2.5,
         "is_sweet_pairing": False,
         "congruent": {
-            # Delicate wine for delicate bird — modest grip, clean finish
-            "multipliers": {
-                "tannin": 0.7,   # Moderate grip only — chicken can't hold heavy tannin
-            },
-            "boosts": {
-                "acidity": 0.5,  # Crispness cuts through poultry fat cleanly
-            },
+            "targets": {"body": 2.8, "tannin": 1.8, "acidity": 3.4, "aromatics": 2.8,
+                        "sweetness": 1.2, "alcohol": 2.8},
+            "weights": {"tannin": 1.3, "body": 1.2},
+            "varietals": {"Chardonnay": 0.9, "Pinot Noir": 0.8, "Chenin Blanc": 0.7,
+                          "Semillon": 0.5, "Gamay": 0.5, "Vermentino": 0.4,
+                          "Nebbiolo": -0.5, "Cabernet Sauvignon": -0.4},
+            "avoid": [
+                {"attr": "tannin", "above": 3.5, "penalty": 0.10,
+                 "reason": "heavy tannin steamrolls the delicate bird"},
+            ],
+            "why": "A gentle, balanced wine with soft grip and clean acidity lets the bird lead.",
         },
         "contrast": {
-            # Fuller, more expressive wine contrasts the bird's mildness — Viognier style.
-            # Tannin suppressed: contrast seeks expressive whites (Viognier, Fiano, Chardonnay);
-            # without tannin suppression a red with perfect tannin match beats them every time.
-            "multipliers": {
-                "tannin": 0.1,   # Remove tannin from the equation — contrast mode rewards aromatics, not grip
-            },
-            "boosts": {
-                "body":     1.2,  # Full body frames the delicate bird — richness leads
-                "aromatics": 0.8, # Intense floral/stone-fruit notes deliberately outshine the dish
-            },
+            "targets": {"aromatics": 4.2, "body": 3.6, "tannin": 1.2, "acidity": 3.0,
+                        "sweetness": 1.5, "alcohol": 3.2},
+            "weights": {"aromatics": 1.5, "tannin": 1.4},
+            "varietals": {"Viognier": 1.0, "Gewürztraminer": 0.7, "Fiano": 0.7,
+                          "Marsanne": 0.6, "Torrontés": 0.6},
+            "avoid": [
+                {"attr": "tannin", "above": 3.5, "penalty": 0.10,
+                 "reason": "heavy tannin steamrolls the delicate bird"},
+            ],
+            "why": "An intensely aromatic, full-textured white deliberately outshines the mild meat — contrast through perfume, not grip.",
         },
     },
 
-    # Seafood: White Fish / Shellfish — tannin destroys delicate fish oils
     "white_fish": {
+        "intensity": 1.6,
         "is_sweet_pairing": False,
         "congruent": {
-            # Bright and clean — match the ocean freshness
-            "multipliers": {
-                "tannin": 0.0,   # Tannin-Free Zone — metallic clash with fish oils
-            },
-            "boosts": {
-                "acidity": 1.5,  # High crispness is essential to complement the brine
-            },
+            "targets": {"acidity": 4.5, "tannin": 1.0, "body": 1.8, "aromatics": 2.6,
+                        "sweetness": 1.0, "alcohol": 2.2},
+            "weights": {"tannin": 1.7, "acidity": 1.5, "body": 1.3},
+            "varietals": {"Albariño": 1.0, "Vermentino": 0.9, "Sauvignon Blanc": 0.8,
+                          "Pinot Grigio": 0.8, "Champagne": 0.8, "Cava": 0.7,
+                          "Fino Sherry": 0.7, "Grüner Veltliner": 0.6,
+                          "Trebbiano Toscano": 0.5, "Airén": 0.4,
+                          "Cabernet Sauvignon": -1.0, "Syrah/Shiraz": -1.0,
+                          "Nebbiolo": -1.0, "Malbec": -0.9, "Tempranillo": -0.8},
+            "avoid": [
+                {"attr": "tannin", "above": 2.2, "penalty": 0.15,
+                 "reason": "tannin reacts with delicate fish oils — metallic, tinny finish"},
+            ],
+            "why": "Saline, razor-crisp acidity mirrors the brine — and tannin stays at zero, where fish demands it.",
         },
         "contrast": {
-            # Skin-contact / textured style — expressiveness to frame the delicacy
-            # Tannin remains off-limits regardless of mode — it's a physical reaction
-            "multipliers": {
-                "tannin":  0.0,  # Still cannot work with fish oils — no exceptions
-                "acidity": 0.6,  # Step back on the crispness to let texture lead
-            },
-            "boosts": {
-                "body":     0.8, # Fuller frame creates contrast with the fish's delicacy
-                "aromatics": 0.5, # Expressive nose lifts the whole pairing
-            },
+            "targets": {"body": 3.0, "aromatics": 3.6, "tannin": 1.0, "acidity": 3.4,
+                        "sweetness": 1.3, "alcohol": 2.8},
+            "weights": {"tannin": 1.7, "aromatics": 1.3},
+            "varietals": {"Viognier": 0.8, "Fiano": 0.8, "Marsanne": 0.8, "Chenin Blanc": 0.7,
+                          "Gewürztraminer": 0.5,
+                          "Cabernet Sauvignon": -1.0, "Syrah/Shiraz": -1.0, "Nebbiolo": -1.0},
+            "avoid": [
+                {"attr": "tannin", "above": 2.2, "penalty": 0.15,
+                 "reason": "tannin reacts with delicate fish oils — metallic, tinny finish"},
+            ],
+            "why": "A textured, perfumed white frames the delicate fish — contrast through richness, never through tannin.",
         },
     },
 
-    # Seafood: Salmon / Tuna — richer flesh; can handle a whisper of texture
     "rich_fish": {
+        "intensity": 3.0,
         "is_sweet_pairing": False,
         "congruent": {
-            # Freshness balances the oily flesh — rosé / light red territory
-            "multipliers": {
-                "tannin": 0.5,   # Small amount of grip OK — rosé/light red territory
-            },
-            "boosts": {
-                "acidity": 0.5,  # Still want freshness to balance the oily flesh
-            },
+            "targets": {"acidity": 3.8, "body": 2.8, "tannin": 1.6, "aromatics": 3.0,
+                        "sweetness": 1.2, "alcohol": 2.8},
+            "weights": {"acidity": 1.2, "tannin": 1.2},
+            "varietals": {"Pinot Noir": 1.0, "Gamay": 0.8, "Chardonnay": 0.7,
+                          "Champagne": 0.6, "Albariño": 0.5, "Vermentino": 0.4},
+            "avoid": [
+                {"attr": "tannin", "above": 3.2, "penalty": 0.12,
+                 "reason": "salmon takes a whisper of grip, not a tannic assault"},
+            ],
+            "why": "Freshness balances the oily flesh — silky light-red or bright-white territory, the salmon-and-Pinot classic.",
         },
         "contrast": {
-            # Match the salmon's weight with body rather than cutting through with acid.
-            # Tannin and aromatics suppressed so full-bodied wines (Red Blend, Merlot) beat
-            # aromatic-match wines that happen to have the right tannin level.
-            "multipliers": {
-                "tannin":   0.3,  # Suppress tannin — body leads; grip is secondary
-                "acidity":  0.5,  # Step back on crispness — richness leads here
-                "aromatics": 0.4, # Suppress aromatics — body drives the contrast, not fruit intensity
-            },
-            "boosts": {
-                "body": 1.5,      # Full body meets full fish — weight for weight
-            },
+            "targets": {"body": 3.6, "tannin": 1.8, "acidity": 3.0, "aromatics": 3.4,
+                        "sweetness": 1.3, "alcohol": 3.2},
+            "weights": {"body": 1.4},
+            "varietals": {"Chardonnay": 0.8, "Viognier": 0.7, "Marsanne": 0.7,
+                          "Pinot Noir": 0.5},
+            "avoid": [
+                {"attr": "tannin", "above": 3.2, "penalty": 0.12,
+                 "reason": "salmon takes a whisper of grip, not a tannic assault"},
+            ],
+            "why": "Weight meets weight — a rich, rounded wine stands shoulder to shoulder with the dense flesh.",
         },
     },
 
-    # Spicy Food — off-dry wines (Riesling, Gewürztraminer) cool the heat best.
-    # is_sweet_pairing=True triggers the Palate Paradox check for dry-preferring users.
     "spicy_food": {
+        "intensity": 3.8,
         "is_sweet_pairing": True,
         "congruent": {
-            # Cool and soothe — fruit sweetness acts as a fire extinguisher
-            "multipliers": {
-                "tannin": 0.0,   # Tannin + capsaicin = burning finish — suppress entirely
-                "body":   0.5,   # High alcohol fans the flames — dampen body
-            },
-            "boosts": {
-                "aromatics": 1.0,  # Residual fruit/sweetness puts out the fire
-            },
+            "targets": {"sweetness": 2.6, "acidity": 3.8, "aromatics": 4.0, "tannin": 1.2,
+                        "body": 2.2, "alcohol": 1.8},
+            "weights": {"sweetness": 1.5, "alcohol": 1.4, "tannin": 1.4},
+            "varietals": {"Riesling": 1.0, "Gewürztraminer": 0.9, "Moscato": 0.6,
+                          "Torrontés": 0.6, "Prosecco": 0.6, "Chenin Blanc": 0.6,
+                          "Cabernet Sauvignon": -0.8, "Nebbiolo": -0.8, "Syrah/Shiraz": -0.6},
+            "avoid": [
+                {"attr": "tannin", "above": 2.5, "penalty": 0.15,
+                 "reason": "tannin scrapes against capsaicin and turns bitter"},
+                {"attr": "alcohol", "above": 3.2, "penalty": 0.12,
+                 "reason": "alcohol fans the chilli flames"},
+            ],
+            "why": "Off-dry sweetness and perfumed fruit cool the burn — low alcohol keeps the flames down, the off-dry-Riesling classic.",
         },
         "contrast": {
-            # Lean into the fire — bold aromatics amplify the experience
-            "multipliers": {
-                "tannin": 0.0,   # Still cannot combine tannin with capsaicin
-                "body":   0.8,   # Allow a little more weight to carry the intensity
-            },
-            "boosts": {
-                "aromatics": 2.0,  # Maximum fruit expression to match the dish's punch
-            },
+            "targets": {"acidity": 4.4, "body": 1.9, "tannin": 1.0, "sweetness": 1.4,
+                        "alcohol": 1.6, "aromatics": 2.8},
+            "weights": {"acidity": 1.5, "alcohol": 1.3, "tannin": 1.3},
+            "varietals": {"Sauvignon Blanc": 0.9, "Cava": 0.8, "Albariño": 0.8,
+                          "Vermentino": 0.8, "Pinot Grigio": 0.7, "Champagne": 0.6,
+                          "Cabernet Sauvignon": -0.8, "Nebbiolo": -0.8},
+            "avoid": [
+                {"attr": "tannin", "above": 2.5, "penalty": 0.15,
+                 "reason": "tannin scrapes against capsaicin and turns bitter"},
+                {"attr": "alcohol", "above": 3.2, "penalty": 0.12,
+                 "reason": "alcohol fans the chilli flames"},
+            ],
+            "why": "An ice-cold, bone-dry, razor-crisp white scrubs and resets the palate between fiery bites.",
         },
     },
 
-    # Tomato-based Pasta / Pizza — tomato acid demands a wine that matches it
     "tomato_sauce": {
+        "intensity": 3.2,
         "is_sweet_pairing": False,
         "congruent": {
-            # Acid meets acid — match the tomato's tartness with a structured red
-            "multipliers": {},
-            "boosts": {
-                "acidity": 1.5,  # High acidity matches the tomato's natural tartness
-                "tannin":  0.3,  # Reward structured reds (Cab Franc, Sangiovese) over high-acid whites
-            },
+            "targets": {"acidity": 4.2, "tannin": 2.8, "body": 3.0, "aromatics": 3.2,
+                        "sweetness": 1.2, "alcohol": 3.0},
+            "weights": {"acidity": 1.6},
+            "varietals": {"Sangiovese": 1.0, "Barbera": 0.9, "Nero d'Avola": 0.7,
+                          "Tempranillo": 0.5, "Grenache": 0.4, "Trebbiano Toscano": 0.4},
+            "avoid": [],
+            "why": "Acid meets acid — a wine that can't match the tomato's tartness tastes flat beside it. Sangiovese and tomato are Tuscany on a plate.",
         },
         "contrast": {
-            # Smooth and round softens the tang instead of matching it — Merlot / Red Blend style.
-            # Tannin and aromatics suppressed so body-forward wines beat aromatic-match wines.
-            "multipliers": {
-                "acidity":  0.5,  # Step back on crispness — let the body absorb the acid
-                "tannin":   0.4,  # Suppress tannin advantage — body leads, not grip
-                "aromatics": 0.5, # Suppress aromatics — roundness leads, not fruit intensity
-            },
-            "boosts": {
-                "body": 1.5,      # Roundness and weight smooth out the tomato's sharpness
-            },
+            "targets": {"body": 3.4, "tannin": 2.2, "acidity": 3.2, "aromatics": 3.0,
+                        "sweetness": 1.4, "alcohol": 3.2},
+            "weights": {"acidity": 1.2, "body": 1.2},
+            "varietals": {"Merlot": 0.8, "Grenache": 0.6, "Red Blend": 0.5},
+            "avoid": [],
+            "why": "Plush, rounded fruit softens the sauce's sharp edges — still with enough acid to stay alive on the plate.",
         },
     },
 
-    # Creamy / Cheesy Pasta — dairy richness needs body and a touch of acid to cut through
     "creamy_sauce": {
+        "intensity": 3.4,
         "is_sweet_pairing": False,
         "congruent": {
-            # Match the dairy richness — full body, softened tannin
-            "multipliers": {
-                "tannin": 0.5,   # Grippy tannin clashes with cream — soften it
-            },
-            "boosts": {
-                "body":    1.0,  # Full body matches the dairy richness
-                "acidity": 0.3,  # Light crispness cuts through the fat
-            },
+            "targets": {"body": 3.8, "acidity": 3.0, "tannin": 1.6, "aromatics": 3.2,
+                        "sweetness": 1.3, "alcohol": 3.2},
+            "weights": {"body": 1.4},
+            "varietals": {"Chardonnay": 1.0, "Viognier": 0.8, "Marsanne": 0.8,
+                          "Fiano": 0.6, "Semillon": 0.6},
+            "avoid": [],
+            "why": "Butter meets butter — a full, creamy-textured white matches the dairy weight for weight.",
         },
         "contrast": {
-            # Classic sommelier move — razor acid slices through the fat
-            "multipliers": {
-                "body":   0.4,   # Suppress the richness — acidity leads
-                "tannin": 0.7,   # Moderate grip is fine when acid is the star
-            },
-            "boosts": {
-                "acidity": 1.5,  # High crispness cuts through dairy fat like Chablis
-            },
+            "targets": {"acidity": 4.4, "body": 2.4, "tannin": 1.2, "aromatics": 3.0,
+                        "sweetness": 1.2, "alcohol": 2.6},
+            "weights": {"acidity": 1.6},
+            "varietals": {"Sauvignon Blanc": 0.9, "Champagne": 0.8, "Riesling": 0.8,
+                          "Grüner Veltliner": 0.7, "Cava": 0.7},
+            "avoid": [],
+            "why": "Sharp, high-wire acidity slices through the cream like a squeeze of lemon.",
         },
     },
 
-    # Salads / Green Veggies — crisp, herbaceous; light is right
     "greens": {
+        "intensity": 1.8,
         "is_sweet_pairing": False,
         "congruent": {
-            # Bright wine mirrors the freshness of the dish
-            "multipliers": {
-                "body":   0.7,   # Heavy reds overwhelm delicate greens
-                "tannin": 0.5,   # Grippy tannin clashes with bitter vegetables
-            },
-            "boosts": {
-                "acidity":   1.0,  # Crispness mirrors the freshness of the dish
-                "aromatics": 0.5,  # Herbaceous notes complement green flavours
-            },
+            "targets": {"acidity": 4.2, "body": 1.9, "tannin": 1.2, "aromatics": 3.2,
+                        "sweetness": 1.1, "alcohol": 2.0},
+            "weights": {"acidity": 1.3, "body": 1.2},
+            "varietals": {"Sauvignon Blanc": 1.0, "Grüner Veltliner": 1.0, "Vermentino": 0.8,
+                          "Albariño": 0.7, "Pinot Grigio": 0.6, "Sauvignonasse/Friulano": 0.6},
+            "avoid": [
+                {"attr": "tannin", "above": 3.5, "penalty": 0.08,
+                 "reason": "grippy tannin tastes harsh against raw greens"},
+            ],
+            "why": "Grassy, green-edged crispness mirrors the garden — Grüner and Sauvignon Blanc are the vegetable wines.",
         },
         "contrast": {
-            # Earthy, textured wine complements rather than mirrors the greens — Sangiovese style.
-            # Aromatics and acidity suppressed so structured reds beat aromatic/crisp whites.
-            # Tannin boosted proportionally to reward wines with real grip (earthy character).
-            "multipliers": {
-                "acidity":   0.4,  # Suppress crispness — earthy contrast doesn't need razor acid
-                "aromatics": 0.3,  # Suppress aromatics — earthy/spice notes ≠ intense fruit intensity
-            },
-            "boosts": {
-                "body":   1.2,     # Weight anchors the earthy pairing
-                "tannin": 1.2,     # Earthy, structured reds have grip — reward wines that actually have it
-            },
+            "targets": {"body": 2.6, "tannin": 2.0, "aromatics": 2.8, "acidity": 3.2,
+                        "sweetness": 1.2, "alcohol": 2.6},
+            "weights": {"tannin": 1.1},
+            "varietals": {"Gamay": 0.8, "Pinot Noir": 0.7, "Sangiovese": 0.4},
+            "avoid": [],
+            "why": "A light, earthy red grounds the fresh greens with gentle savoury weight.",
         },
     },
 
-    # Cheese & Charcuterie — the all-rounder; acid cuts through salt and fat
     "charcuterie": {
+        "intensity": 3.4,
         "is_sweet_pairing": False,
         "congruent": {
-            # Balanced all-rounder — modest acid and body for the full board
-            "multipliers": {},
-            "boosts": {
-                "acidity": 0.5,  # Crispness cuts through cured-meat fat and salt
-                "body":    0.3,  # Medium body rounds out the board nicely
-            },
+            "targets": {"acidity": 3.6, "body": 3.0, "tannin": 2.6, "aromatics": 3.0,
+                        "sweetness": 1.3, "alcohol": 3.0},
+            "weights": {"acidity": 1.2},
+            "varietals": {"Gamay": 1.0, "Barbera": 0.8, "Fino Sherry": 0.8,
+                          "Tempranillo": 0.7, "Cava": 0.7, "Grenache": 0.6,
+                          "Pinot Noir": 0.6, "Sangiovese": 0.5},
+            "avoid": [],
+            "why": "A juicy, medium-everything bistro wine — salt softens tannin, so cured meat flatters easy reds. Gamay was born for this board.",
         },
         "contrast": {
-            # Lean and punchy — acid leads to cut through fat and salt aggressively.
-            # Tannin and aromatics suppressed so crisp whites (Grüner, Sauvignon Blanc) beat
-            # aromatic reds that happen to match the user's tannin/flavour preference.
-            "multipliers": {
-                "body":     0.6,  # Lighter frame lets the acid do the work
-                "tannin":   0.2,  # Suppress tannin — lean acid wines don't need grip
-                "aromatics": 0.3, # Suppress aromatics — crispness leads, not fruit intensity
-            },
-            "boosts": {
-                "acidity": 1.5,   # High crispness cuts through salt, fat, and rich cheeses
-            },
+            "targets": {"acidity": 4.3, "body": 2.4, "tannin": 1.4, "aromatics": 3.0,
+                        "sweetness": 1.5, "alcohol": 2.6},
+            "weights": {"acidity": 1.4},
+            "varietals": {"Champagne": 0.9, "Riesling": 0.8, "Sauvignon Blanc": 0.7,
+                          "Prosecco": 0.6, "Grüner Veltliner": 0.6},
+            "avoid": [],
+            "why": "Scrubbing acidity and a touch of fruit power through the salt, fat and cure.",
         },
     },
 
-    # Dessert / Sweet Treats — residual sugar in wine echoes sweetness in food
-    # is_sweet_pairing=True triggers Palate Paradox for dry-preferring users.
     "dessert": {
+        "intensity": 4.0,
         "is_sweet_pairing": True,
         "congruent": {
-            # Match sweetness with sweetness — aromatic, luscious styles
-            "multipliers": {
-                "tannin":  0.0,   # Tannin makes sweet foods taste bitter — eliminate it
-                "acidity": 0.5,   # Some crispness prevents cloying; not the focus
-            },
-            "boosts": {
-                "aromatics": 1.5, # Fruit-forward and honeyed notes echo the dessert
-                "body":      0.5, # A little weight carries the sweetness gracefully
-            },
+            "targets": {"sweetness": 4.6, "body": 3.6, "acidity": 3.4, "aromatics": 4.0,
+                        "tannin": 1.6, "alcohol": 3.4},
+            "weights": {"sweetness": 1.7, "acidity": 1.2},
+            "varietals": {"Botrytis Semillon": 1.0, "Late Harvest Riesling": 1.0,
+                          "Tawny Port": 0.9, "Muscat Liqueur": 0.9, "Moscato": 0.7},
+            "avoid": [],
+            "why": "The wine must be at least as sweet as the dish — anything drier turns thin and bitter beside sugar. Acid keeps the lusciousness lifted.",
         },
         "contrast": {
-            # Bright, high-acid counterpoint cuts through sugar — Sauternes-with-cheese style
-            "multipliers": {
-                "tannin":  0.0,   # Still kills sweet flavours — no exceptions
-                "body":    0.5,   # Lighter style lets the acidity lead
-            },
-            "boosts": {
-                "acidity": 1.5,   # Razor crispness slices through richness and sugar
-            },
+            "targets": {"sweetness": 3.4, "acidity": 4.4, "body": 2.4, "aromatics": 3.4,
+                        "tannin": 1.2, "alcohol": 2.4},
+            "weights": {"sweetness": 1.3, "acidity": 1.4},
+            "varietals": {"Moscato": 0.9, "Late Harvest Riesling": 0.8, "Champagne": 0.5},
+            "avoid": [],
+            "why": "Lighter, frothier sweetness with electric acidity — refreshment against the richness rather than an echo of it.",
         },
     },
 
-    # Smoked & BBQ — charred bark, sweet rubs, slow-cook richness
     "smoked_bbq": {
+        "intensity": 4.4,
         "is_sweet_pairing": False,
         "congruent": {
-            # Bold wine to match the smoke and charred-sweet intensity — Zinfandel/Malbec/Syrah territory
-            "multipliers": {
-                "tannin": 1.4,   # Fat and char absorb tannin well — reward grippy reds
-                "body":   1.5,   # Big flavours need big wine
-            },
-            "boosts": {
-                "aromatics": 0.5,  # Spicy/fruity notes complement the smoky rub
-            },
+            "targets": {"body": 4.2, "tannin": 3.8, "aromatics": 4.0, "acidity": 3.0,
+                        "sweetness": 1.4, "alcohol": 4.0},
+            "weights": {"body": 1.4, "aromatics": 1.2},
+            "varietals": {"Syrah/Shiraz": 1.0, "Malbec": 0.9, "Sparkling Shiraz": 0.8,
+                          "Mourvèdre": 0.7, "Tempranillo": 0.6, "Red Blend": 0.6,
+                          "Cabernet Sauvignon": 0.6, "Grenache": 0.5,
+                          "Pinot Grigio": -0.6, "Sauvignon Blanc": -0.5},
+            "avoid": [],
+            "why": "Big, smoky, peppery fruit locks onto char and sweet rub — Shiraz and the barbecue is the great Australian handshake.",
         },
         "contrast": {
-            # Acid-bright wine cuts through the sweet-smoky fat — think GSM rosé or Grenache
-            "multipliers": {
-                "tannin": 0.5,   # Ease back on grip — freshness does the work
-                "body":   0.7,   # Lighter frame lets the acidity lead
-            },
-            "boosts": {
-                "acidity": 1.0,  # Crispness slices through the richness and sweetness of the rub
-            },
+            "targets": {"acidity": 4.2, "tannin": 2.2, "body": 2.8, "aromatics": 3.2,
+                        "sweetness": 1.8, "alcohol": 2.8},
+            "weights": {"acidity": 1.5},
+            "varietals": {"Barbera": 0.8, "Riesling": 0.6, "Gamay": 0.6,
+                          "Sparkling Shiraz": 0.4},
+            "avoid": [],
+            "why": "Bright acid and juicy fruit cut through the smoke and sweet fat, resetting the palate between bites.",
         },
     },
 
-    # Vegetarian & Earthy — mushrooms, roasted root veg, lentils, legumes
     "earthy_veg": {
+        "intensity": 2.8,
         "is_sweet_pairing": False,
         "congruent": {
-            # Earthy, structured wine echoes the umami and rootiness — Pinot Noir/Nebbiolo territory
-            "multipliers": {
-                "tannin": 0.9,   # Moderate grip suits earthy umami — not crushing
-                "body":   1.1,   # Medium-full body matches the heartiness of roasted veg
-            },
-            "boosts": {
-                "aromatics": 0.8,  # Forest floor / earthy/spice notes complement mushroom and root veg
-                "acidity":   0.3,  # Light crispness prevents the pairing from feeling heavy
-            },
+            "targets": {"body": 3.0, "tannin": 2.4, "acidity": 3.4, "aromatics": 3.0,
+                        "sweetness": 1.2, "alcohol": 3.0},
+            "weights": {"tannin": 1.2},
+            "varietals": {"Pinot Noir": 1.0, "Nebbiolo": 0.8, "Grenache": 0.6,
+                          "Tempranillo": 0.6, "Gamay": 0.6, "Sangiovese": 0.5},
+            "avoid": [
+                {"attr": "tannin", "above": 4.2, "penalty": 0.08,
+                 "reason": "umami makes very heavy tannin taste bitter"},
+            ],
+            "why": "Forest-floor earthiness echoes mushroom and roasted-root umami — Pinot Noir and mushrooms share the same soil.",
         },
         "contrast": {
-            # Crisp aromatic white lifts the earthiness — Riesling / Grüner Veltliner style
-            "multipliers": {
-                "tannin": 0.2,   # Suppress grip — brightness leads
-                "body":   0.6,   # Lighter frame to contrast the hearty dish
-            },
-            "boosts": {
-                "acidity":   1.0,  # Razor freshness cuts through the earthiness
-                "aromatics": 0.5,  # Aromatic whites (Riesling, Grüner) lift and frame the dish
-            },
+            "targets": {"acidity": 4.0, "body": 2.2, "aromatics": 3.2, "tannin": 1.2,
+                        "sweetness": 1.3, "alcohol": 2.4},
+            "weights": {"acidity": 1.3},
+            "varietals": {"Grüner Veltliner": 0.9, "Sauvignon Blanc": 0.7,
+                          "Chenin Blanc": 0.7, "Pinot Grigio": 0.5},
+            "avoid": [],
+            "why": "Bright, peppery freshness lifts the earthiness like a squeeze of lemon over roast vegetables.",
         },
     },
 
-    # No food — palate dial stays exactly where the user set it
+    # No food — pure palate match; no targets, no varietal bias, no penalties.
     "none": {
+        "intensity": None,
         "is_sweet_pairing": False,
         "congruent": {
-            "multipliers": {},
-            "boosts": {},
+            "targets": {}, "weights": {}, "varietals": {}, "avoid": [],
+            "why": "Matched purely to your palate — no food in the picture, the wine gets to shine on its own.",
         },
         "contrast": {
-            "multipliers": {},
-            "boosts": {},
+            "targets": {}, "weights": {}, "varietals": {}, "avoid": [],
+            "why": "Matched purely to your palate — no food in the picture, the wine gets to shine on its own.",
         },
     },
 }

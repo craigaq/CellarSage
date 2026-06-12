@@ -411,7 +411,12 @@ def recommend(req: RecommendRequest):
                 score=r.score,
                 attribute_scores=r.attribute_scores,
                 wine_profile=_wine_profile_dict(r.wine),
-                raw_metrics=_raw_metrics_dict(r.wine),
+                # pairing_explanation rides in raw_metrics — the frontend's
+                # whyThisPick callout prefers it over its local heuristics.
+                raw_metrics={
+                    **_raw_metrics_dict(r.wine),
+                    "pairing_explanation": r.explanation,
+                },
             )
             for r in results
         ],

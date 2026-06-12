@@ -1,23 +1,25 @@
 """
 RecommendationService — core scoring engine for Cellar Sage.
 
-Scoring formula
----------------
-For each wine attribute a:
-    W_Final(a) = W_P(a) × M_S(a)
+Scoring model (v2 — sommelier-aligned, shared architecture with beer)
+---------------------------------------------------------------------
+1. TARGETS    Each food/mode defines ideal attribute values (1-5). These are
+              blended 65/35 with the user's palate dials, and each wine is
+              scored by a weighted Gaussian fit against the blended targets.
+              Importance weights are decoupled from dial values — "I want NO
+              tannin" now carries as much force as "I want HIGH acidity"
+              (the v1 formula weighted preferences by their dial value, so
+              low-dial constraints were structurally 5× weaker).
+2. AFFINITY   A classic-pairing varietal matrix per food (Sangiovese+tomato,
+              Pinot+salmon, Shiraz+BBQ) adds a bonus of up to ±0.12.
+3. PENALTIES  Directional `avoid` rules (tannin×fish oils, alcohol×capsaicin,
+              umami×heavy tannin) and an intensity-mismatch penalty
+              (the sommelier's first rule: match the dish's weight class).
 
-Where:
-    W_P  = preference weight  → user input (1-5) normalised to [0.2, 1.0]
-    M_S  = match score        → how closely the wine's profile matches W_P (0.0-1.0)
+final = clamp01( weighted_gaussian_fit + 0.12×affinity − penalties )
 
-Food pairing modifiers are applied on top of W_Final:
-    adjusted(a) = (W_Final(a) * food_multiplier(a)) + (food_boost(a) * wine_value(a) / 5.0)
-
-    The boost is proportional to the wine's attribute value so that a
-    high-acidity boost in contrast mode rewards genuinely acidic wines
-    rather than shifting all wines identically.
-
-The overall wine score is the mean of all adjusted attribute scores.
+Sweetness (residual-sugar-derived) and alcohol (ABV-derived) are now scored
+axes, not just hard filters.
 """
 
 from __future__ import annotations
@@ -73,6 +75,8 @@ class WineProfile:
     tannin:      float = field(init=False, default=0.0)
     aromatics:   float = field(init=False, default=0.0)
     alcohol_abv: float = field(init=False, default=0.0)
+    sweetness:   float = field(init=False, default=1.0)  # RS-derived, 1-5
+    alcohol:     float = field(init=False, default=3.0)  # ABV-derived, 1-5
 
     def __post_init__(self) -> None:
         if not self.varietal:
@@ -84,6 +88,22 @@ class WineProfile:
         # Map 1-10 intensity to 0.5-5.0 scoring range (halved)
         self.aromatics   = self.aromatic_intensity / 2.0
         self.alcohol_abv = self.abv_percentage
+        # Residual sugar → 1-5 perceived sweetness. Piecewise curve calibrated
+        # to OIV bands: ≤2 g/L bone dry, 5 g/L "dry on paper", ~15 g/L off-dry,
+        # 45+ g/L dessert-sweet. Perception is roughly logarithmic in RS.
+        rs = self.residual_sugar_gl
+        if rs <= 2.0:
+            self.sweetness = 1.0
+        elif rs <= 5.0:
+            self.sweetness = round(1.0 + (rs - 2.0) / 3.0 * 0.5, 2)    # 1.0–1.5
+        elif rs <= 15.0:
+            self.sweetness = round(1.5 + (rs - 5.0) / 10.0, 2)          # 1.5–2.5
+        elif rs <= 45.0:
+            self.sweetness = round(2.5 + (rs - 15.0) / 30.0 * 1.5, 2)   # 2.5–4.0
+        else:
+            self.sweetness = round(min(5.0, 4.0 + (rs - 45.0) / 60.0), 2)
+        # ABV → 1-5 scale: 8% → 1.0, 15.5%+ → 5.0 (fortified clamps to 5).
+        self.alcohol = round(min(5.0, max(1.0, 1.0 + (self.abv_percentage - 8.0) / 1.875)), 2)
 
 
 @dataclass
@@ -204,6 +224,7 @@ class ScoredWine:
     wine: WineProfile
     score: float
     attribute_scores: dict[str, float] = field(default_factory=dict)
+    explanation: str = ""
 
 
 @dataclass
@@ -254,70 +275,33 @@ _PREF_FIELD_TO_ATTR: dict[str, str] = {
     "flavor_intensity": "aromatics",
 }
 
-# Ordered tuple of technical attribute names — derived once to avoid repeated dict iteration
-_ATTRS: tuple[str, ...] = tuple(_PREF_FIELD_TO_ATTR.values())
+# All scorable wine attributes (1-5 scale each). The four dial attributes
+# plus the two profile-derived axes the v1 engine never scored.
+_WINE_ATTRS: tuple[str, ...] = (
+    "acidity", "body", "tannin", "aromatics", "sweetness", "alcohol",
+)
 
 
 import math as _math
 
-def _normalise(user_input: int) -> float:
-    """Map a 1-5 user input to a preference weight W_P in [0.2, 1.0]."""
-    if not 1 <= user_input <= 5:
-        raise ValueError(f"User input must be between 1 and 5, got {user_input}")
-    return user_input / 5.0
-
-
 # Per-attribute Gaussian sigma values (in 1-5 scale units).
-# Lower sigma = tighter tolerance (user is more sensitive to that attribute).
-# Tannin and acidity are polarising — tight tolerance (1.0).
-# Body and aromatics have broader tolerance bands (1.5).
-_ATTR_SIGMA: dict[str, float] = {
-    "acidity":  1.0,
-    "body":     1.5,
-    "tannin":   1.0,
-    "aromatics": 1.5,
+# Lower sigma = tighter tolerance (palates are more sensitive to that axis).
+_WINE_ATTR_SIGMA: dict[str, float] = {
+    "acidity":   1.0,   # polarising — tight
+    "body":      1.3,
+    "tannin":    1.0,   # polarising — tight
+    "aromatics": 1.4,
+    "sweetness": 1.0,   # off-dry vs dry is very noticeable
+    "alcohol":   1.3,
 }
 
+# How much the food's ideal profile outweighs the user's palate dial when a
+# food is selected. Sommelier logic: the dish sets the frame, the palate tunes it.
+_WINE_FOOD_TARGET_WEIGHT = 0.65
 
-def _match_score(preference_weight: float, wine_value: float, attr: str = "") -> float:
-    """
-    Compute M_S via Gaussian decay: how well the wine's attribute matches the
-    user's preference. Returns 1.0 at perfect match, decaying exponentially
-    with distance. Replaces the previous linear abs-difference model which
-    penalised adjacent values (e.g. user=1, wine=2) as harshly as distant
-    values (e.g. user=1, wine=5).
-
-    Both user_input and wine_value are on the 1-5 scale.
-    sigma is per-attribute (tannin/acidity tight at 1.0; body/aromatics wide at 1.5).
-    """
-    sigma = _ATTR_SIGMA.get(attr, 1.0)
-    # Convert preference_weight back to 1-5 scale for the distance calculation
-    user_input_scaled = preference_weight * 5.0
-    diff = wine_value - user_input_scaled
-    return _math.exp(-(diff ** 2) / (2 * sigma ** 2))
-
-
-def _score_attribute(
-    attr: str,
-    wine_value: float,
-    pref_weight: float,
-    pairing_cfg: dict,
-) -> float:
-    """
-    Apply the full per-attribute formula and return the adjusted score.
-
-    W_Final  = W_P × M_S  (Gaussian decay match score)
-    adjusted = (W_Final × multiplier) + (boost × wine_value / 5.0)
-
-    The boost is proportional to the wine's actual attribute value so that
-    e.g. an acidity boost in contrast mode rewards genuinely high-acid wines
-    rather than shifting every wine's score identically (which would leave
-    the relative ranking unchanged).
-    """
-    w_final = pref_weight * _match_score(pref_weight, wine_value, attr)
-    multiplier = pairing_cfg["multipliers"].get(attr, 1.0)
-    boost = pairing_cfg["boosts"].get(attr, 0.0)
-    return (w_final * multiplier) + (boost * wine_value / 5.0)
+# Attributes used to estimate a wine's overall intensity (rule #1: match the
+# dish's weight class). Acidity is freshness, not weight — excluded.
+_WINE_INTENSITY_ATTRS: tuple[str, ...] = ("body", "tannin", "aromatics", "alcohol")
 
 
 # ---------------------------------------------------------------------------
@@ -327,8 +311,9 @@ def _score_attribute(
 # Sweetness thresholds are now carried directly on WineProfile.residual_sugar_gl
 # and evaluated by the middleware interceptor — see interceptor.py _filter_catalog().
 
-_COMPROMISE_AROMA_BOOST = 0.3  # find_compromise: boost aromatics weight (Priority 2 — high terpenes)
-_COMPROMISE_ACID_BOOST  = 0.2  # find_compromise: boost acidity  weight (Priority 4 — palate cleanse)
+# find_compromise scoring behaviour (Priority 2 high terpenes / Priority 4
+# palate-cleansing acid) is implemented as target/weight raises in
+# RecommendationService._build_scoring_context.
 
 
 def resolve_pairing_conflict(prefs: UserPreferences) -> PalateParadox | None:
@@ -510,30 +495,6 @@ def check_food_pairing_conflicts(prefs: UserPreferences) -> FoodPairingAlert | N
 
 
 # ---------------------------------------------------------------------------
-# Brave mode — food-derived ideal palate vector
-# ---------------------------------------------------------------------------
-
-def _brave_palate(food_cfg: dict) -> dict[str, float]:
-    """Synthesise an ideal palate vector from a food's congruent pairing config.
-
-    Maps each attribute's multiplier/boost to a preference weight so the scoring
-    engine ranks wines by food-compatibility rather than user preference.
-    multiplier 0→weight 0.2 (banned), 1→0.6 (neutral), 1.5→0.9 (strongly desired).
-    """
-    congruent   = food_cfg.get("congruent", {"multipliers": {}, "boosts": {}})
-    multipliers = congruent.get("multipliers", {})
-    boosts      = congruent.get("boosts", {})
-    weights: dict[str, float] = {}
-    for attr in _ATTRS:
-        m = multipliers.get(attr, 1.0)
-        b = boosts.get(attr, 0.0)
-        base  = min(1.0, max(0.2, m * 0.6))  # 0→0.2, 1→0.6, 1.5→0.9
-        bonus = min(0.4, b * 0.15)            # high boost nudges weight up
-        weights[attr] = round(min(1.0, base + bonus), 3)
-    return weights
-
-
-# ---------------------------------------------------------------------------
 # RecommendationService
 # ---------------------------------------------------------------------------
 
@@ -581,18 +542,10 @@ class RecommendationService:
             Falls back to the full instance catalog when omitted.
         """
         wines = catalog if catalog is not None else self.wine_catalog
-        pref_weights, pairing_cfg = self._build_scoring_context(preferences)
-
-        if preferences.override_mode == "find_compromise":
-            # Shallow-copy so we don't mutate the shared dict
-            pref_weights = dict(pref_weights)
-            # Priority 2 — High Terpenes: boost aromatics so fruit-forward dry wines score higher
-            pref_weights["aromatics"] = min(1.0, pref_weights["aromatics"] + _COMPROMISE_AROMA_BOOST)
-            # Priority 4 — Medium-High Acidity: boost acidity so palate-cleansing wines score higher
-            pref_weights["acidity"]   = min(1.0, pref_weights["acidity"]   + _COMPROMISE_ACID_BOOST)
+        ctx = self._build_scoring_context(preferences)
 
         scored = sorted(
-            (self._score_wine(wine, pref_weights, pairing_cfg) for wine in wines),
+            (self._score_wine(wine, ctx) for wine in wines),
             key=lambda s: s.score,
             reverse=True,
         )
@@ -604,57 +557,117 @@ class RecommendationService:
         preferences: UserPreferences,
     ) -> ScoredWine:
         """Score a single wine against the given preferences."""
-        pref_weights, pairing_cfg = self._build_scoring_context(preferences)
-        return self._score_wine(wine, pref_weights, pairing_cfg)
+        return self._score_wine(wine, self._build_scoring_context(preferences))
 
     # ------------------------------------------------------------------
     # Private helpers (no instance state — static methods)
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _build_scoring_context(
-        preferences: UserPreferences,
-    ) -> tuple[dict[str, float], dict[str, dict[str, float]]]:
-        """Derive pref_weights and pairing_cfg from a UserPreferences instance."""
+    def _build_scoring_context(preferences: UserPreferences) -> dict:
+        """Resolve blended targets, weights, and pairing config for scoring."""
         food_entry = FOOD_PAIRING.get(preferences.food_pairing, FOOD_PAIRING["none"])
-        if preferences.pairing_mode == "brave":
-            # Override user palate entirely — use food-ideal weights + congruent config
-            pref_weights = _brave_palate(food_entry)
-            pairing_cfg  = food_entry["congruent"]
-        else:
-            pref_weights = {
-                attr: _normalise(getattr(preferences, pref_field))
-                for pref_field, attr in _PREF_FIELD_TO_ATTR.items()
-            }
-            mode = preferences.pairing_mode if preferences.pairing_mode in ("congruent", "contrast") else "congruent"
-            pairing_cfg = food_entry.get(mode, food_entry["congruent"])
-        return pref_weights, pairing_cfg
+        brave = preferences.pairing_mode == "brave"
+        mode = preferences.pairing_mode if preferences.pairing_mode in ("congruent", "contrast") else "congruent"
+        cfg = food_entry.get(mode, food_entry["congruent"])
+
+        # User palate targets from the four dials (1-5 ints, used directly).
+        # Brave mode hands the palate over to the dish entirely.
+        user_targets: dict[str, float] = {} if brave else {
+            attr: float(getattr(preferences, pref_field))
+            for pref_field, attr in _PREF_FIELD_TO_ATTR.items()
+        }
+
+        # Middle Ground (find_compromise): dry but fruit-forward. Pull the
+        # aromatics and acidity targets up so expressive, palate-cleansing
+        # dry wines lead — the documented Priority 2 / Priority 4 behaviour.
+        if preferences.override_mode == "find_compromise" and not brave:
+            user_targets["aromatics"] = max(user_targets.get("aromatics", 3.0), 4.2)
+            user_targets["acidity"]   = max(user_targets.get("acidity", 3.0), 4.0)
+
+        # Blend food targets (lead) with user targets (tune) per attribute.
+        food_targets: dict[str, float] = cfg.get("targets", {})
+        targets: dict[str, float] = {}
+        weights: dict[str, float] = {}
+        for attr in _WINE_ATTRS:
+            f_t = food_targets.get(attr)
+            u_t = user_targets.get(attr)
+            if f_t is not None and u_t is not None:
+                targets[attr] = _WINE_FOOD_TARGET_WEIGHT * f_t + (1 - _WINE_FOOD_TARGET_WEIGHT) * u_t
+            elif f_t is not None:
+                targets[attr] = f_t
+            elif u_t is not None:
+                targets[attr] = u_t
+            else:
+                continue  # nothing constrains this attribute
+            weights[attr] = cfg.get("weights", {}).get(attr, 1.0)
+
+        if preferences.override_mode == "find_compromise":
+            weights["aromatics"] = max(weights.get("aromatics", 1.0), 1.4)
+            weights["acidity"]   = max(weights.get("acidity", 1.0), 1.2)
+
+        return {
+            "targets": targets,
+            "weights": weights,
+            "varietals": cfg.get("varietals", {}),
+            "avoid": cfg.get("avoid", []),
+            "why": cfg.get("why", ""),
+            "food_intensity": food_entry.get("intensity"),
+        }
 
     @staticmethod
-    def _score_wine(
-        wine: WineProfile,
-        pref_weights: dict[str, float],
-        pairing_cfg: dict,
-    ) -> ScoredWine:
-        """
-        Apply the full scoring formula for one wine.
+    def _score_wine(wine: WineProfile, ctx: dict) -> ScoredWine:
+        """Sommelier three-step scoring: harmony fit + canon affinity − interactions."""
+        # Step 2a: weighted Gaussian fit against blended targets.
+        attribute_scores: dict[str, float] = {}
+        fit_sum = 0.0
+        weight_sum = 0.0
+        for attr, target in ctx["targets"].items():
+            wine_value = getattr(wine, attr, 0.0)
+            sigma = _WINE_ATTR_SIGMA.get(attr, 1.2)
+            fit = _math.exp(-((wine_value - target) ** 2) / (2 * sigma ** 2))
+            w = ctx["weights"].get(attr, 1.0)
+            fit_sum += w * fit
+            weight_sum += w
+            # Keep UI-label keys for the four dial attributes (frontend contract);
+            # the two derived axes are exposed under their technical names.
+            attribute_scores[TECHNICAL_TO_UI.get(attr, attr)] = round(fit, 4)
+        base = fit_sum / weight_sum if weight_sum else 0.5
 
-        Step 1: W_Final(a) = W_P(a) × M_S(a)
-        Step 2: adjusted(a) = (W_Final(a) × food_multiplier(a)) + food_boost(a)
-        Step 3: overall_score = mean(adjusted values)
-        """
-        attribute_scores: dict[str, float] = {
-            TECHNICAL_TO_UI[attr]: round(
-                _score_attribute(attr, getattr(wine, attr), pref_weights[attr], pairing_cfg),
-                4,
-            )
-            for attr in _ATTRS
-        }
-        overall = sum(attribute_scores.values()) / len(attribute_scores)
+        # Step 2b: classic-pairing varietal affinity (the sommelier canon).
+        affinity = ctx["varietals"].get(wine.varietal, 0.0)
+        affinity_bonus = 0.12 * affinity
+
+        # Step 3: directional interaction penalties.
+        penalty = 0.0
+        penalty_reason = ""
+        for rule in ctx["avoid"]:
+            value = getattr(wine, rule["attr"], 0.0)
+            if value > rule["above"]:
+                penalty += rule["penalty"] * min(2.0, value - rule["above"])
+                penalty_reason = rule["reason"]
+
+        # Step 1: intensity match (applied last, but conceptually first).
+        food_intensity = ctx["food_intensity"]
+        if food_intensity is not None:
+            wine_intensity = sum(getattr(wine, a) for a in _WINE_INTENSITY_ATTRS) / len(_WINE_INTENSITY_ATTRS)
+            gap = abs(wine_intensity - food_intensity)
+            penalty += min(0.18, 0.06 * max(0.0, gap - 1.2))
+
+        score = max(0.0, min(1.0, base + affinity_bonus - penalty))
+
+        # Human-readable pairing logic for the UI.
+        explanation = ctx["why"]
+        if affinity >= 0.8:
+            explanation = f"{explanation} And {wine.varietal} is a textbook classic for this dish."
+        elif penalty_reason and penalty > 0.05:
+            explanation = f"{explanation} (Heads-up: {penalty_reason}.)"
+
         return ScoredWine(
             wine=wine,
-            score=round(overall, 4),
+            score=round(score, 4),
             attribute_scores=attribute_scores,
+            explanation=explanation,
         )
 
 
