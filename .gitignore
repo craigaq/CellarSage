@@ -55,3 +55,5 @@ landing/preview_fox.html
 
 # ─── Claude local settings ───────────────────────────────────────────────────
 **/.claude/settings.local.json
+
+*.log
