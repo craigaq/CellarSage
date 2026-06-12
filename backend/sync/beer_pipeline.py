@@ -234,18 +234,33 @@ def fetch_liquorland_beers(pages: int = 4) -> list[dict]:
 
 # ── Matching + upsert ─────────────────────────────────────────────────────────
 
+# Style-typical ABV used only when a listing doesn't state one. Alcohol is a
+# scored axis in the v2 engine (spicy targets low, BBQ tolerates high), so a
+# flat fallback would mis-rank styles like Strong Ale or Stout. Keyed to the
+# canonical STYLE_TRAITS styles.
+_STYLE_TYPICAL_ABV: dict[str, float] = {
+    "Lager": 4.6, "Pilsner": 4.6, "Pale Ale": 4.9, "IPA": 6.0, "Hazy IPA": 5.6,
+    "Black IPA": 6.2, "Golden Ale": 4.5, "Amber Ale": 5.0, "Brown Ale": 5.0,
+    "Porter": 5.2, "Stout": 5.2, "Wheat": 5.0, "Sour": 4.2, "Strong Ale": 8.0,
+    "Ale": 4.8,
+}
+_DEFAULT_ABV = 4.7  # last-resort fallback for an unmapped style
+
+
 def _style_defaults(style: str, abv: float | None) -> dict:
     """Derive seedable attributes for a new beer from its style's typical profile."""
-    from beer_pairing import style_traits
+    from beer_pairing import canonical_style, style_traits
 
     typ = style_traits(style)["typical"]
+    if abv is None:
+        abv = _STYLE_TYPICAL_ABV.get(canonical_style(style), _DEFAULT_ABV)
     return {
         # bitterness 1-5 → IBU via the inverse of BeerProfile's IBU/20 mapping
         "ibu": round((typ["bitterness"] - 1.0) * 20.0),
         "body": round(typ["body"], 1),
         "malt_sweetness": max(1, min(5, round(typ["sweetness"]))),
         "hop_intensity": max(1, min(10, round(typ["aromatics"] * 2))),
-        "abv": abv if abv is not None else 4.7,
+        "abv": abv,
         "carbonation": max(1, min(5, round(typ["carbonation"]))),
     }
 

@@ -66,6 +66,13 @@ jobs:
           DATABASE_URL:    ${{ secrets.DATABASE_URL }}
         run: python -m sync.main
 
+      - name: Run beer pipeline (Boozeit + Liquorland)
+        working-directory: backend
+        env:
+          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
+          DATABASE_URL:    ${{ secrets.DATABASE_URL }}
+        run: python -m sync.beer_pipeline --liquorland
+
       - name: Fix country mis-classifications
         working-directory: backend
         env:
@@ -121,3 +128,18 @@ jobs:
                 '_Auto-created by the weekly sync workflow. Close when resolved._',
               ].join('\n'),
             });
+
+      - name: Flush production cache
+        # Reloads the wine varietal catalog, beer catalog and beer offers in the
+        # running app so the freshly-synced data is served without a redeploy.
+        # No-ops quietly if the CACHE_FLUSH_TOKEN secret is not configured.
+        env:
+          CACHE_FLUSH_TOKEN: ${{ secrets.CACHE_FLUSH_TOKEN }}
+        run: |
+          if [ -z "$CACHE_FLUSH_TOKEN" ]; then
+            echo "CACHE_FLUSH_TOKEN not set — skipping cache flush."
+            exit 0
+          fi
+          curl -fsS -X POST \
+            "https://cellarsage-api.fly.dev/internal/flush-cache?token=$CACHE_FLUSH_TOKEN" \
+            && echo "Cache flushed." || echo "Cache flush failed (non-fatal)."
