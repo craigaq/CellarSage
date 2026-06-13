@@ -83,8 +83,25 @@ def _load_beer_catalog():
 _beer_service = BeerRecommendationService(_load_beer_catalog())
 
 
+# How "normal" a pack is as a retail purchase unit (lower = preferred as the
+# representative offer for a beer): 4-6 packs first, cartons next, singles last.
+def _pack_rank(pack_count: int | None) -> int:
+    pc = pack_count or 1
+    if 4 <= pc <= 6:
+        return 0
+    if pc >= 7:
+        return 1
+    return 2  # singles / pairs
+
+
 def _load_beer_offers() -> dict[str, list[dict]]:
-    """Beer retailer offers keyed by lowercase beer name, cheapest first."""
+    """Beer offers keyed by lowercase beer name.
+
+    Each beer is deduped to ONE representative offer per retailer — its most
+    sensible retail pack (4-6 pack preferred, carton next, single last) — so a
+    beer's cheap single can and pricey carton don't make it span budget tiers.
+    Each offer carries pack_count + unit_price for per-drink display.
+    """
     import os
     url = os.environ.get("DATABASE_URL")
     if not url:
@@ -100,18 +117,36 @@ def _load_beer_offers() -> dict[str, list[dict]]:
             if not cur.fetchone()["exists"]:
                 return {}
             cur.execute(
-                """SELECT b.name, o.retailer, o.price, o.url, o.package_info
+                """SELECT b.name, o.retailer, o.price, o.url, o.package_info,
+                          o.pack_count, o.unit_price
                    FROM beer_merchant_offers o JOIN beers b ON b.id = o.beer_id
-                   ORDER BY o.price ASC"""
+                   WHERE o.price IS NOT NULL"""
             )
-            offers: dict[str, list[dict]] = {}
-            for r in cur.fetchall():
-                offers.setdefault(r["name"].lower(), []).append({
-                    "retailer": r["retailer"],
-                    "price": float(r["price"]) if r["price"] is not None else None,
-                    "url": r["url"] or "",
-                    "package_info": r["package_info"] or "",
-                })
+            rows = cur.fetchall()
+        # Pick one representative offer per (beer, retailer).
+        best: dict[tuple, dict] = {}
+        for r in rows:
+            key = (r["name"].lower(), r["retailer"])
+            cand = {
+                "retailer": r["retailer"],
+                "price": float(r["price"]),
+                "url": r["url"] or "",
+                "package_info": r["package_info"] or "",
+                "pack_count": r["pack_count"] or 1,
+                "unit_price": float(r["unit_price"]) if r["unit_price"] is not None else float(r["price"]),
+            }
+            cur_best = best.get(key)
+            # Prefer the more "normal" pack; tie-break on lower unit price.
+            if (cur_best is None
+                    or _pack_rank(cand["pack_count"]) < _pack_rank(cur_best["pack_count"])
+                    or (_pack_rank(cand["pack_count"]) == _pack_rank(cur_best["pack_count"])
+                        and cand["unit_price"] < cur_best["unit_price"])):
+                best[key] = cand
+        offers: dict[str, list[dict]] = {}
+        for (name_lc, _retailer), offer in best.items():
+            offers.setdefault(name_lc, []).append(offer)
+        for lst in offers.values():
+            lst.sort(key=lambda o: o["price"])
         return offers
     except Exception as e:
         logging.getLogger("cellar_sage").warning("Could not load beer offers: %s", e)
@@ -197,6 +232,8 @@ class BeerPick(BaseModel):
     retailer: str
     url: str = ""
     package_info: str = ""
+    pack_count: int = 1
+    unit_price: float = 0.0
 
 
 class BeerPicksResponse(BaseModel):
@@ -564,14 +601,17 @@ def beer_picks(
                     "WHERE table_name='beer_merchant_offers')"
                 )
                 if cur.fetchone()["exists"]:
+                    # Drill-down shows ALL packs in budget, best per-drink value
+                    # first, so value buyers can compare cans/six-packs/cartons.
                     cur.execute(
                         """SELECT b.name, b.beer_style, b.abv_percentage,
-                                  o.retailer, o.price, o.url, o.package_info
+                                  o.retailer, o.price, o.url, o.package_info,
+                                  o.pack_count, o.unit_price
                            FROM beers b
                            JOIN beer_merchant_offers o ON o.beer_id = b.id
                            WHERE b.beer_style = %s AND o.price IS NOT NULL
                              AND o.price BETWEEN %s AND %s
-                           ORDER BY o.price ASC
+                           ORDER BY o.unit_price ASC NULLS LAST, o.price ASC
                            LIMIT 30""",
                         (style, budget_min, budget_max),
                     )
@@ -584,6 +624,8 @@ def beer_picks(
                             retailer=row["retailer"],
                             url=row["url"] or "",
                             package_info=row["package_info"] or "",
+                            pack_count=row["pack_count"] or 1,
+                            unit_price=float(row["unit_price"]) if row["unit_price"] is not None else float(row["price"]),
                         )
                         for row in cur.fetchall()
                     ]

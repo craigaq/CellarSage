@@ -53,10 +53,14 @@ _NOT_BEER_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Order matters — first match wins. Explicit, unambiguous styles are checked
+# before brand-ish words. "lager" sits ABOVE amber/brown/golden so an explicit
+# "...Lager" title (e.g. "Pure Blonde Ultra Low Carb Lager") isn't hijacked by
+# the brand word "blonde" → Golden Ale.
 _STYLE_RULES: list[tuple[str, str]] = [
     (r"hazy|neipa|new\s+england", "Hazy IPA"),
     (r"black\s+ipa|cascadian", "Black IPA"),
-    (r"\bipa\b|india\s+pale", "IPA"),
+    (r"\bipa\b|india[n]?\s+pale", "IPA"),
     (r"\bxpa\b|extra\s+pale", "Pale Ale"),
     (r"pale\s+ale", "Pale Ale"),
     (r"pilsner|pilsener|\bpils\b", "Pilsner"),
@@ -64,13 +68,15 @@ _STYLE_RULES: list[tuple[str, str]] = [
     (r"porter", "Porter"),
     (r"wheat|hefe|weiss|weizen|witbier|white\s+ale", "Wheat"),
     (r"sour|gose|berliner", "Sour"),
+    # Only an explicit "lager" word — NOT "draught"/"bitter"/"dry", which
+    # misfire (Guinness Draught is a stout). Macro lagers that use those
+    # words are curated in the seed, so inference needn't guess them.
+    (r"\blager\b|pale\s+lager", "Lager"),
     (r"amber|red\s+ale|red\s+ipa", "Amber Ale"),
     (r"brown\s+ale|dark\s+ale|toohey'?s\s+old", "Brown Ale"),
     (r"golden\s+ale|summer\s+ale|blonde|k[oö]lsch", "Golden Ale"),
     (r"barley\s*wine|strong\s+ale|imperial|double\s+\w+\s*ale", "Strong Ale"),
     (r"sparkling\s+ale|session\s+ale|\bale\b", "Ale"),
-    # AU retail reality: "bitter" and "draught" on a macro label mean lager.
-    (r"lager|draught|\bbitter\b|pale\s+lager|dry\b", "Lager"),
 ]
 
 _ABV_RE = re.compile(r"(\d{1,2}(?:\.\d)?)\s*%")
@@ -83,14 +89,24 @@ _PACK_NOISE_RE = re.compile(
 )
 
 
-def infer_style(text: str) -> str | None:
-    """Return a canonical style for the product text, or None if not a beer."""
-    if _NOT_BEER_RE.search(text):
-        return None
+def _match_style(text: str) -> str | None:
     for pattern, style in _STYLE_RULES:
         if re.search(pattern, text, re.IGNORECASE):
             return style
-    return None  # unrecognised — safer to skip than to guess Lager
+    return None
+
+
+def infer_style(title: str, extra: str = "") -> str | None:
+    """Canonical style for a product, or None if it's not a beer.
+
+    The TITLE is authoritative — a beer's name carries its true style
+    ("...Lager", "...IPA"). Marketing body copy ('amber hue', 'pilsner-style')
+    is only consulted as a fallback when the title has no style word, so it
+    can't override an explicit title style.
+    """
+    if _NOT_BEER_RE.search(f"{title} {extra}"):
+        return None
+    return _match_style(title) or _match_style(extra)
 
 
 def extract_abv(text: str) -> float | None:
@@ -106,6 +122,25 @@ def clean_name(title: str) -> str:
     """Strip pack-format noise from a retail title."""
     name = _PACK_NOISE_RE.sub(" ", title)
     return re.sub(r"\s{2,}", " ", name).strip(" -–—")
+
+
+def parse_pack_count(package_info: str | None, title: str = "") -> int:
+    """Number of drinks in an offer's pack. Defaults to 1 (single) when unknown.
+
+    Handles AU retail formats: 'Can', '6 Pack', 'PACK6', 'Case (24)', 'CTN24',
+    '4 Pack', plus 'NN x MMml' multipacks embedded in titles.
+    """
+    text = f"{package_info or ''} {title}".lower()
+    # CTNnn / PACKnn / "Case (24)" / "24 pack" / "24pk"
+    m = re.search(r"(?:ctn|pack|case[^0-9]{0,4}|carton[^0-9]{0,4})\(?\s*(\d{1,2})", text)
+    if m:
+        return max(1, int(m.group(1)))
+    m = re.search(r"\b(\d{1,2})\s*(?:x\b|pack|pk|pk\.|cans?|bottles?|stubbies)", text)
+    if m:
+        return max(1, int(m.group(1)))
+    if re.search(r"\b(can|bottle|stubby|longneck|single)\b", text):
+        return 1
+    return 1
 
 
 def _norm_tokens(name: str) -> set[str]:
@@ -142,10 +177,11 @@ def fetch_boozeit_beers() -> list[dict]:
         title = (p.get("title") or "").strip()
         if not title:
             continue
-        blob = " ".join([title, p.get("product_type") or "", p.get("body_html") or ""])
-        style = infer_style(blob)
+        extra = " ".join([p.get("product_type") or "", p.get("body_html") or ""])
+        style = infer_style(title, extra)
         if style is None:
             continue
+        blob = f"{title} {extra}"
 
         # Cheapest available variant = the entry-level pack for this product.
         variants = [v for v in (p.get("variants") or []) if v.get("price")]
@@ -204,10 +240,11 @@ def fetch_liquorland_beers(pages: int = 4) -> list[dict]:
         title = (item.get("title") or item.get("name") or item.get("product_name") or "").strip()
         if not title:
             continue
-        blob = " ".join([title, str(item.get("description") or "")])
-        style = infer_style(blob)
+        extra = str(item.get("description") or "")
+        style = infer_style(title, extra)
         if style is None:
             continue
+        blob = f"{title} {extra}"
         price = (item.get("current_price") or item.get("discount_price")
                  or item.get("price") or item.get("currentPrice"))
         try:
@@ -285,12 +322,16 @@ def upsert_beer_offers(offers: list[dict]) -> tuple[int, int, int]:
     for o in offers:
         offer_tokens = _norm_tokens(o["name"])
         beer_id = None
-        # Existing beer whose full name is contained in the offer title
-        # (e.g. catalog "Coopers Pale Ale" ⊆ "Coopers Original Pale Ale 375ml").
-        best_len = 0
+        # Match to an existing beer only when its name is BOTH a subset of the
+        # offer's tokens AND covers most of them (>=70%). The coverage guard
+        # stops a short name absorbing a distinct product — e.g. "Balter XPA"
+        # (2 tokens) must NOT swallow "Balter Hazy XPA" (3 tokens, 0.67).
+        best_cov = 0.0
         for cid, _cname, ctokens in catalog:
-            if ctokens and ctokens <= offer_tokens and len(ctokens) > best_len:
-                beer_id, best_len = cid, len(ctokens)
+            if len(ctokens) >= 2 and ctokens <= offer_tokens:
+                cov = len(ctokens) / len(offer_tokens)
+                if cov >= 0.7 and cov > best_cov:
+                    beer_id, best_cov = cid, cov
 
         if beer_id is not None:
             matched += 1
@@ -308,13 +349,18 @@ def upsert_beer_offers(offers: list[dict]) -> tuple[int, int, int]:
             catalog.append((beer_id, o["name"], _norm_tokens(o["name"])))
             created += 1
 
+        pack = parse_pack_count(o["package_info"], o["raw_title"])
+        unit_price = round(o["price"] / pack, 2)
         cur.execute(
-            """INSERT INTO beer_merchant_offers (beer_id, retailer, price, url, package_info, scraped_at)
-               VALUES (%s,%s,%s,%s,%s,NOW())
+            """INSERT INTO beer_merchant_offers
+                   (beer_id, retailer, price, url, package_info, pack_count, unit_price, scraped_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,NOW())
                ON CONFLICT (beer_id, retailer)
                DO UPDATE SET price = EXCLUDED.price, url = EXCLUDED.url,
-                             package_info = EXCLUDED.package_info, scraped_at = NOW()""",
-            (beer_id, o["retailer"], o["price"], o["url"], o["package_info"]),
+                             package_info = EXCLUDED.package_info,
+                             pack_count = EXCLUDED.pack_count,
+                             unit_price = EXCLUDED.unit_price, scraped_at = NOW()""",
+            (beer_id, o["retailer"], o["price"], o["url"], o["package_info"], pack, unit_price),
         )
         upserted += 1
 

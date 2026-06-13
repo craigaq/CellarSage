@@ -221,6 +221,13 @@ class _BeerPickCard extends StatelessWidget {
                 ],
               ],
             ),
+            if (pick.packCount > 1 && pick.unitPrice > 0) ...[
+              const SizedBox(height: 2),
+              Text(
+                'A\$${pick.unitPrice.toStringAsFixed(2)} per drink',
+                style: WwText.bodySmall(color: WwColors.violetMuted),
+              ),
+            ],
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
