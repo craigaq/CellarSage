@@ -202,6 +202,7 @@ class _CardPalatePromise extends StatelessWidget {
                             texture: 2,
                             labels: const ['Crisp', 'Body', 'Flavour', 'Tannin'],
                             titleFontSize: 9,
+                            compact: true,
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -209,7 +210,7 @@ class _CardPalatePromise extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 28),
                   Expanded(
                     child: Column(
                       children: [
@@ -222,6 +223,7 @@ class _CardPalatePromise extends StatelessWidget {
                             texture: 4,
                             labels: const ['Hops', 'Body', 'Aroma', 'Fizz'],
                             titleFontSize: 9,
+                            compact: true,
                           ),
                         ),
                         const SizedBox(height: 10),
