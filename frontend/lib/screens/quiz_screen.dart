@@ -98,7 +98,13 @@ class _QuizScreenState extends State<QuizScreen> {
   List<PalateProfile> _savedProfiles = [];
   PalateProfile? _loadedProfile; // non-null when user launched from a saved profile card
 
-  static const int _totalPages = 9;
+  // Pages: 0 welcome · 1-4 dials · 5 food · 6 pairing philosophy · 7 budget
+  //        · 8 summary · 9 results. Philosophy (6) is skipped when food=='none'.
+  static const int _totalPages = 10;
+  static const int _kFoodPage    = 5;
+  static const int _kPhiloPage   = 6;
+  static const int _kBudgetPage  = 7;
+  static const int _kSummaryPage = 8;
 
   /// Each entry: label = UI text, id = backend key, emoji = grid icon,
   /// comment = fox commentary shown when the item is selected.
@@ -266,12 +272,21 @@ class _QuizScreenState extends State<QuizScreen> {
   // ---------------------------------------------------------------------------
 
   Future<void> _goNext() async {
-    // Food page (5) → check for gastro clash before advancing
-    if (_currentPage == 5 && _foodPairing != 'none') {
+    // Food page → check for gastro clash before advancing
+    if (_currentPage == _kFoodPage && _foodPairing != 'none') {
       await _checkAndHandlePairingClash();
     }
-    if (_currentPage == 7) {
+    if (_currentPage == _kSummaryPage) {
       _fetchResults();
+    }
+    // No food selected → the Pairing Philosophy page is meaningless, skip it.
+    if (_currentPage == _kFoodPage && _foodPairing == 'none') {
+      _controller.animateToPage(
+        _kBudgetPage,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
+      );
+      return;
     }
     if (_currentPage < _totalPages - 1) {
       _controller.nextPage(
@@ -316,6 +331,15 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   void _goBack() {
+    // Budget page with no food → skip back over the hidden Philosophy page.
+    if (_currentPage == _kBudgetPage && _foodPairing == 'none') {
+      _controller.animateToPage(
+        _kFoodPage,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
+      );
+      return;
+    }
     if (_currentPage > 0) {
       _controller.previousPage(
         duration: const Duration(milliseconds: 350),
@@ -386,7 +410,7 @@ class _QuizScreenState extends State<QuizScreen> {
       _loadedProfile = profile;
     });
     _controller.animateToPage(
-      7, // summary page — jump straight here so user sees the full profile
+      _kSummaryPage, // jump straight here so user sees the full profile
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeInOut,
     );
@@ -679,7 +703,7 @@ class _QuizScreenState extends State<QuizScreen> {
           AnimatedSize(
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeInOut,
-            child: (_currentPage >= 1 && _currentPage <= 6)
+            child: (_currentPage >= 1 && _currentPage <= _kBudgetPage)
                 ? _buildLivingPalate()
                 : const SizedBox.shrink(),
           ),
@@ -723,6 +747,7 @@ class _QuizScreenState extends State<QuizScreen> {
                   onChanged: (v) => setState(() => _flavor = v),
                 ),
                 _buildFoodPairingStep(),
+                _buildPairingPhilosophyStep(),
                 _buildBudgetStep(),
                 _buildSummaryStep(),
                 _buildResultsStep(),
@@ -768,10 +793,10 @@ class _QuizScreenState extends State<QuizScreen> {
                   )
                 else
                   SizedBox(
-                    width: _currentPage == 7 ? 170 : null,
+                    width: _currentPage == _kSummaryPage ? 170 : null,
                     child: FilledButton.icon(
                       onPressed: _goNext,
-                      label: Text(_currentPage == 7
+                      label: Text(_currentPage == _kSummaryPage
                           ? (_isBeer ? 'Find My Beer!' : 'Find My Wine!')
                           : 'Next'),
                       icon: const Icon(Icons.arrow_forward),
@@ -790,7 +815,7 @@ class _QuizScreenState extends State<QuizScreen> {
                 ),
               ),
             ],
-            if (_currentPage >= 4 && _currentPage < 7) ...[
+            if (_currentPage >= 4 && _currentPage <= _kBudgetPage) ...[
               const SizedBox(height: 4),
               TextButton.icon(
                 onPressed: _savedProfiles.length < PalatePrefs.maxProfiles
@@ -804,7 +829,7 @@ class _QuizScreenState extends State<QuizScreen> {
                 ),
               ),
             ],
-            if (_currentPage == 7 && _loadedProfile != null) ...[
+            if (_currentPage == _kSummaryPage && _loadedProfile != null) ...[
               const SizedBox(height: 4),
               TextButton.icon(
                 onPressed: _startOver,
@@ -1094,23 +1119,10 @@ class _QuizScreenState extends State<QuizScreen> {
 
           const SizedBox(height: 16),
 
-          // Pairing Philosophy — animated reveal once a food is chosen
-          AnimatedOpacity(
-            duration: const Duration(milliseconds: 320),
-            opacity: _foodPairing != 'none' ? 1.0 : 0.0,
-            child: _foodPairing != 'none'
-                ? Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _PairingPhilosophyPicker(
-                      value: _pairingMode,
-                      onChanged: (v) => setState(() => _pairingMode = v),
-                      isBeer: _isBeer,
-                    ),
-                  )
-                : const SizedBox.shrink(),
-          ),
-
-          // Fox commentary — fades in/out as the selection changes
+          // Fox commentary — immediate feedback on the food choice.
+          // (Pairing Philosophy now lives on its own page — see
+          // _buildPairingPhilosophyStep — so this important lever isn't
+          // buried below the food grid.)
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
             transitionBuilder: (child, animation) =>
@@ -1128,7 +1140,45 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // Step 6 — Budget
+  // Step 6 — Pairing Philosophy (only shown when a food is chosen)
+  // ---------------------------------------------------------------------------
+
+  Widget _buildPairingPhilosophyStep() {
+    return _stepShell(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Pairing Philosophy', style: WwText.headlineLarge()),
+          const SizedBox(height: 8),
+          Text(
+            'How should your ${_isBeer ? 'beer' : 'wine'} play against ${_foodLabel.toLowerCase()}?',
+            style: WwText.bodyMedium(),
+          ),
+          const SizedBox(height: 20),
+          _PairingPhilosophyPicker(
+            value: _pairingMode,
+            onChanged: (v) => setState(() => _pairingMode = v),
+            isBeer: _isBeer,
+          ),
+          const SizedBox(height: 16),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            transitionBuilder: (child, animation) =>
+                FadeTransition(opacity: animation, child: child),
+            child: _foodComment != null
+                ? _FoxComment(
+                    key: ValueKey('philo:$_foodPairing:$_pairingMode'),
+                    text: _foodComment!,
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Step 7 — Budget
   // ---------------------------------------------------------------------------
 
   Widget _buildBudgetStep() {
@@ -1425,8 +1475,22 @@ class _QuizScreenState extends State<QuizScreen> {
                         .copyWith(fontWeight: FontWeight.w600),
                     textAlign: TextAlign.right,
                   ),
-                  targetPage: 5,
+                  targetPage: _kFoodPage,
                 ),
+                if (_foodPairing != 'none')
+                  _summaryRow(
+                    label: 'Pairing Style',
+                    trailing: Text(
+                      switch (_pairingMode) {
+                        'contrast' => 'Contrast',
+                        'brave' => "I'm Brave",
+                        _ => 'Harmonise',
+                      },
+                      style: WwText.bodyMedium(color: WwColors.violet)
+                          .copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    targetPage: _kPhiloPage,
+                  ),
                 _summaryRow(
                   label: 'Budget (per bottle)',
                   trailing: Text(
@@ -1434,7 +1498,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     style: WwText.bodyMedium(color: WwColors.violet)
                         .copyWith(fontWeight: FontWeight.w600),
                   ),
-                  targetPage: 6,
+                  targetPage: _kBudgetPage,
                 ),
                 if (_loadedProfile?.savedWineName != null) ...[
                   const Divider(height: 16, color: WwColors.borderSubtle),
