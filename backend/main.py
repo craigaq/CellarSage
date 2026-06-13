@@ -189,6 +189,21 @@ class BeerRecommendResponse(BaseModel):
     ui_labels: dict[str, str]  # Reuse wine UI labels for now
 
 
+class BeerPick(BaseModel):
+    name: str
+    beer_style: str
+    abv_percentage: float
+    price: float
+    retailer: str
+    url: str = ""
+    package_info: str = ""
+
+
+class BeerPicksResponse(BaseModel):
+    style: str
+    picks: list[BeerPick]
+
+
 class NearbyRequest(BaseModel):
     wine_name: str = Field(..., max_length=200)
     user_lat: float = Field(..., ge=-90.0, le=90.0)
@@ -521,6 +536,54 @@ def beer_recommend(req: RecommendRequest):
         ],
         ui_labels=TECHNICAL_TO_UI,
     )
+
+
+@app.get("/beer-picks", response_model=BeerPicksResponse)
+def beer_picks(style: str = Query(..., max_length=60)):
+    """Every buyable beer of a given style, one row per retailer offer, cheapest first.
+
+    Beer analogue of /wine-picks: the 'View Recommendations' drill-down from a
+    style recommendation. Reads beers + beer_merchant_offers live from the DB.
+    """
+    import os
+    picks: list[BeerPick] = []
+    url = os.environ.get("DATABASE_URL")
+    if url:
+        try:
+            import psycopg2, psycopg2.extras
+            conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
+            with conn, conn.cursor() as cur:
+                cur.execute(
+                    "SELECT EXISTS(SELECT 1 FROM information_schema.tables "
+                    "WHERE table_name='beer_merchant_offers')"
+                )
+                if cur.fetchone()["exists"]:
+                    cur.execute(
+                        """SELECT b.name, b.beer_style, b.abv_percentage,
+                                  o.retailer, o.price, o.url, o.package_info
+                           FROM beers b
+                           JOIN beer_merchant_offers o ON o.beer_id = b.id
+                           WHERE b.beer_style = %s AND o.price IS NOT NULL
+                           ORDER BY o.price ASC
+                           LIMIT 30""",
+                        (style,),
+                    )
+                    picks = [
+                        BeerPick(
+                            name=row["name"],
+                            beer_style=row["beer_style"] or style,
+                            abv_percentage=float(row["abv_percentage"] or 0),
+                            price=float(row["price"]),
+                            retailer=row["retailer"],
+                            url=row["url"] or "",
+                            package_info=row["package_info"] or "",
+                        )
+                        for row in cur.fetchall()
+                    ]
+        except Exception as e:
+            logging.getLogger("cellar_sage").warning("beer_picks query failed: %s", e)
+
+    return BeerPicksResponse(style=style, picks=picks)
 
 
 @app.get("/wine-picks", response_model=WinePicksResponse)

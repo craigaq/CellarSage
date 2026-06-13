@@ -7,6 +7,7 @@ import '../services/api_service.dart';
 import '../services/location_service.dart';
 import '../services/palate_prefs.dart';
 import '../screens/wine_picks_screen.dart';
+import '../screens/beer_picks_screen.dart';
 import '../services/currency_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/conflict_alert.dart';
@@ -1699,6 +1700,12 @@ class _QuizScreenState extends State<QuizScreen> {
 // Expandable wine result card
 // ---------------------------------------------------------------------------
 
+String _beerRetailerLabel(String retailer) => switch (retailer) {
+      'liquorland' => 'Liquorland',
+      'boozeit'    => 'Boozeit',
+      _            => retailer.isNotEmpty ? retailer : 'retailer',
+    };
+
 class _WineResultCard extends StatefulWidget {
   final int rank;
   final WineRecommendation wine;
@@ -2074,83 +2081,97 @@ class _WineResultCardState extends State<_WineResultCard> {
                     onRetry: _loadBuyOptions,
                   ),
                 ] else ...[
-                  // Beer: the style's best-matching beers (no retailer offers yet).
+                  // Beer mirrors wine: a "View Recommendations" drill-down to
+                  // all beers of this style, then a "Where to Buy" list with
+                  // the retailer named beside each listing.
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => BeerPicksScreen(style: widget.wine.varietal),
+                        ),
+                      ),
+                      icon: const Icon(Icons.sports_bar_outlined, size: 16),
+                      label: const Text('View Recommendations'),
+                    ),
+                  ),
                   const SizedBox(height: 14),
                   const Divider(height: 1),
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Text('🍺', style: TextStyle(fontSize: 16)),
+                      const Text('🛒', style: TextStyle(fontSize: 16)),
                       const SizedBox(width: 6),
-                      Text('Top Picks', style: WwText.titleMedium()),
+                      Text('Where to Buy', style: WwText.titleMedium()),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  ...((widget.wine.rawMetrics['beer_picks'] as List?) ?? const [])
-                      .asMap()
-                      .entries
-                      .map((entry) {
-                    final pick = entry.value as Map;
-                    final pct = ((pick['score'] as num) * 100).clamp(0, 100);
-                    final offers = (pick['offers'] as List?) ?? const [];
-                    final cheapest = offers.isNotEmpty ? offers.first as Map : null;
-                    final offerUrl = (cheapest?['url'] as String?) ?? '';
-                    return InkWell(
-                      onTap: offerUrl.isEmpty
-                          ? null
-                          : () => launchUrl(
-                                Uri.parse(offerUrl),
-                                mode: LaunchMode.externalApplication,
-                              ),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 22,
-                              height: 22,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: WwColors.violet.withValues(alpha: 0.15),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Text(
-                                '${entry.key + 1}',
-                                style: WwText.bodySmall(color: WwColors.violet)
-                                    .copyWith(fontWeight: FontWeight.w700),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    pick['name'] as String,
-                                    style: WwText.bodyMedium(),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  if (cheapest != null)
-                                    Text(
-                                      '\$${(cheapest['price'] as num).toStringAsFixed(2)}'
-                                      '${(cheapest['package_info'] as String?)?.isNotEmpty == true ? ' (${cheapest['package_info']})' : ''}'
-                                      ' @ ${cheapest['retailer']} →',
-                                      style: WwText.bodySmall(color: WwColors.violet),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            Text(
-                              '${pct.toStringAsFixed(0)}%',
-                              style: WwText.bodySmall(color: WwColors.textSecondary),
-                            ),
-                          ],
+                  ...(() {
+                    // Flatten the style's picks into (beer, retailer offer)
+                    // rows, cheapest first — one row per retailer, like wine.
+                    final rows = <Map>[];
+                    for (final p in (widget.wine.rawMetrics['beer_picks'] as List?) ?? const []) {
+                      final pick = p as Map;
+                      for (final o in (pick['offers'] as List?) ?? const []) {
+                        rows.add({...(o as Map), 'name': pick['name']});
+                      }
+                    }
+                    rows.sort((a, b) => (a['price'] as num).compareTo(b['price'] as num));
+                    if (rows.isEmpty) {
+                      return [
+                        Text(
+                          'No listings found yet for this style.',
+                          style: WwText.bodySmall(color: WwColors.textDisabled),
                         ),
-                      ),
-                    );
-                  }),
+                      ];
+                    }
+                    return rows.take(5).map((row) {
+                      final url = (row['url'] as String?) ?? '';
+                      final pkg = (row['package_info'] as String?) ?? '';
+                      return GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: url.isEmpty
+                            ? null
+                            : () => launchUrl(Uri.parse(url),
+                                mode: LaunchMode.externalApplication),
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      row['name'] as String,
+                                      style: WwText.bodySmall(),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      'A\$${(row['price'] as num).toStringAsFixed(2)}'
+                                      '${pkg.isNotEmpty ? '  ·  $pkg' : ''}',
+                                      style: WwText.bodySmall(color: WwColors.violet)
+                                          .copyWith(fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                _beerRetailerLabel(row['retailer'] as String? ?? ''),
+                                style: WwText.labelLarge(
+                                  color: url.isEmpty ? WwColors.textDisabled : WwColors.violet,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList();
+                  })(),
                 ],
               ],
             ],

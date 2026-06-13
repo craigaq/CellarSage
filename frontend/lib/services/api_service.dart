@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../models/wine_recommendation.dart';
 import '../models/merchant.dart';
 import '../models/wine_picks.dart';
+import '../models/beer_picks.dart';
 
 class ApiService {
   // Singleton — one shared http.Client across all callers.
@@ -195,6 +196,18 @@ class ApiService {
     final response = await _client.get(uri);
     if (response.statusCode == 200) {
       return WinePicksResponse.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    }
+    throw Exception('Server returned status ${response.statusCode}');
+  }
+
+  Future<BeerPicksResponse> beerPicks({required String style}) async {
+    final uri = Uri.parse('$_baseUrl/beer-picks')
+        .replace(queryParameters: {'style': style});
+    final response = await _client.get(uri);
+    if (response.statusCode == 200) {
+      return BeerPicksResponse.fromJson(
         jsonDecode(response.body) as Map<String, dynamic>,
       );
     }
