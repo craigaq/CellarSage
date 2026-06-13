@@ -11,7 +11,14 @@ import '../theme/app_theme.dart';
 /// "View Recommendations" button.
 class BeerPicksScreen extends StatefulWidget {
   final String style;
-  const BeerPicksScreen({super.key, required this.style});
+  final double budgetMin;
+  final double budgetMax;
+  const BeerPicksScreen({
+    super.key,
+    required this.style,
+    this.budgetMin = 0.0,
+    this.budgetMax = 99999.0,
+  });
 
   @override
   State<BeerPicksScreen> createState() => _BeerPicksScreenState();
@@ -34,7 +41,11 @@ class _BeerPicksScreenState extends State<BeerPicksScreen> {
       _error = null;
     });
     try {
-      final response = await ApiService().beerPicks(style: widget.style);
+      final response = await ApiService().beerPicks(
+        style: widget.style,
+        budgetMin: widget.budgetMin,
+        budgetMax: widget.budgetMax,
+      );
       if (!mounted) return;
       setState(() {
         _response = response;
@@ -115,7 +126,9 @@ class _BeerPicksScreenState extends State<BeerPicksScreen> {
               const Text('🍺', style: TextStyle(fontSize: 48)),
               const SizedBox(height: 16),
               Text(
-                'No ${widget.style} listings found right now.',
+                'No ${widget.style} found in your budget '
+                '(A\$${widget.budgetMin.toStringAsFixed(0)}–${widget.budgetMax.toStringAsFixed(0)}).\n'
+                'Try widening your budget on the previous step.',
                 textAlign: TextAlign.center,
                 style: WwText.bodyMedium(),
               ),

@@ -202,9 +202,16 @@ class ApiService {
     throw Exception('Server returned status ${response.statusCode}');
   }
 
-  Future<BeerPicksResponse> beerPicks({required String style}) async {
-    final uri = Uri.parse('$_baseUrl/beer-picks')
-        .replace(queryParameters: {'style': style});
+  Future<BeerPicksResponse> beerPicks({
+    required String style,
+    double budgetMin = 0.0,
+    double budgetMax = 99999.0,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/beer-picks').replace(queryParameters: {
+      'style': style,
+      'budget_min': '$budgetMin',
+      'budget_max': '$budgetMax',
+    });
     final response = await _client.get(uri);
     if (response.statusCode == 200) {
       return BeerPicksResponse.fromJson(

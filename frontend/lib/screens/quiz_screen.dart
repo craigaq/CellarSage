@@ -2091,7 +2091,11 @@ class _WineResultCardState extends State<_WineResultCard> {
                       onPressed: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => BeerPicksScreen(style: widget.wine.varietal),
+                          builder: (_) => BeerPicksScreen(
+                            style: widget.wine.varietal,
+                            budgetMin: widget.budgetMin,
+                            budgetMax: widget.budgetMax,
+                          ),
                         ),
                       ),
                       icon: const Icon(Icons.sports_bar_outlined, size: 16),
@@ -2116,14 +2120,20 @@ class _WineResultCardState extends State<_WineResultCard> {
                     for (final p in (widget.wine.rawMetrics['beer_picks'] as List?) ?? const []) {
                       final pick = p as Map;
                       for (final o in (pick['offers'] as List?) ?? const []) {
-                        rows.add({...(o as Map), 'name': pick['name']});
+                        final price = (o as Map)['price'] as num;
+                        // Respect the selected budget bracket — drops cheap
+                        // single cans (below) and big cases (above).
+                        if (price < widget.budgetMin || price > widget.budgetMax) continue;
+                        rows.add({...o, 'name': pick['name']});
                       }
                     }
                     rows.sort((a, b) => (a['price'] as num).compareTo(b['price'] as num));
                     if (rows.isEmpty) {
                       return [
                         Text(
-                          'No listings found yet for this style.',
+                          'No listings in your A\$${widget.budgetMin.toStringAsFixed(0)}–'
+                          '${widget.budgetMax.toStringAsFixed(0)} budget. '
+                          'Tap "View Recommendations" or widen your budget.',
                           style: WwText.bodySmall(color: WwColors.textDisabled),
                         ),
                       ];

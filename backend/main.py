@@ -539,11 +539,17 @@ def beer_recommend(req: RecommendRequest):
 
 
 @app.get("/beer-picks", response_model=BeerPicksResponse)
-def beer_picks(style: str = Query(..., max_length=60)):
+def beer_picks(
+    style: str = Query(..., max_length=60),
+    budget_min: float = Query(0.0, ge=0.0),
+    budget_max: float = Query(99999.0, ge=0.0),
+):
     """Every buyable beer of a given style, one row per retailer offer, cheapest first.
 
     Beer analogue of /wine-picks: the 'View Recommendations' drill-down from a
     style recommendation. Reads beers + beer_merchant_offers live from the DB.
+    Offers are filtered to the selected budget bracket so a $7.99 single can
+    and a $108.99 case don't both show under a "$20–$35" budget.
     """
     import os
     picks: list[BeerPick] = []
@@ -564,9 +570,10 @@ def beer_picks(style: str = Query(..., max_length=60)):
                            FROM beers b
                            JOIN beer_merchant_offers o ON o.beer_id = b.id
                            WHERE b.beer_style = %s AND o.price IS NOT NULL
+                             AND o.price BETWEEN %s AND %s
                            ORDER BY o.price ASC
                            LIMIT 30""",
-                        (style,),
+                        (style, budget_min, budget_max),
                     )
                     picks = [
                         BeerPick(
