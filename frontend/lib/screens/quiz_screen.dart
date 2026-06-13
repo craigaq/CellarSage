@@ -54,6 +54,37 @@ class _QuizScreenState extends State<QuizScreen> {
     {'id': 'Sour', 'label': '🍋 Sour & Tart'},
   ];
 
+  // Style → typical dial profile [bitterness, body, carbonation, aroma] on the
+  // 1-5 scale, mirroring the backend STYLE_TRAITS. Tapping a style chip
+  // pre-fills the four beer dials from this (averaged across selected styles)
+  // so the chip's effect is visible and the dials stay the single source of
+  // truth — the backend no longer blends these axes behind the scenes.
+  static const Map<String, List<int>> _beerStyleDialProfile = {
+    'Lager':    [2, 3, 4, 2],
+    'Pale Ale': [3, 3, 3, 3],
+    'IPA':      [4, 3, 3, 4],
+    'Stout':    [3, 4, 2, 2],
+    'Wheat':    [2, 3, 4, 3],
+    'Sour':     [1, 2, 4, 3],
+  };
+
+  /// Recompute the four beer dials as the rounded average of the currently
+  /// selected style chips. No-op when nothing is selected (dials stay put).
+  void _applyStyleAnchorsToDials() {
+    if (_styleAnchors.isEmpty) return;
+    final profiles =
+        _styleAnchors.map((id) => _beerStyleDialProfile[id]).whereType<List<int>>().toList();
+    if (profiles.isEmpty) return;
+    int avg(int i) =>
+        (profiles.map((p) => p[i]).reduce((a, b) => a + b) / profiles.length).round().clamp(1, 5);
+    setState(() {
+      _crispness = avg(0); // bitterness
+      _weight    = avg(1); // body
+      _texture   = avg(2); // carbonation
+      _flavor    = avg(3); // aroma
+    });
+  }
+
   // --- Results state ---
   List<WineRecommendation>? _results;
   bool _loading = false;
@@ -881,8 +912,13 @@ class _QuizScreenState extends State<QuizScreen> {
           // Beer style anchors — the strongest palate signal in beer mode.
           if (_isBeer) ...[
             Text(
-              'Which beers do you already enjoy? (optional)',
+              'Drink a style already? Tap it for a head start — (optional)',
               style: WwText.bodySmall(color: WwColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            Text(
+              "We'll set your dials to match; tweak them on the next steps.",
+              style: WwText.bodySmall(color: WwColors.textDisabled),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
@@ -894,9 +930,12 @@ class _QuizScreenState extends State<QuizScreen> {
                 final id = style['id']!;
                 final selected = _styleAnchors.contains(id);
                 return GestureDetector(
-                  onTap: () => setState(() {
-                    selected ? _styleAnchors.remove(id) : _styleAnchors.add(id);
-                  }),
+                  onTap: () {
+                    setState(() {
+                      selected ? _styleAnchors.remove(id) : _styleAnchors.add(id);
+                    });
+                    _applyStyleAnchorsToDials();
+                  },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(

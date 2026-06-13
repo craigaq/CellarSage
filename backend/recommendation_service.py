@@ -795,8 +795,11 @@ class BeerRecommendationService:
             for pref_field, attr in _BEER_PREF_FIELD_TO_ATTR.items()
         }
 
-        # Style anchors pull the palate toward styles the user already drinks —
-        # the single most predictive signal in beer (drinkers have style identities).
+        # Style anchors ("I already drink IPAs") supply ONLY the axes the four
+        # dials can't express — sweetness, roast, alcohol. On the frontend the
+        # chips pre-fill the dials themselves, so the dial axes (bitterness,
+        # body, carbonation, aromatics) are the single source of truth and are
+        # left untouched here — no hidden blend, no chip-vs-dial contradiction.
         anchor_canons: set[str] = set()
         if style_anchors:
             anchor_vecs = []
@@ -808,14 +811,11 @@ class BeerRecommendationService:
                 vec["roast"] = traits["roast"]
                 anchor_vecs.append(vec)
             for attr in _BEER_ATTRS:
-                vals = [v[attr] for v in anchor_vecs if attr in v]
-                if not vals:
-                    continue
-                anchor_avg = sum(vals) / len(vals)
                 if attr in user_targets:
-                    user_targets[attr] = 0.5 * user_targets[attr] + 0.5 * anchor_avg
-                else:
-                    user_targets[attr] = anchor_avg  # sweetness / roast / alcohol
+                    continue  # dial axis — owned by the (chip-prefilled) dial
+                vals = [v[attr] for v in anchor_vecs if attr in v]
+                if vals:
+                    user_targets[attr] = sum(vals) / len(vals)  # sweetness / roast / alcohol
 
         # Blend food targets (lead) with user targets (tune) per attribute.
         food_targets: dict[str, float] = cfg.get("targets", {})
