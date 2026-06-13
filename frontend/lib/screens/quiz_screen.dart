@@ -830,8 +830,6 @@ class _QuizScreenState extends State<QuizScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('🍷', style: TextStyle(fontSize: 72)),
-          const SizedBox(height: 24),
           Text(
             'Welcome to\nCellar Sage',
             style: WwText.displayLarge(),
