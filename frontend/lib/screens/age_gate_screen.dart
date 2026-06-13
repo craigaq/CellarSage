@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/sage_fox_widget.dart';
 
 class AgeGateScreen extends StatelessWidget {
   final VoidCallback onConfirmed;
@@ -24,19 +25,9 @@ class AgeGateScreen extends StatelessWidget {
               children: [
                 const Spacer(flex: 2),
 
-                // Crest — gold ring with wine glass
-                Container(
-                  width: 104,
-                  height: 104,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: WwColors.violet, width: 2),
-                    boxShadow: WwDecorations.violetGlow(),
-                  ),
-                  child: const Center(
-                    child: Text('🍷', style: TextStyle(fontSize: 50)),
-                  ),
-                ),
+                // Brand crest — the Sage Fox (beverage-neutral; the app
+                // now covers both wine and beer).
+                const SageFoxWidget(size: 104),
 
                 const SizedBox(height: 36),
 
