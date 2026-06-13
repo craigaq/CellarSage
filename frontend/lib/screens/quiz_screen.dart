@@ -1061,7 +1061,8 @@ class _QuizScreenState extends State<QuizScreen> {
 
           // "Just sipping" sits directly below the dry-wine toggle
           _FoodCard(
-            option: soloOption,
+            // "Just sipping" shows the beverage emoji — swap to beer in beer mode.
+            option: _isBeer ? {...soloOption, 'emoji': '🍺'} : soloOption,
             selected: _foodPairing == soloOption['id'],
             onTap: () => setState(() {
               _foodPairing = soloOption['id']!;
