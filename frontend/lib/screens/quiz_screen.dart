@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/wine_recommendation.dart';
+import '../models/beer_picks.dart';
 import '../services/api_service.dart';
 import '../services/location_service.dart';
 import '../services/palate_prefs.dart';
@@ -575,14 +576,9 @@ class _QuizScreenState extends State<QuizScreen> {
               'beer_style': style,
               'pairing_explanation': top.pairingExplanation,
               'flavor_tags': top.flavorTags,
-              'beer_picks': beers
-                  .take(4)
-                  .map((b) => {
-                        'name': b.name,
-                        'score': b.score,
-                        'offers': b.buyOptions,
-                      })
-                  .toList(),
+              // Where-to-Buy + View Recommendations both lazy-load from
+              // /beer-picks (by style + budget) so they stay consistent —
+              // no per-recommendation offers baked in here anymore.
             },
           );
         }).toList();
@@ -1903,6 +1899,14 @@ class _WineResultCardState extends State<_WineResultCard> {
   bool _buyLoading = false;
   String? _buyError;
 
+  // Beer "Where to Buy" — uses the same /beer-picks source as the
+  // "View Recommendations" screen so the two are always consistent (the old
+  // approach filtered representative packs and could empty out while View
+  // Recommendations still found in-budget offers).
+  List<BeerPick>? _beerPicks;
+  bool _beerPicksLoading = false;
+  String? _beerPicksError;
+
   Future<void> _loadBuyOptions() async {
     if (_buyOptions != null || _buyLoading) return;
     final varietal = widget.wine.varietal;
@@ -1919,6 +1923,23 @@ class _WineResultCardState extends State<_WineResultCard> {
       if (mounted) setState(() { _buyOptions = options; _buyLoading = false; });
     } catch (e) {
       if (mounted) setState(() { _buyError = e.toString(); _buyLoading = false; });
+    }
+  }
+
+  Future<void> _loadBeerPicks() async {
+    if (_beerPicks != null || _beerPicksLoading) return;
+    final style = widget.wine.varietal; // carries the beer style
+    if (style.isEmpty) return;
+    setState(() { _beerPicksLoading = true; _beerPicksError = null; });
+    try {
+      final resp = await ApiService().beerPicks(
+        style: style,
+        budgetMin: widget.budgetMin,
+        budgetMax: widget.budgetMax,
+      );
+      if (mounted) setState(() { _beerPicks = resp.picks; _beerPicksLoading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _beerPicksError = e.toString(); _beerPicksLoading = false; });
     }
   }
 
@@ -1946,7 +1967,9 @@ class _WineResultCardState extends State<_WineResultCard> {
         borderRadius: BorderRadius.circular(14),
         onTap: () {
           setState(() => _expanded = !_expanded);
-          if (_expanded && !widget.isBeer) _loadBuyOptions();
+          if (_expanded) {
+            widget.isBeer ? _loadBeerPicks() : _loadBuyOptions();
+          }
         },
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -2177,81 +2200,128 @@ class _WineResultCardState extends State<_WineResultCard> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  ...(() {
-                    // Flatten the style's picks into (beer, retailer offer)
-                    // rows, cheapest first — one row per retailer, like wine.
-                    final rows = <Map>[];
-                    for (final p in (widget.wine.rawMetrics['beer_picks'] as List?) ?? const []) {
-                      final pick = p as Map;
-                      for (final o in (pick['offers'] as List?) ?? const []) {
-                        final price = (o as Map)['price'] as num;
-                        // Respect the selected budget bracket — drops cheap
-                        // single cans (below) and big cases (above).
-                        if (price < widget.budgetMin || price > widget.budgetMax) continue;
-                        rows.add({...o, 'name': pick['name']});
-                      }
-                    }
-                    rows.sort((a, b) => (a['price'] as num).compareTo(b['price'] as num));
-                    if (rows.isEmpty) {
-                      return [
-                        Text(
-                          'No listings in your A\$${widget.budgetMin.toStringAsFixed(0)}–'
-                          '${widget.budgetMax.toStringAsFixed(0)} budget. '
-                          'Tap "View Recommendations" or widen your budget.',
-                          style: WwText.bodySmall(color: WwColors.textDisabled),
-                        ),
-                      ];
-                    }
-                    return rows.take(5).map((row) {
-                      final url = (row['url'] as String?) ?? '';
-                      final pkg = (row['package_info'] as String?) ?? '';
-                      return GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: url.isEmpty
-                            ? null
-                            : () => launchUrl(Uri.parse(url),
-                                mode: LaunchMode.externalApplication),
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      row['name'] as String,
-                                      style: WwText.bodySmall(),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    Text(
-                                      'A\$${(row['price'] as num).toStringAsFixed(2)}'
-                                      '${pkg.isNotEmpty ? '  ·  $pkg' : ''}',
-                                      style: WwText.bodySmall(color: WwColors.violet)
-                                          .copyWith(fontWeight: FontWeight.w600),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Text(
-                                _beerRetailerLabel(row['retailer'] as String? ?? ''),
-                                style: WwText.labelLarge(
-                                  color: url.isEmpty ? WwColors.textDisabled : WwColors.violet,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList();
-                  })(),
+                  _BeerWhereToBuy(
+                    loading: _beerPicksLoading,
+                    error: _beerPicksError,
+                    picks: _beerPicks,
+                    budgetMin: widget.budgetMin,
+                    budgetMax: widget.budgetMax,
+                    onRetry: _loadBeerPicks,
+                  ),
                 ],
               ],
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Beer "Where to Buy" — lazy-loaded from /beer-picks (same source as the
+// View Recommendations screen, so the two are always consistent)
+// ---------------------------------------------------------------------------
+
+class _BeerWhereToBuy extends StatelessWidget {
+  final bool loading;
+  final String? error;
+  final List<BeerPick>? picks;
+  final double budgetMin;
+  final double budgetMax;
+  final VoidCallback onRetry;
+
+  const _BeerWhereToBuy({
+    required this.loading,
+    required this.error,
+    required this.picks,
+    required this.budgetMin,
+    required this.budgetMax,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2, color: WwColors.violet),
+          ),
+        ),
+      );
+    }
+
+    if (error != null) {
+      return Row(
+        children: [
+          Text('Could not load listings.', style: WwText.bodySmall(color: WwColors.error)),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: onRetry,
+            child: Text(
+              'Retry',
+              style: WwText.bodySmall(color: WwColors.violet)
+                  .copyWith(decoration: TextDecoration.underline),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final list = picks ?? const [];
+    if (list.isEmpty) {
+      return Text(
+        'No listings in your A\$${budgetMin.toStringAsFixed(0)}–${budgetMax.toStringAsFixed(0)} '
+        'budget. Tap "View Recommendations" or widen your budget.',
+        style: WwText.bodySmall(color: WwColors.textDisabled),
+      );
+    }
+
+    return Column(
+      children: list.take(5).map((p) {
+        final pkg = p.packageInfo;
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: p.url.isEmpty
+              ? null
+              : () => launchUrl(Uri.parse(p.url), mode: LaunchMode.externalApplication),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        p.name,
+                        style: WwText.bodySmall(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'A\$${p.price.toStringAsFixed(2)}${pkg.isNotEmpty ? '  ·  $pkg' : ''}',
+                        style: WwText.bodySmall(color: WwColors.violet)
+                            .copyWith(fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  _beerRetailerLabel(p.retailer),
+                  style: WwText.labelLarge(
+                    color: p.url.isEmpty ? WwColors.textDisabled : WwColors.violet,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

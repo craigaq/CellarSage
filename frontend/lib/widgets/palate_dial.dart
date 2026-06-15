@@ -17,6 +17,11 @@ class PalateDial extends StatelessWidget {
   /// Override the axis-label font size (defaults: 11, or 9 in compact mode).
   final double? titleFontSize;
 
+  /// When false, the chart draws without its built-in axis labels so the
+  /// caller can overlay its own (e.g. onboarding's side-by-side dials, where
+  /// labels need manual positioning to avoid colliding between the two charts).
+  final bool showLabels;
+
   const PalateDial({
     super.key,
     required this.crispness,
@@ -26,6 +31,7 @@ class PalateDial extends StatelessWidget {
     this.compact = false,
     this.labels,
     this.titleFontSize,
+    this.showLabels = true,
   });
 
   @override
@@ -92,6 +98,7 @@ class PalateDial extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
           getTitle: (index, angle) {
+            if (!showLabels) return const RadarChartTitle(text: '');
             final titles = labels ??
                 (compact
                     ? const ['A', 'B', 'F', 'T']

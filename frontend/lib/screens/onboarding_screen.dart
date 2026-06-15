@@ -187,44 +187,47 @@ class _CardPalatePromise extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Wine + beer palate dials side by side — one app, two palates.
+              // Labels are positioned manually (the chart's own labels are
+              // hidden) so the inner-facing pair don't collide between charts:
+              // wine 'Body' rides above the centre line, beer 'Fizz' below it.
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Expanded(
                     child: Column(
                       children: [
-                        SizedBox(
-                          height: 150,
-                          child: PalateDial(
-                            crispness: 3,
-                            weight: 3,
-                            flavorIntensity: 4,
-                            texture: 2,
-                            labels: const ['Crisp', 'Body', 'Flavour', 'Tannin'],
-                            titleFontSize: 9,
-                            compact: true,
-                          ),
+                        const _LabeledMiniDial(
+                          crispness: 3,
+                          weight: 3,
+                          flavorIntensity: 4,
+                          texture: 2,
+                          labels: [
+                            ('Crisp', Alignment(0, -1)),
+                            ('Body', Alignment(1, -0.5)),   // raised above centre
+                            ('Flavour', Alignment(0, 1)),
+                            ('Tannin', Alignment(-1, 0)),
+                          ],
                         ),
                         const SizedBox(height: 10),
                         Text('🍷 Wine', style: WwText.bodyMedium()),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 28),
+                  const SizedBox(width: 20),
                   Expanded(
                     child: Column(
                       children: [
-                        SizedBox(
-                          height: 150,
-                          child: PalateDial(
-                            crispness: 4,
-                            weight: 2,
-                            flavorIntensity: 3,
-                            texture: 4,
-                            labels: const ['Hops', 'Body', 'Aroma', 'Fizz'],
-                            titleFontSize: 9,
-                            compact: true,
-                          ),
+                        const _LabeledMiniDial(
+                          crispness: 4,
+                          weight: 2,
+                          flavorIntensity: 3,
+                          texture: 4,
+                          labels: [
+                            ('Hops', Alignment(0, -1)),
+                            ('Body', Alignment(1, 0)),
+                            ('Aroma', Alignment(0, 1)),
+                            ('Fizz', Alignment(-1, 0.5)),   // dropped below centre
+                          ],
                         ),
                         const SizedBox(height: 10),
                         Text('🍺 Beer', style: WwText.bodyMedium()),
@@ -370,6 +373,64 @@ class _CardLocalLegendState extends State<_CardLocalLegend>
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mini palate dial with manually-positioned labels
+// ---------------------------------------------------------------------------
+// Used by the onboarding intro for the side-by-side wine/beer dials. The
+// chart's built-in labels are hidden (showLabels: false) and each label is
+// placed via Align so the inner-facing pair can be offset vertically and not
+// collide between the two charts.
+
+class _LabeledMiniDial extends StatelessWidget {
+  final int crispness;
+  final int weight;
+  final int flavorIntensity;
+  final int texture;
+  final List<(String, Alignment)> labels;
+
+  const _LabeledMiniDial({
+    required this.crispness,
+    required this.weight,
+    required this.flavorIntensity,
+    required this.texture,
+    required this.labels,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 168,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Chart inset so the edge labels sit just outside the diamond.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+            child: PalateDial(
+              crispness: crispness,
+              weight: weight,
+              flavorIntensity: flavorIntensity,
+              texture: texture,
+              showLabels: false,
+            ),
+          ),
+          for (final (text, align) in labels)
+            Align(
+              alignment: align,
+              child: Text(
+                text,
+                style: WwText.bodySmall().copyWith(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
