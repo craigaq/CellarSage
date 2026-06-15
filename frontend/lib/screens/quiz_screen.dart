@@ -226,10 +226,10 @@ class _QuizScreenState extends State<QuizScreen> {
   // Beer mode re-labels the four palate dials along Cicerone axes:
   // bitterness (IBU), body, carbonation, hop/flavour intensity.
   static const List<String> _beerAttrOrder = [
-    'Bitterness (Hops)',
+    'Bitterness',
     'Weight (Body)',
     'Carbonation (Fizz)',
-    'Aroma (Hops)',
+    'Aroma',
   ];
 
   List<String> get _attrOrder => _isBeer ? _beerAttrOrder : _wineAttrOrder;
@@ -1430,9 +1430,9 @@ class _QuizScreenState extends State<QuizScreen> {
                 texture: _texture,
                 labels: _isBeer
                     ? const [
-                        'Bitterness\n(Hops)',
+                        'Bitterness',
                         'Weight\n(Body)',
-                        'Aroma\n(Hops)',
+                        'Aroma',
                         'Carbonation\n(Fizz)',
                       ]
                     : null,
