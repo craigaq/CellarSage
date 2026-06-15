@@ -204,8 +204,8 @@ class _CardPalatePromise extends StatelessWidget {
                           labels: [
                             ('Crisp', Alignment(0, -1)),
                             ('Body', Alignment(1, -0.2)),    // yellow: right, just above centre
-                            ('Flavour', Alignment(0, 0.72)), // red: lifted up under the dial
-                            ('Tannin', Alignment(-1, 0)),    // brown: left, centre height
+                            ('Flavour', Alignment(0, 0.68)), // red: snug under the dial
+                            ('Tannin', Alignment(-1, -0.2)), // brown: left, just above centre
                           ],
                         ),
                         const SizedBox(height: 10),
@@ -224,9 +224,9 @@ class _CardPalatePromise extends StatelessWidget {
                           texture: 4,
                           labels: [
                             ('Hops', Alignment(0, -1)),
-                            ('Body', Alignment(1, 0)),
-                            ('Aroma', Alignment(0, 0.72)),  // green: lifted up under the dial
-                            ('Fizz', Alignment(-1, 0.15)),  // blue: left, just below centre
+                            ('Body', Alignment(1, -0.2)),   // yellow: right, just above centre
+                            ('Aroma', Alignment(0, 0.68)),  // green: snug under the dial
+                            ('Fizz', Alignment(-1, 0.05)),  // blue: left, ~centre height
                           ],
                         ),
                         const SizedBox(height: 10),
