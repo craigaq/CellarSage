@@ -229,7 +229,7 @@ class _QuizScreenState extends State<QuizScreen> {
     'Bitterness (Hops)',
     'Weight (Body)',
     'Carbonation (Fizz)',
-    'Flavor Intensity (Aroma)',
+    'Aroma (Hops)',
   ];
 
   List<String> get _attrOrder => _isBeer ? _beerAttrOrder : _wineAttrOrder;
@@ -1429,7 +1429,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     ? const [
                         'Bitterness\n(Hops)',
                         'Weight\n(Body)',
-                        'Flavor Intensity\n(Aroma)',
+                        'Aroma\n(Hops)',
                         'Carbonation\n(Fizz)',
                       ]
                     : null,

@@ -77,13 +77,25 @@ const _carbonation = [
   _Card('🍾', 'Champagne Fizz!', 'Maximum sparkle. A fireworks show on the tongue'),
 ];
 
+// Beer aroma = hop aromatic intensity (clean lager → tropical hop bomb).
+// Distinct from wine 'flavour' cards (rose/cherry), which confused testers.
+const _beerAroma = [
+  _Card('💧', 'Clean & Crisp', 'Almost no aroma — pure, refreshing lager character'),
+  _Card('🌿', 'Gentle Hops', 'A soft herbal, floral lift. Easy and approachable'),
+  _Card('🍊', 'Citrus & Pine', 'Expressive hop perfume — the classic pale-ale nose'),
+  _Card('🌲', 'Hop Forward', 'Bold, resinous and aromatic. IPA territory'),
+  _Card('🌴', 'Aroma Bomb!', 'Tropical, juicy, dank — a full-on hazy/DIPA nose'),
+];
+
 List<_Card> _cardsFor(String title) {
   if (title.contains('Bitterness')) return _bitterness;
   if (title.contains('Carbonation')) return _carbonation;
+  // beer aroma dial ("Aroma (Hops)"); exclude wine "...(Aromatics)"
+  if (title.contains('Aroma') && !title.contains('Aromatics')) return _beerAroma;
   if (title.contains('Crisp') || title.contains('Acidity')) return _crispness;
   if (title.contains('Weight') || title.contains('Body')) return _weight;
   if (title.contains('Texture') || title.contains('Tannin')) return _texture;
-  return _flavor;
+  return _flavor; // wine: "Flavor Intensity (Aromatics)"
 }
 
 // ---------------------------------------------------------------------------
