@@ -273,8 +273,11 @@ class _QuizScreenState extends State<QuizScreen> {
   // ---------------------------------------------------------------------------
 
   Future<void> _goNext() async {
-    // Food page → check for gastro clash before advancing
-    if (_currentPage == _kFoodPage && _foodPairing != 'none') {
+    // Food page → check for gastro clash before advancing.
+    // Wine only: the clash rules + Palate Paradox are wine concepts (acidity,
+    // tannin, dry preference) and would surface wine terminology/advice in
+    // beer mode. The beer engine handles food interactions in its own scoring.
+    if (_currentPage == _kFoodPage && _foodPairing != 'none' && !_isBeer) {
       await _checkAndHandlePairingClash();
     }
     if (_currentPage == _kSummaryPage) {
