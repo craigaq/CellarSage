@@ -954,8 +954,14 @@ class _QuizScreenState extends State<QuizScreen> {
                 final selected = _styleAnchors.contains(id);
                 return GestureDetector(
                   onTap: () {
+                    // Single-select: a chip is a head-start that pre-fills the
+                    // dials to ONE coherent style profile. Tapping selects only
+                    // that style (replacing any previous); tapping it again
+                    // clears the selection. Averaging two styles would produce
+                    // a blend that matches neither.
                     setState(() {
-                      selected ? _styleAnchors.remove(id) : _styleAnchors.add(id);
+                      _styleAnchors.clear();
+                      if (!selected) _styleAnchors.add(id);
                     });
                     _applyStyleAnchorsToDials();
                   },
