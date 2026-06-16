@@ -109,6 +109,37 @@ def infer_style(title: str, extra: str = "") -> str | None:
     return _match_style(title) or _match_style(extra)
 
 
+# ── Location inference (origin tier) ──────────────────────────────────────────
+# Brand-based, NOT keyword-based: "Japanese Style"/"Mexican Style" lagers are
+# Australian-made, so only genuine overseas BRANDS are flagged International.
+# Licensed-in-AU brands (Heineken Australia, Corona (AU)) still read by brand.
+_INTERNATIONAL_BRANDS: tuple[str, ...] = (
+    "asahi", "kirin", "sapporo", "orion", "heineken", "beck", "carlsberg",
+    "henninger", "paulaner", "schofferhofer", "weihenstephaner", "stella artois",
+    "hoegaarden", "duvel", "birra moretti", "peroni", "budvar", "praga",
+    "budweiser", "corona", "sol cerveza", "san miguel", "estrella", "singha",
+    "efes", "almaza", "kingfisher", "guinness", "coors", "miller genuine",
+    "karlovacko", "jelen", "lav premium", "zajecarsko", "henninger",
+)
+# SA breweries → Local Hero. NOTE: this assumes the SA market (the current
+# tester base). True geo-personalisation (brewery→state map + user_state, like
+# wine's producer_state.json) is the proper fix — see backlog.
+_LOCAL_SA_BRANDS: tuple[str, ...] = (
+    "coopers", "pirate life", "vale brewing", "vale crisp", "lobethal",
+    "west end", "mismatch", "prancing pony", "big shed", "uraidla",
+)
+
+
+def infer_location(name: str) -> str:
+    """Origin tier from the beer's brand: Local (SA) | International | National."""
+    n = name.lower()
+    if any(b in n for b in _LOCAL_SA_BRANDS):
+        return "Local"
+    if any(b in n for b in _INTERNATIONAL_BRANDS):
+        return "International"
+    return "National"
+
+
 def extract_abv(text: str) -> float | None:
     m = _ABV_RE.search(text)
     if m:
@@ -343,7 +374,8 @@ def upsert_beer_offers(offers: list[dict]) -> tuple[int, int, int]:
                                       beer_style, location_tag)
                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
                 (o["name"], d["ibu"], d["body"], d["malt_sweetness"],
-                 d["hop_intensity"], d["abv"], d["carbonation"], o["style"], "National"),
+                 d["hop_intensity"], d["abv"], d["carbonation"], o["style"],
+                 infer_location(o["name"])),
             )
             beer_id = cur.fetchone()["id"]
             catalog.append((beer_id, o["name"], _norm_tokens(o["name"])))
