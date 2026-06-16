@@ -205,7 +205,10 @@ class _CardPalatePromise extends StatelessWidget {
                             ('Crisp', Alignment(0, -1)),
                             ('Body', Alignment(1, -0.2)),    // yellow: right, just above centre
                             ('Flavour', Alignment(0, 0.68)), // red: snug under the dial
-                            ('Tannin', Alignment(-1, -0.2)), // brown: left, just above centre
+                            // brown: pushed left into the margin (x<-1) so the
+                            // long 'Tannin' label clears the dial instead of
+                            // bleeding into it.
+                            ('Tannin', Alignment(-1.35, -0.05)),
                           ],
                         ),
                         const SizedBox(height: 10),
@@ -226,7 +229,7 @@ class _CardPalatePromise extends StatelessWidget {
                             ('Hops', Alignment(0, -1)),
                             ('Body', Alignment(1, -0.2)),   // yellow: right, just above centre
                             ('Aroma', Alignment(0, 0.68)),  // green: snug under the dial
-                            ('Fizz', Alignment(-1, 0.05)),  // blue: left, ~centre height
+                            ('Fizz', Alignment(-1, -0.15)), // blue: raised above centre
                           ],
                         ),
                         const SizedBox(height: 10),
