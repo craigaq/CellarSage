@@ -577,18 +577,32 @@ def beer_recommend(req: RecommendRequest):
     )
 
 
+_BEER_TIER_LABELS = {1: "Local Hero", 2: "The Interstater", 3: "The Internationalist"}
+
+
+def _beer_tier(location_tag: str | None, brewery_state: str | None, user_state: str | None) -> int:
+    """Origin tier: 3 overseas; 1 if the brewery is in the user's state; else 2."""
+    if location_tag == "International":
+        return 3
+    if user_state and brewery_state and brewery_state.upper() == user_state.upper():
+        return 1  # Local Hero — brewed in the user's own state
+    return 2      # The Interstater — Australian, another state (or unknown)
+
+
 @app.get("/beer-picks", response_model=BeerPicksResponse)
 def beer_picks(
     style: str = Query(..., max_length=60),
     budget_min: float = Query(0.0, ge=0.0),
     budget_max: float = Query(99999.0, ge=0.0),
+    user_state: Optional[str] = Query(None, max_length=10, description="User's AU state (e.g. 'SA') for Local Hero"),
 ):
-    """Every buyable beer of a given style, one row per retailer offer, cheapest first.
+    """Every buyable beer of a given style, grouped by origin tier.
 
-    Beer analogue of /wine-picks: the 'View Recommendations' drill-down from a
-    style recommendation. Reads beers + beer_merchant_offers live from the DB.
-    Offers are filtered to the selected budget bracket so a $7.99 single can
-    and a $108.99 case don't both show under a "$20–$35" budget.
+    Beer analogue of /wine-picks. Offers filtered to the budget bracket, then
+    grouped Local Hero → The Interstater → The Internationalist (best per-drink
+    value first within each). 'Local Hero' is awarded when the brewery's state
+    matches the user's — geo-personalised like wine, so a Victorian sees VB as
+    local while a South Australian sees Coopers as local.
     """
     import os
     picks: list[BeerPick] = []
@@ -603,43 +617,45 @@ def beer_picks(
                     "WHERE table_name='beer_merchant_offers')"
                 )
                 if cur.fetchone()["exists"]:
-                    # Drill-down shows ALL packs in budget, best per-drink value
-                    # first, so value buyers can compare cans/six-packs/cartons.
-                    # Grouped by origin tier (Local Hero → Interstater →
-                    # Internationalist), best per-drink value first within each.
+                    # Fetch a generous pool by value; tier + final ordering done
+                    # in Python so Local Hero (state-matched) floats to the top
+                    # even if it isn't the cheapest per drink.
                     cur.execute(
-                        """SELECT b.name, b.beer_style, b.abv_percentage, b.location_tag,
+                        """SELECT b.name, b.beer_style, b.abv_percentage,
+                                  b.location_tag, b.brewery_state,
                                   o.retailer, o.price, o.url, o.package_info,
-                                  o.pack_count, o.unit_price,
-                                  CASE b.location_tag
-                                       WHEN 'Local' THEN 1
-                                       WHEN 'International' THEN 3
-                                       ELSE 2 END AS tier
+                                  o.pack_count, o.unit_price
                            FROM beers b
                            JOIN beer_merchant_offers o ON o.beer_id = b.id
                            WHERE b.beer_style = %s AND o.price IS NOT NULL
                              AND o.price BETWEEN %s AND %s
-                           ORDER BY tier ASC, o.unit_price ASC NULLS LAST, o.price ASC
-                           LIMIT 30""",
+                           ORDER BY o.unit_price ASC NULLS LAST, o.price ASC
+                           LIMIT 60""",
                         (style, budget_min, budget_max),
                     )
-                    _TIER_LABELS = {1: "Local Hero", 2: "The Interstater", 3: "The Internationalist"}
-                    picks = [
-                        BeerPick(
-                            name=row["name"],
-                            beer_style=row["beer_style"] or style,
-                            abv_percentage=float(row["abv_percentage"] or 0),
-                            price=float(row["price"]),
-                            retailer=row["retailer"],
-                            url=row["url"] or "",
-                            package_info=row["package_info"] or "",
-                            pack_count=row["pack_count"] or 1,
-                            unit_price=float(row["unit_price"]) if row["unit_price"] is not None else float(row["price"]),
-                            tier=row["tier"],
-                            tier_label=_TIER_LABELS.get(row["tier"], "The Interstater"),
-                        )
-                        for row in cur.fetchall()
-                    ]
+                    rows = cur.fetchall()
+                    built = []
+                    for row in rows:
+                        tier = _beer_tier(row["location_tag"], row["brewery_state"], user_state)
+                        built.append((
+                            tier,
+                            float(row["unit_price"]) if row["unit_price"] is not None else float(row["price"]),
+                            BeerPick(
+                                name=row["name"],
+                                beer_style=row["beer_style"] or style,
+                                abv_percentage=float(row["abv_percentage"] or 0),
+                                price=float(row["price"]),
+                                retailer=row["retailer"],
+                                url=row["url"] or "",
+                                package_info=row["package_info"] or "",
+                                pack_count=row["pack_count"] or 1,
+                                unit_price=float(row["unit_price"]) if row["unit_price"] is not None else float(row["price"]),
+                                tier=tier,
+                                tier_label=_BEER_TIER_LABELS[tier],
+                            ),
+                        ))
+                    built.sort(key=lambda t: (t[0], t[1]))  # tier, then per-drink value
+                    picks = [b[2] for b in built[:30]]
         except Exception as e:
             logging.getLogger("cellar_sage").warning("beer_picks query failed: %s", e)
 

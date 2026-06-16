@@ -121,23 +121,62 @@ _INTERNATIONAL_BRANDS: tuple[str, ...] = (
     "efes", "almaza", "kingfisher", "guinness", "coors", "miller genuine",
     "karlovacko", "jelen", "lav premium", "zajecarsko", "henninger",
 )
-# SA breweries → Local Hero. NOTE: this assumes the SA market (the current
-# tester base). True geo-personalisation (brewery→state map + user_state, like
-# wine's producer_state.json) is the proper fix — see backlog.
-_LOCAL_SA_BRANDS: tuple[str, ...] = (
-    "coopers", "pirate life", "vale brewing", "vale crisp", "lobethal",
-    "west end", "mismatch", "prancing pony", "big shed", "uraidla",
-)
-
-
 def infer_location(name: str) -> str:
-    """Origin tier from the beer's brand: Local (SA) | International | National."""
+    """Origin marker from the beer's brand: International (overseas) | Domestic.
+
+    'Local' vs 'Interstater' is decided at query time by matching brewery_state
+    to the user's state (see infer_brewery_state + /beer-picks). This only flags
+    overseas brands; everything else is Australian ('National')."""
     n = name.lower()
-    if any(b in n for b in _LOCAL_SA_BRANDS):
-        return "Local"
     if any(b in n for b in _INTERNATIONAL_BRANDS):
         return "International"
     return "National"
+
+
+# Australian brewery → state, for geo-personalised "Local Hero" (beer analogue
+# of wine's producer_state.json). Brand-fragment match, lowercased. Order
+# matters where one fragment is a substring of another — more specific first.
+# Unmapped Australian brands stay state=NULL → "The Interstater" (safe default;
+# better to under-claim Local than wrongly claim it).
+_BREWERY_STATE: tuple[tuple[str, str], ...] = (
+    # SA
+    ("coopers", "SA"), ("pirate life", "SA"), ("vale brewing", "SA"),
+    ("vale crisp", "SA"), ("lobethal", "SA"), ("fox hat", "SA"),
+    ("mismatch", "SA"), ("prancing pony", "SA"), ("big shed", "SA"),
+    ("uraidla", "SA"), ("west end", "SA"),
+    # VIC
+    ("carlton", "VIC"), ("victoria bitter", "VIC"), ("melbourne bitter", "VIC"),
+    ("crown lager", "VIC"), ("pure blonde", "VIC"), ("mountain goat", "VIC"),
+    ("moon dog", "VIC"), ("holgate", "VIC"), ("hawkers", "VIC"),
+    ("furphy", "VIC"), ("white rabbit", "VIC"), ("brick lane", "VIC"),
+    ("bright brewery", "VIC"), ("west city", "VIC"),
+    # NSW (note: 'hawkers' (VIC) is matched above before "hawke's")
+    ("tooheys", "NSW"), ("resch", "NSW"), ("hahn", "NSW"),
+    ("james squire", "NSW"), ("kosciuszko", "NSW"), ("young henrys", "NSW"),
+    ("stone & wood", "NSW"), ("stone and wood", "NSW"), ("4 pines", "NSW"),
+    ("mountain culture", "NSW"), ("philter", "NSW"), ("grifter", "NSW"),
+    ("lord nelson", "NSW"), ("byron bay", "NSW"), ("hawke's", "NSW"),
+    ("heaps normal", "NSW"),
+    # QLD
+    ("balter", "QLD"), ("great northern", "QLD"), ("xxxx", "QLD"),
+    ("burleigh", "QLD"),
+    # WA
+    ("little creatures", "WA"), ("feral", "WA"), ("gage roads", "WA"),
+    ("colonial", "WA"), ("matso", "WA"),
+    # TAS
+    ("cascade", "TAS"), ("boag", "TAS"), ("moo brew", "TAS"),
+    # ACT
+    ("bentspoke", "ACT"),
+)
+
+
+def infer_brewery_state(name: str) -> str | None:
+    """Australian state of the brewery, or None if overseas/unknown."""
+    n = name.lower()
+    for fragment, state in _BREWERY_STATE:
+        if fragment in n:
+            return state
+    return None
 
 
 def extract_abv(text: str) -> float | None:
@@ -371,11 +410,11 @@ def upsert_beer_offers(offers: list[dict]) -> tuple[int, int, int]:
             cur.execute(
                 """INSERT INTO beers (name, ibu_bitterness, body, malt_sweetness,
                                       hop_intensity, abv_percentage, carbonation_level,
-                                      beer_style, location_tag)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+                                      beer_style, location_tag, brewery_state)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
                 (o["name"], d["ibu"], d["body"], d["malt_sweetness"],
                  d["hop_intensity"], d["abv"], d["carbonation"], o["style"],
-                 infer_location(o["name"])),
+                 infer_location(o["name"]), infer_brewery_state(o["name"])),
             )
             beer_id = cur.fetchone()["id"]
             catalog.append((beer_id, o["name"], _norm_tokens(o["name"])))

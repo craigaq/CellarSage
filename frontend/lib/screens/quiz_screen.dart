@@ -1945,6 +1945,7 @@ class _WineResultCardState extends State<_WineResultCard> {
         style: style,
         budgetMin: widget.budgetMin,
         budgetMax: widget.budgetMax,
+        userState: widget.userState,
       );
       if (mounted) setState(() { _beerPicks = resp.picks; _beerPicksLoading = false; });
     } catch (e) {
@@ -2191,6 +2192,7 @@ class _WineResultCardState extends State<_WineResultCard> {
                             style: widget.wine.varietal,
                             budgetMin: widget.budgetMin,
                             budgetMax: widget.budgetMax,
+                            userState: widget.userState,
                           ),
                         ),
                       ),

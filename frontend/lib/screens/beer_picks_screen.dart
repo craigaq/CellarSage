@@ -26,11 +26,13 @@ class BeerPicksScreen extends StatefulWidget {
   final String style;
   final double budgetMin;
   final double budgetMax;
+  final String? userState;
   const BeerPicksScreen({
     super.key,
     required this.style,
     this.budgetMin = 0.0,
     this.budgetMax = 99999.0,
+    this.userState,
   });
 
   @override
@@ -58,6 +60,7 @@ class _BeerPicksScreenState extends State<BeerPicksScreen> {
         style: widget.style,
         budgetMin: widget.budgetMin,
         budgetMax: widget.budgetMax,
+        userState: widget.userState,
       );
       if (!mounted) return;
       setState(() {
