@@ -11,6 +11,8 @@ class BeerPick {
   final String packageInfo;
   final int packCount;
   final double unitPrice;
+  final int tier;          // 1 Local Hero · 2 The Interstater · 3 The Internationalist
+  final String tierLabel;
 
   const BeerPick({
     required this.name,
@@ -22,6 +24,8 @@ class BeerPick {
     this.packageInfo = '',
     this.packCount = 1,
     this.unitPrice = 0.0,
+    this.tier = 2,
+    this.tierLabel = 'The Interstater',
   });
 
   factory BeerPick.fromJson(Map<String, dynamic> json) => BeerPick(
@@ -34,6 +38,8 @@ class BeerPick {
         packageInfo:   (json['package_info'] as String?) ?? '',
         packCount:     (json['pack_count'] as num?)?.toInt() ?? 1,
         unitPrice:     (json['unit_price'] as num?)?.toDouble() ?? 0.0,
+        tier:          (json['tier'] as num?)?.toInt() ?? 2,
+        tierLabel:     (json['tier_label'] as String?) ?? 'The Interstater',
       );
 }
 

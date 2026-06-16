@@ -6,6 +6,19 @@ import '../models/beer_picks.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 
+// Origin tiers (parallel to wine): Local Hero → The Interstater → The
+// Internationalist. Reuses the shared tier palette.
+const _beerTierColors = {
+  1: WwColors.tierLocal,
+  2: WwColors.tierNational,
+  3: WwColors.tierGlobal,
+};
+const _beerTierIcons = {
+  1: Icons.home_outlined,
+  2: Icons.flag_outlined,
+  3: Icons.public,
+};
+
 /// Beer drill-down: every buyable beer of a style with its retailer offers.
 /// Beer analogue of WinePicksScreen, opened from the result card's
 /// "View Recommendations" button.
@@ -146,7 +159,7 @@ class _BeerPicksScreenState extends State<BeerPicksScreen> {
           child: Text(
             picks.length == 1
                 ? 'One ${widget.style} to buy right now.'
-                : '${picks.length} ${widget.style} options — cheapest first.',
+                : '${picks.length} ${widget.style} options — local heroes first.',
             style: WwText.bodyMedium(),
             textAlign: TextAlign.center,
           ),
@@ -193,16 +206,33 @@ class _BeerPickCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tierColor = _beerTierColors[pick.tier] ?? WwColors.tierNational;
+    final tierIcon = _beerTierIcons[pick.tier] ?? Icons.flag_outlined;
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: WwDecorations.card(),
       clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(pick.name, style: WwText.headlineMedium()),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Origin tier strip
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: WwDecorations.tierHeader(tierColor),
+            child: Row(
+              children: [
+                Icon(tierIcon, color: Colors.white, size: 15),
+                const SizedBox(width: 8),
+                Text(pick.tierLabel.toUpperCase(), style: WwText.badgeLabel()),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(pick.name, style: WwText.headlineMedium()),
             const SizedBox(height: 4),
             Text(
               '${pick.beerStyle}'
@@ -229,16 +259,18 @@ class _BeerPickCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _launch,
-                icon: const Icon(Icons.open_in_new, size: 15),
-                label: Text('Buy on ${_retailerLabel(pick.retailer)}'),
-              ),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _launch,
+                    icon: const Icon(Icons.open_in_new, size: 15),
+                    label: Text('Buy on ${_retailerLabel(pick.retailer)}'),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

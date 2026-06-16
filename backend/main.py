@@ -234,6 +234,8 @@ class BeerPick(BaseModel):
     package_info: str = ""
     pack_count: int = 1
     unit_price: float = 0.0
+    tier: int = 2                    # 1 Local Hero · 2 Interstater · 3 Internationalist
+    tier_label: str = "The Interstater"
 
 
 class BeerPicksResponse(BaseModel):
@@ -603,18 +605,25 @@ def beer_picks(
                 if cur.fetchone()["exists"]:
                     # Drill-down shows ALL packs in budget, best per-drink value
                     # first, so value buyers can compare cans/six-packs/cartons.
+                    # Grouped by origin tier (Local Hero → Interstater →
+                    # Internationalist), best per-drink value first within each.
                     cur.execute(
-                        """SELECT b.name, b.beer_style, b.abv_percentage,
+                        """SELECT b.name, b.beer_style, b.abv_percentage, b.location_tag,
                                   o.retailer, o.price, o.url, o.package_info,
-                                  o.pack_count, o.unit_price
+                                  o.pack_count, o.unit_price,
+                                  CASE b.location_tag
+                                       WHEN 'Local' THEN 1
+                                       WHEN 'International' THEN 3
+                                       ELSE 2 END AS tier
                            FROM beers b
                            JOIN beer_merchant_offers o ON o.beer_id = b.id
                            WHERE b.beer_style = %s AND o.price IS NOT NULL
                              AND o.price BETWEEN %s AND %s
-                           ORDER BY o.unit_price ASC NULLS LAST, o.price ASC
+                           ORDER BY tier ASC, o.unit_price ASC NULLS LAST, o.price ASC
                            LIMIT 30""",
                         (style, budget_min, budget_max),
                     )
+                    _TIER_LABELS = {1: "Local Hero", 2: "The Interstater", 3: "The Internationalist"}
                     picks = [
                         BeerPick(
                             name=row["name"],
@@ -626,6 +635,8 @@ def beer_picks(
                             package_info=row["package_info"] or "",
                             pack_count=row["pack_count"] or 1,
                             unit_price=float(row["unit_price"]) if row["unit_price"] is not None else float(row["price"]),
+                            tier=row["tier"],
+                            tier_label=_TIER_LABELS.get(row["tier"], "The Interstater"),
                         )
                         for row in cur.fetchall()
                     ]
