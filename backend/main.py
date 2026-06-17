@@ -631,9 +631,10 @@ def beer_picks(
                     style_avg = cur.fetchone()["a"]
                     style_avg = float(style_avg) if style_avg is not None else None
 
-                    # Fetch a generous pool by value; tier + final ordering done
-                    # in Python so Local Hero (state-matched) floats to the top
-                    # even if it isn't the cheapest per drink.
+                    # Fetch the full in-budget pool (value-ordered), then keep up
+                    # to N PER TIER so every origin tier with stock surfaces —
+                    # otherwise a flood of domestic offers crowds out the
+                    # Internationalist (tier 3 sorts last).
                     cur.execute(
                         """SELECT b.name, b.beer_style, b.abv_percentage,
                                   b.location_tag, b.brewery_state,
@@ -645,42 +646,36 @@ def beer_picks(
                            WHERE b.beer_style = %s AND o.price IS NOT NULL
                              AND o.price BETWEEN %s AND %s
                            ORDER BY o.unit_price ASC NULLS LAST, o.price ASC
-                           LIMIT 60""",
+                           LIMIT 200""",
                         (style, budget_min, budget_max),
                     )
-                    rows = cur.fetchall()
-                    built = []
-                    for row in rows:
+                    by_tier: dict[int, list[BeerPick]] = {1: [], 2: [], 3: []}
+                    for row in cur.fetchall():  # already value-ordered
                         tier = _beer_tier(row["location_tag"], row["brewery_state"], user_state)
                         rating = float(row["untappd_rating"]) if row["untappd_rating"] is not None else None
-                        # Highly rated = clearly above the style average and a
-                        # solid score in its own right.
                         highly = bool(
                             rating is not None and style_avg is not None
                             and rating >= style_avg + 0.1 and rating >= 3.5
                         )
-                        built.append((
-                            tier,
-                            float(row["unit_price"]) if row["unit_price"] is not None else float(row["price"]),
-                            BeerPick(
-                                name=row["name"],
-                                beer_style=row["beer_style"] or style,
-                                abv_percentage=float(row["abv_percentage"] or 0),
-                                price=float(row["price"]),
-                                retailer=row["retailer"],
-                                url=row["url"] or "",
-                                package_info=row["package_info"] or "",
-                                pack_count=row["pack_count"] or 1,
-                                unit_price=float(row["unit_price"]) if row["unit_price"] is not None else float(row["price"]),
-                                tier=tier,
-                                tier_label=_BEER_TIER_LABELS[tier],
-                                untappd_rating=rating,
-                                untappd_url=row["untappd_url"] or "",
-                                highly_rated=highly,
-                            ),
+                        by_tier[tier].append(BeerPick(
+                            name=row["name"],
+                            beer_style=row["beer_style"] or style,
+                            abv_percentage=float(row["abv_percentage"] or 0),
+                            price=float(row["price"]),
+                            retailer=row["retailer"],
+                            url=row["url"] or "",
+                            package_info=row["package_info"] or "",
+                            pack_count=row["pack_count"] or 1,
+                            unit_price=float(row["unit_price"]) if row["unit_price"] is not None else float(row["price"]),
+                            tier=tier,
+                            tier_label=_BEER_TIER_LABELS[tier],
+                            untappd_rating=rating,
+                            untappd_url=row["untappd_url"] or "",
+                            highly_rated=highly,
                         ))
-                    built.sort(key=lambda t: (t[0], t[1]))  # tier, then per-drink value
-                    picks = [b[2] for b in built[:30]]
+                    # Up to 10 per tier, grouped Local Hero → Interstater →
+                    # Internationalist (value-ordered within each).
+                    picks = by_tier[1][:10] + by_tier[2][:10] + by_tier[3][:10]
         except Exception as e:
             logging.getLogger("cellar_sage").warning("beer_picks query failed: %s", e)
 
