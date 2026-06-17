@@ -7,6 +7,7 @@ import '../models/beer_picks.dart';
 import '../services/api_service.dart';
 import '../services/location_service.dart';
 import '../services/palate_prefs.dart';
+import '../services/state_prefs.dart';
 import '../screens/wine_picks_screen.dart';
 import '../screens/beer_picks_screen.dart';
 import '../services/currency_service.dart';
@@ -668,11 +669,23 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   void initState() {
     super.initState();
+    // Last-known / manually-chosen state first, so "Local Hero" works even
+    // before (or without) a live GPS fix.
+    StatePrefs.load().then((saved) {
+      if (saved != null && mounted && _userState == null) {
+        setState(() => _userState = saved);
+      }
+    });
     CurrencyService.detectCodeFromGps().then((code) {
       if (mounted) setState(() => _currencyCode = code);
       // State detection runs after currency so permission is already granted.
+      // Only overwrite (and persist) when GPS actually resolves a state —
+      // never clobber a saved/manual value with null.
       CurrencyService.detectAustralianStateFromGps().then((state) {
-        if (mounted) setState(() => _userState = state);
+        if (state != null && mounted) {
+          setState(() => _userState = state);
+          StatePrefs.save(state);
+        }
       });
       // Also capture raw lat/lng for geo-gated retailer filtering.
       LocationService().getCurrentPosition().then((pos) {
@@ -1504,6 +1517,40 @@ class _QuizScreenState extends State<QuizScreen> {
                         .copyWith(fontWeight: FontWeight.w600),
                   ),
                   targetPage: _kBudgetPage,
+                ),
+                // Region — drives the "Local Hero" tier. Auto-detected from GPS
+                // (and remembered), but settable here so it works without a fix.
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text('Local picks for', style: WwText.bodyMedium())),
+                      DropdownButton<String>(
+                        value: _userState,
+                        hint: Text('Set state',
+                            style: WwText.bodyMedium(color: WwColors.violet)
+                                .copyWith(fontWeight: FontWeight.w600)),
+                        underline: const SizedBox.shrink(),
+                        dropdownColor: WwColors.bgElevated,
+                        isDense: true,
+                        items: [
+                          for (final s in StatePrefs.auStates)
+                            DropdownMenuItem(
+                              value: s,
+                              child: Text(s,
+                                  style: WwText.bodyMedium(color: WwColors.violet)
+                                      .copyWith(fontWeight: FontWeight.w600)),
+                            ),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) {
+                            setState(() => _userState = v);
+                            StatePrefs.save(v);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
                 ),
                 if (_loadedProfile?.savedWineName != null) ...[
                   const Divider(height: 16, color: WwColors.borderSubtle),
