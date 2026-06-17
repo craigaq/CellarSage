@@ -143,7 +143,7 @@ class _BeerPicksScreenState extends State<BeerPicksScreen> {
               const SizedBox(height: 16),
               Text(
                 'No ${widget.style} found in your budget '
-                '(A\$${widget.budgetMin.toStringAsFixed(0)}–${widget.budgetMax.toStringAsFixed(0)}).\n'
+                '(A\$${widget.budgetMin.toStringAsFixed(0)}–${widget.budgetMax.toStringAsFixed(0)} per drink).\n'
                 'Try widening your budget on the previous step.',
                 textAlign: TextAlign.center,
                 style: WwText.bodyMedium(),

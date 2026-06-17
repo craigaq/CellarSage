@@ -235,8 +235,11 @@ class _QuizScreenState extends State<QuizScreen> {
 
   List<String> get _attrOrder => _isBeer ? _beerAttrOrder : _wineAttrOrder;
 
-  BudgetBracket get _selectedBracket =>
-      CurrencyService.getBrackets(_currencyCode)[_budgetIndex];
+  // Beer budgets are per-drink (unit_price); wine budgets are per-bottle.
+  List<BudgetBracket> get _budgetBrackets =>
+      _isBeer ? CurrencyService.getBeerBrackets() : CurrencyService.getBrackets(_currencyCode);
+
+  BudgetBracket get _selectedBracket => _budgetBrackets[_budgetIndex];
 
   String get _foodLabel =>
       _foodOptions.firstWhere((f) => f['id'] == _foodPairing)['label'] ??
@@ -1204,7 +1207,8 @@ class _QuizScreenState extends State<QuizScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Your Budget (per bottle)', style: WwText.headlineLarge()),
+          Text(_isBeer ? 'Your Budget (per drink)' : 'Your Budget (per bottle)',
+              style: WwText.headlineLarge()),
           const SizedBox(height: 8),
           Text(
             'The Cellar Fox respects all budgets. Even the modest ones.',
@@ -1212,7 +1216,7 @@ class _QuizScreenState extends State<QuizScreen> {
           ),
           const SizedBox(height: 32),
           Column(
-            children: CurrencyService.getBrackets(_currencyCode)
+            children: _budgetBrackets
                 .asMap()
                 .entries
                 .map((entry) {
@@ -1510,7 +1514,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     targetPage: _kPhiloPage,
                   ),
                 _summaryRow(
-                  label: 'Budget (per bottle)',
+                  label: _isBeer ? 'Budget (per drink)' : 'Budget (per bottle)',
                   trailing: Text(
                     _selectedBracket.label,
                     style: WwText.bodyMedium(color: WwColors.violet)
@@ -2335,7 +2339,7 @@ class _BeerWhereToBuy extends StatelessWidget {
     if (list.isEmpty) {
       return Text(
         'No listings in your A\$${budgetMin.toStringAsFixed(0)}–${budgetMax.toStringAsFixed(0)} '
-        'budget. Tap "View Recommendations" or widen your budget.',
+        'per-drink budget. Tap "View Recommendations" or widen your budget.',
         style: WwText.bodySmall(color: WwColors.textDisabled),
       );
     }

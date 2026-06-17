@@ -645,8 +645,8 @@ def beer_picks(
                            FROM beers b
                            JOIN beer_merchant_offers o ON o.beer_id = b.id
                            WHERE b.beer_style = %s AND o.price IS NOT NULL
-                             AND o.price BETWEEN %s AND %s
-                           ORDER BY o.unit_price ASC NULLS LAST, o.price ASC
+                             AND COALESCE(o.unit_price, o.price) BETWEEN %s AND %s
+                           ORDER BY COALESCE(o.unit_price, o.price) ASC, o.price ASC
                            LIMIT 200""",
                         (style, budget_min, budget_max),
                     )

@@ -111,6 +111,20 @@ class CurrencyService {
     ],
   };
 
+  // Beer budget brackets — PER DRINK, not per pack. Beer is sold as singles,
+  // 6-packs and cartons, so a flat pack-price band fragments by format (a $5
+  // can and a $58 carton of the same beer never share a tier). Filtering on
+  // per-drink price (unit_price) compares them fairly. Beer catalog is AU-only
+  // (Boozeit/Liquorland), so a single AUD set is used regardless of currency.
+  // Bands tuned to the live unit_price spread (A$1.33–A$11.25).
+  static const _beerBrackets = <BudgetBracket>[
+    BudgetBracket('Under A\$3 / drink',    0,    3),
+    BudgetBracket('A\$3 – A\$4 / drink',   3,    4),
+    BudgetBracket('A\$4 – A\$5 / drink',   4,    5),
+    BudgetBracket('A\$5 – A\$7 / drink',   5,    7),
+    BudgetBracket('A\$7+ / drink',         7,  9999),
+  ];
+
   // Australian state bounding boxes — checked top-to-bottom; first match wins.
   // Smaller/more specific regions (TAS, ACT) are listed before larger ones
   // that overlap them (NSW, VIC) to ensure correct assignment.
@@ -235,4 +249,8 @@ class CurrencyService {
 
   static List<BudgetBracket> getBrackets(String code) =>
       _brackets[code] ?? _brackets['AUD']!;
+
+  /// Per-drink budget brackets for beer (AU-only catalog). Same 5-slot layout
+  /// as [getBrackets] so a saved budgetIndex maps across beverage types.
+  static List<BudgetBracket> getBeerBrackets() => _beerBrackets;
 }
