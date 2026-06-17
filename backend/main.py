@@ -673,9 +673,18 @@ def beer_picks(
                             untappd_url=row["untappd_url"] or "",
                             highly_rated=highly,
                         ))
-                    # Up to 10 per tier, grouped Local Hero → Interstater →
-                    # Internationalist (value-ordered within each).
-                    picks = by_tier[1][:10] + by_tier[2][:10] + by_tier[3][:10]
+                    # Mirror wine's "View Recommendations": ONE best pick per
+                    # origin tier (Local Hero → Interstater → Internationalist),
+                    # so at most 3 beers — not the full where-to-buy list. Within
+                    # a tier, prefer a beer that has an Untappd rating (a real
+                    # quality signal); otherwise fall back to best per-drink value.
+                    def _best(bucket: list[BeerPick]) -> BeerPick | None:
+                        if not bucket:
+                            return None
+                        rated = [p for p in bucket if p.untappd_rating is not None]
+                        return rated[0] if rated else bucket[0]
+
+                    picks = [p for p in (_best(by_tier[1]), _best(by_tier[2]), _best(by_tier[3])) if p]
         except Exception as e:
             logging.getLogger("cellar_sage").warning("beer_picks query failed: %s", e)
 

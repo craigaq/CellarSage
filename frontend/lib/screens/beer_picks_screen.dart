@@ -161,8 +161,8 @@ class _BeerPicksScreenState extends State<BeerPicksScreen> {
           padding: const EdgeInsets.only(bottom: 16),
           child: Text(
             picks.length == 1
-                ? 'One ${widget.style} to buy right now.'
-                : '${picks.length} ${widget.style} options — local heroes first.',
+                ? 'One ${widget.style} pick — matched to your taste.'
+                : '${picks.length} ${widget.style} picks — local hero to global icon.',
             style: WwText.bodyMedium(),
             textAlign: TextAlign.center,
           ),
