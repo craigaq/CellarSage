@@ -242,6 +242,34 @@ class _BeerPickCard extends StatelessWidget {
               '${pick.abvPercentage > 0 ? '  ·  ${pick.abvPercentage.toStringAsFixed(1)}% ABV' : ''}',
               style: WwText.bodySmall(),
             ),
+            if (pick.untappdRating != null) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.star_rounded, size: 15, color: Color(0xFFFFC000)),
+                  const SizedBox(width: 4),
+                  Text('${pick.untappdRating!.toStringAsFixed(2)}  ·  Untappd',
+                      style: WwText.bodySmall()),
+                  if (pick.highlyRated) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: WwColors.tierLocal.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(color: WwColors.tierLocal.withValues(alpha: 0.5)),
+                      ),
+                      child: Text('HIGHLY RATED',
+                          style: WwText.badgeLabel().copyWith(
+                            fontSize: 9,
+                            color: const Color(0xFF4CAF82),
+                            letterSpacing: 0.4,
+                          )),
+                    ),
+                  ],
+                ],
+              ),
+            ],
             const SizedBox(height: 12),
             Row(
               crossAxisAlignment: CrossAxisAlignment.baseline,

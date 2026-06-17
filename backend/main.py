@@ -236,6 +236,9 @@ class BeerPick(BaseModel):
     unit_price: float = 0.0
     tier: int = 2                    # 1 Local Hero · 2 Interstater · 3 Internationalist
     tier_label: str = "The Interstater"
+    untappd_rating: Optional[float] = None   # community rating out of 5
+    untappd_url: str = ""
+    highly_rated: bool = False               # strong rating *for its style*
 
 
 class BeerPicksResponse(BaseModel):
@@ -617,12 +620,24 @@ def beer_picks(
                     "WHERE table_name='beer_merchant_offers')"
                 )
                 if cur.fetchone()["exists"]:
+                    # Style's average rating, to flag beers that are highly
+                    # rated *for their style* (Untappd skews by style — IPAs
+                    # high, lagers low — so a flat threshold would bury lagers).
+                    cur.execute(
+                        "SELECT AVG(untappd_rating) AS a FROM beers "
+                        "WHERE beer_style = %s AND untappd_rating IS NOT NULL",
+                        (style,),
+                    )
+                    style_avg = cur.fetchone()["a"]
+                    style_avg = float(style_avg) if style_avg is not None else None
+
                     # Fetch a generous pool by value; tier + final ordering done
                     # in Python so Local Hero (state-matched) floats to the top
                     # even if it isn't the cheapest per drink.
                     cur.execute(
                         """SELECT b.name, b.beer_style, b.abv_percentage,
                                   b.location_tag, b.brewery_state,
+                                  b.untappd_rating, b.untappd_url,
                                   o.retailer, o.price, o.url, o.package_info,
                                   o.pack_count, o.unit_price
                            FROM beers b
@@ -637,6 +652,13 @@ def beer_picks(
                     built = []
                     for row in rows:
                         tier = _beer_tier(row["location_tag"], row["brewery_state"], user_state)
+                        rating = float(row["untappd_rating"]) if row["untappd_rating"] is not None else None
+                        # Highly rated = clearly above the style average and a
+                        # solid score in its own right.
+                        highly = bool(
+                            rating is not None and style_avg is not None
+                            and rating >= style_avg + 0.1 and rating >= 3.5
+                        )
                         built.append((
                             tier,
                             float(row["unit_price"]) if row["unit_price"] is not None else float(row["price"]),
@@ -652,6 +674,9 @@ def beer_picks(
                                 unit_price=float(row["unit_price"]) if row["unit_price"] is not None else float(row["price"]),
                                 tier=tier,
                                 tier_label=_BEER_TIER_LABELS[tier],
+                                untappd_rating=rating,
+                                untappd_url=row["untappd_url"] or "",
+                                highly_rated=highly,
                             ),
                         ))
                     built.sort(key=lambda t: (t[0], t[1]))  # tier, then per-drink value

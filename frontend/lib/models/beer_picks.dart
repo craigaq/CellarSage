@@ -13,6 +13,9 @@ class BeerPick {
   final double unitPrice;
   final int tier;          // 1 Local Hero · 2 The Interstater · 3 The Internationalist
   final String tierLabel;
+  final double? untappdRating;   // community rating /5, null if un-enriched
+  final String untappdUrl;
+  final bool highlyRated;        // strong rating for its style
 
   const BeerPick({
     required this.name,
@@ -26,6 +29,9 @@ class BeerPick {
     this.unitPrice = 0.0,
     this.tier = 2,
     this.tierLabel = 'The Interstater',
+    this.untappdRating,
+    this.untappdUrl = '',
+    this.highlyRated = false,
   });
 
   factory BeerPick.fromJson(Map<String, dynamic> json) => BeerPick(
@@ -40,6 +46,9 @@ class BeerPick {
         unitPrice:     (json['unit_price'] as num?)?.toDouble() ?? 0.0,
         tier:          (json['tier'] as num?)?.toInt() ?? 2,
         tierLabel:     (json['tier_label'] as String?) ?? 'The Interstater',
+        untappdRating: (json['untappd_rating'] as num?)?.toDouble(),
+        untappdUrl:    (json['untappd_url'] as String?) ?? '',
+        highlyRated:   (json['highly_rated'] as bool?) ?? false,
       );
 }
 
