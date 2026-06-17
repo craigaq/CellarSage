@@ -1993,6 +1993,7 @@ class _WineResultCardState extends State<_WineResultCard> {
         budgetMin: widget.budgetMin,
         budgetMax: widget.budgetMax,
         userState: widget.userState,
+        mode: 'all', // Where to Buy lists every buyable offer
       );
       if (mounted) setState(() { _beerPicks = resp.picks; _beerPicksLoading = false; });
     } catch (e) {

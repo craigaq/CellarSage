@@ -207,11 +207,13 @@ class ApiService {
     double budgetMin = 0.0,
     double budgetMax = 99999.0,
     String? userState,
+    String mode = 'tiered', // 'tiered' = View Recommendations; 'all' = Where to Buy
   }) async {
     final uri = Uri.parse('$_baseUrl/beer-picks').replace(queryParameters: {
       'style': style,
       'budget_min': '$budgetMin',
       'budget_max': '$budgetMax',
+      'mode': mode,
       if (userState != null) 'user_state': userState,
     });
     final response = await _client.get(uri);

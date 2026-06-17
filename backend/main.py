@@ -598,6 +598,7 @@ def beer_picks(
     budget_min: float = Query(0.0, ge=0.0),
     budget_max: float = Query(99999.0, ge=0.0),
     user_state: Optional[str] = Query(None, max_length=10, description="User's AU state (e.g. 'SA') for Local Hero"),
+    mode: str = Query("tiered", regex="^(tiered|all)$", description="'tiered' = 1 best pick per origin tier (View Recommendations); 'all' = every buyable offer (Where to Buy)"),
 ):
     """Every buyable beer of a given style, grouped by origin tier.
 
@@ -673,18 +674,31 @@ def beer_picks(
                             untappd_url=row["untappd_url"] or "",
                             highly_rated=highly,
                         ))
-                    # Mirror wine's "View Recommendations": ONE best pick per
-                    # origin tier (Local Hero → Interstater → Internationalist),
-                    # so at most 3 beers — not the full where-to-buy list. Within
-                    # a tier, prefer a beer that has an Untappd rating (a real
-                    # quality signal); otherwise fall back to best per-drink value.
-                    def _best(bucket: list[BeerPick]) -> BeerPick | None:
-                        if not bucket:
-                            return None
-                        rated = [p for p in bucket if p.untappd_rating is not None]
-                        return rated[0] if rated else bucket[0]
+                    if mode == "all":
+                        # Where to Buy: every buyable offer, grouped Local Hero →
+                        # Interstater → Internationalist (value-ordered within each).
+                        picks = by_tier[1][:10] + by_tier[2][:10] + by_tier[3][:10]
+                    else:
+                        # View Recommendations — mirror wine's /wine-picks: ONE
+                        # best pick per origin tier (Local Hero → Interstater →
+                        # Internationalist), so at most 3 beers. Within a tier,
+                        # prefer a beer that has an Untappd rating (a real quality
+                        # signal); otherwise fall back to best per-drink value.
+                        def _best(bucket: list[BeerPick]) -> BeerPick | None:
+                            if not bucket:
+                                return None
+                            rated = [p for p in bucket if p.untappd_rating is not None]
+                            return rated[0] if rated else bucket[0]
 
-                    picks = [p for p in (_best(by_tier[1]), _best(by_tier[2]), _best(by_tier[3])) if p]
+                        picks = [p for p in (_best(by_tier[1]), _best(by_tier[2]), _best(by_tier[3])) if p]
+                        # Backfill toward 3: if some origin tiers have no stock,
+                        # top up from the remaining beers (rated-preferred, then
+                        # value) so a single-tier style still offers a few options.
+                        if len(picks) < 3:
+                            chosen = {p.name for p in picks}
+                            leftover = [p for t in (1, 2, 3) for p in by_tier[t] if p.name not in chosen]
+                            leftover.sort(key=lambda p: (p.untappd_rating is None, p.unit_price))
+                            picks += leftover[: 3 - len(picks)]
         except Exception as e:
             logging.getLogger("cellar_sage").warning("beer_picks query failed: %s", e)
 
