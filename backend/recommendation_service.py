@@ -284,6 +284,21 @@ _WINE_ATTRS: tuple[str, ...] = (
 
 import math as _math
 
+
+def _soft_cap(x: float) -> float:
+    """Squash a raw score into [0,1) without the hard-clamp pile-up at 1.0.
+
+    Below 0.9 the value is unchanged; at/above 0.9 it compresses smoothly and
+    asymptotes toward (but never reaches) 1.0. This keeps genuinely-distinct
+    raw scores distinct — the previous min(1.0, ...) clamp flattened several
+    strong matches to an identical, misleading "100%".
+    """
+    if x <= 0.0:
+        return 0.0
+    if x < 0.9:
+        return x
+    return 0.9 + 0.1 * (1.0 - _math.exp(-(x - 0.9) / 0.1))
+
 # Per-attribute Gaussian sigma values (in 1-5 scale units).
 # Lower sigma = tighter tolerance (palates are more sensitive to that axis).
 _WINE_ATTR_SIGMA: dict[str, float] = {
@@ -654,7 +669,7 @@ class RecommendationService:
             gap = abs(wine_intensity - food_intensity)
             penalty += min(0.18, 0.06 * max(0.0, gap - 1.2))
 
-        score = max(0.0, min(1.0, base + affinity_bonus - penalty))
+        score = _soft_cap(base + affinity_bonus - penalty)
 
         # Human-readable pairing logic for the UI.
         explanation = ctx["why"]
@@ -888,7 +903,7 @@ class BeerRecommendationService:
             gap = abs(beer_intensity - food_intensity)
             penalty += min(0.18, 0.06 * max(0.0, gap - 1.2))
 
-        score = max(0.0, min(1.0, base + style_bonus + anchor_bonus - penalty))
+        score = _soft_cap(base + style_bonus + anchor_bonus - penalty)
 
         # Human-readable pairing logic for the UI.
         explanation = ctx["why"]
