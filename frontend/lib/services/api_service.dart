@@ -214,7 +214,7 @@ class ApiService {
       'budget_min': '$budgetMin',
       'budget_max': '$budgetMax',
       'mode': mode,
-      if (userState != null) 'user_state': userState,
+      'user_state': ?userState,
     });
     final response = await _client.get(uri);
     if (response.statusCode == 200) {
@@ -234,7 +234,7 @@ class ApiService {
   }) async {
     final uri = Uri.parse('$_baseUrl/beer-budget-availability').replace(queryParameters: {
       'edges': edges,
-      if (style != null) 'style': style,
+      'style': ?style,
     });
     final response = await _client.get(uri);
     if (response.statusCode == 200) {
