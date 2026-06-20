@@ -301,11 +301,6 @@ class _QuizScreenState extends State<QuizScreen> {
     _attrOrder[3]: _flavor,
   };
 
-  bool get _hasConflict =>
-      (_weight <= 2 && _texture >= 4) ||       // Light body + high tannin
-      (_flavor <= 1 && _crispness >= 4) ||      // Near-zero flavour + razor acidity
-      (_texture >= 5 && _crispness >= 5);       // Maximum tannin + maximum acidity
-
   // ---------------------------------------------------------------------------
   // Navigation
   // ---------------------------------------------------------------------------
@@ -932,7 +927,7 @@ class _QuizScreenState extends State<QuizScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
                         color: _beverageType == 'wine'
-                          ? WwColors.violet.withOpacity(0.1)
+                          ? WwColors.violet.withValues(alpha: 0.1)
                           : Colors.transparent,
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(12),
@@ -959,7 +954,7 @@ class _QuizScreenState extends State<QuizScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
                         color: _beverageType == 'beer'
-                          ? WwColors.violet.withOpacity(0.1)
+                          ? WwColors.violet.withValues(alpha: 0.1)
                           : Colors.transparent,
                         borderRadius: const BorderRadius.only(
                           topRight: Radius.circular(12),
@@ -1717,7 +1712,7 @@ class _QuizScreenState extends State<QuizScreen> {
     final nearTie = top3.length >= 2 &&
         (top3[0].score - top3[1].score).abs() / top3[0].score < 0.05;
 
-    Widget _card(WineRecommendation wine, int rank) => _WineResultCard(
+    Widget card(WineRecommendation wine, int rank) => _WineResultCard(
       key: ValueKey(wine.varietal),
       rank: rank,
       wine: wine,
@@ -1838,7 +1833,7 @@ class _QuizScreenState extends State<QuizScreen> {
           const SizedBox(height: 16),
 
           // ── Selected varietal card ──────────────────────────────────────
-          _card(sel, idx + 1),
+          card(sel, idx + 1),
 
           // ── Other varietals (weaker matches) ───────────────────────────
           if (others.isNotEmpty) ...[
@@ -1855,7 +1850,7 @@ class _QuizScreenState extends State<QuizScreen> {
                 ],
               ),
             ),
-            for (int i = 0; i < others.length; i++) _card(others[i], top3.length + i + 1),
+            for (int i = 0; i < others.length; i++) card(others[i], top3.length + i + 1),
           ],
         ],
       ),
