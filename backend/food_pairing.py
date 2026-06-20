@@ -153,7 +153,7 @@ FOOD_PAIRING: dict[str, dict] = {
                 {"attr": "tannin", "above": 3.2, "penalty": 0.12,
                  "reason": "salmon takes a whisper of grip, not a tannic assault"},
             ],
-            "why": "Freshness balances the oily flesh — silky light-red or bright-white territory, the salmon-and-Pinot classic.",
+            "why": "Freshness balances the oily flesh — silky light-red or bright-white territory, the classic salmon move.",
         },
         "contrast": {
             "targets": {"body": 3.6, "tannin": 1.8, "acidity": 3.0, "aromatics": 3.4,
@@ -185,7 +185,7 @@ FOOD_PAIRING: dict[str, dict] = {
                 {"attr": "alcohol", "above": 3.2, "penalty": 0.12,
                  "reason": "alcohol fans the chilli flames"},
             ],
-            "why": "Off-dry sweetness and perfumed fruit cool the burn — low alcohol keeps the flames down, the off-dry-Riesling classic.",
+            "why": "Off-dry sweetness and perfumed fruit cool the burn — low alcohol keeps the flames down, the off-dry classic for heat.",
         },
         "contrast": {
             "targets": {"acidity": 4.4, "body": 1.9, "tannin": 1.0, "sweetness": 1.4,
@@ -214,7 +214,7 @@ FOOD_PAIRING: dict[str, dict] = {
             "varietals": {"Sangiovese": 1.0, "Barbera": 0.9, "Nero d'Avola": 0.7,
                           "Tempranillo": 0.5, "Grenache": 0.4, "Trebbiano Toscano": 0.4},
             "avoid": [],
-            "why": "Acid meets acid — a wine that can't match the tomato's tartness tastes flat beside it. Sangiovese and tomato are Tuscany on a plate.",
+            "why": "Acid meets acid — a wine that can't match the tomato's tartness tastes flat beside it. A high-acid red and tomato are Tuscany on a plate.",
         },
         "contrast": {
             "targets": {"body": 3.4, "tannin": 2.2, "acidity": 3.2, "aromatics": 3.0,
@@ -262,7 +262,7 @@ FOOD_PAIRING: dict[str, dict] = {
                 {"attr": "tannin", "above": 3.5, "penalty": 0.08,
                  "reason": "grippy tannin tastes harsh against raw greens"},
             ],
-            "why": "Grassy, green-edged crispness mirrors the garden — Grüner and Sauvignon Blanc are the vegetable wines.",
+            "why": "Grassy, green-edged crispness mirrors the garden — herbaceous whites are the vegetable wines.",
         },
         "contrast": {
             "targets": {"body": 2.6, "tannin": 2.0, "aromatics": 2.8, "acidity": 3.2,
@@ -285,7 +285,7 @@ FOOD_PAIRING: dict[str, dict] = {
                           "Tempranillo": 0.7, "Cava": 0.7, "Grenache": 0.6,
                           "Pinot Noir": 0.6, "Sangiovese": 0.5},
             "avoid": [],
-            "why": "A juicy, medium-everything bistro wine — salt softens tannin, so cured meat flatters easy reds. Gamay was born for this board.",
+            "why": "A juicy, medium-everything bistro wine — salt softens tannin, so cured meat flatters easy reds, born for the board.",
         },
         "contrast": {
             "targets": {"acidity": 4.3, "body": 2.4, "tannin": 1.4, "aromatics": 3.0,
@@ -332,7 +332,7 @@ FOOD_PAIRING: dict[str, dict] = {
                           "Cabernet Sauvignon": 0.6, "Grenache": 0.5,
                           "Pinot Grigio": -0.6, "Sauvignon Blanc": -0.5},
             "avoid": [],
-            "why": "Big, smoky, peppery fruit locks onto char and sweet rub — Shiraz and the barbecue is the great Australian handshake.",
+            "why": "Big, smoky, peppery fruit locks onto char and sweet rub — a bold red and the barbecue is the great Australian handshake.",
         },
         "contrast": {
             "targets": {"acidity": 4.2, "tannin": 2.2, "body": 2.8, "aromatics": 3.2,
@@ -358,7 +358,7 @@ FOOD_PAIRING: dict[str, dict] = {
                 {"attr": "tannin", "above": 4.2, "penalty": 0.08,
                  "reason": "umami makes very heavy tannin taste bitter"},
             ],
-            "why": "Forest-floor earthiness echoes mushroom and roasted-root umami — Pinot Noir and mushrooms share the same soil.",
+            "why": "Forest-floor earthiness echoes mushroom and roasted-root umami — earthy reds and mushrooms share the same soil.",
         },
         "contrast": {
             "targets": {"acidity": 4.0, "body": 2.2, "aromatics": 3.2, "tannin": 1.2,
