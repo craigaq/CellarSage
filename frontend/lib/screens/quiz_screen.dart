@@ -45,6 +45,11 @@ class _QuizScreenState extends State<QuizScreen> {
   String _beverageType = 'wine'; // 'wine' | 'beer'
   final Set<String> _styleAnchors = {}; // beer styles the user already enjoys
 
+  // Per-drink stock per beer budget band (aligned to getBeerBrackets), for
+  // greying out empty options. Re-fetched when the style-anchor scope changes.
+  List<int>? _beerBudgetCounts;
+  String? _beerBudgetCountsKey;
+
   bool get _isBeer => _beverageType == 'beer';
 
   /// Beer style anchor chips shown on the welcome page in beer mode.
@@ -240,6 +245,35 @@ class _QuizScreenState extends State<QuizScreen> {
       _isBeer ? CurrencyService.getBeerBrackets() : CurrencyService.getBrackets(_currencyCode);
 
   BudgetBracket get _selectedBracket => _budgetBrackets[_budgetIndex];
+
+  /// Fetch per-band beer stock for greying out empty budget options. Scoped to
+  /// the style anchor when exactly one is set, else the whole catalog. Idempotent
+  /// per scope — safe to call on every budget-step build.
+  void _ensureBeerBudgetCounts() {
+    if (!_isBeer) return;
+    final scope = _styleAnchors.length == 1 ? _styleAnchors.first : null;
+    final key = scope ?? '*';
+    if (_beerBudgetCountsKey == key) return; // already loaded/loading for this scope
+    _beerBudgetCountsKey = key;
+    // Upper edges of every band except the open-ended last one → "3,4,5,7".
+    final brackets = CurrencyService.getBeerBrackets();
+    final edges = brackets.take(brackets.length - 1).map((b) => b.max.toStringAsFixed(0)).join(',');
+    ApiService().beerBudgetAvailability(edges: edges, style: scope).then((counts) {
+      if (!mounted) return;
+      setState(() {
+        _beerBudgetCounts = counts;
+        // If the current selection landed on an empty band, hop to the first
+        // band with stock so the user never proceeds into a dead budget.
+        if (_budgetIndex < counts.length && counts[_budgetIndex] == 0) {
+          final firstStocked = counts.indexWhere((c) => c > 0);
+          if (firstStocked != -1) _budgetIndex = firstStocked;
+        }
+      });
+    }).catchError((_) {
+      // Network/none — leave counts null so all bands stay enabled (fail open).
+      if (mounted) setState(() => _beerBudgetCounts = null);
+    });
+  }
 
   String get _foodLabel =>
       _foodOptions.firstWhere((f) => f['id'] == _foodPairing)['label'] ??
@@ -1203,6 +1237,8 @@ class _QuizScreenState extends State<QuizScreen> {
   // ---------------------------------------------------------------------------
 
   Widget _buildBudgetStep() {
+    if (_isBeer) _ensureBeerBudgetCounts();
+    final counts = _isBeer ? _beerBudgetCounts : null;
     return _stepShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1211,7 +1247,9 @@ class _QuizScreenState extends State<QuizScreen> {
               style: WwText.headlineLarge()),
           const SizedBox(height: 8),
           Text(
-            'The Cellar Fox respects all budgets. Even the modest ones.',
+            _isBeer && _styleAnchors.length == 1
+                ? 'Stock shown for ${_styleAnchors.first}. Greyed bands have none.'
+                : 'The Cellar Fox respects all budgets. Even the modest ones.',
             style: WwText.bodyMedium(),
           ),
           const SizedBox(height: 32),
@@ -1224,8 +1262,14 @@ class _QuizScreenState extends State<QuizScreen> {
                   final bracket = entry.value;
                   final label = bracket.label;
                   final selected = _budgetIndex == index;
+                  final count = (counts != null && index < counts.length)
+                      ? counts[index]
+                      : null;
+                  final disabled = count == 0; // empty band — grey out
                   return GestureDetector(
-                    onTap: () => setState(() => _budgetIndex = index),
+                    onTap: disabled
+                        ? null
+                        : () => setState(() => _budgetIndex = index),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       margin: const EdgeInsets.only(bottom: 12),
@@ -1245,25 +1289,34 @@ class _QuizScreenState extends State<QuizScreen> {
                           width: selected ? 2 : 1,
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            label,
-                            style: WwText.bodyLarge(
-                              color: selected
-                                  ? WwColors.textPrimary
-                                  : WwColors.textSecondary,
-                            ).copyWith(
-                              fontWeight: selected
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
+                      child: Opacity(
+                        opacity: disabled ? 0.4 : 1.0,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              label,
+                              style: WwText.bodyLarge(
+                                color: selected
+                                    ? WwColors.textPrimary
+                                    : WwColors.textSecondary,
+                              ).copyWith(
+                                fontWeight: selected
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                              ),
                             ),
-                          ),
-                          if (selected)
-                            const Icon(Icons.check_circle,
-                                color: WwColors.violet),
-                        ],
+                            if (selected)
+                              const Icon(Icons.check_circle,
+                                  color: WwColors.violet)
+                            else if (count != null)
+                              Text(
+                                disabled ? 'None' : '$count',
+                                style: WwText.bodySmall(
+                                    color: WwColors.textDisabled),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -1309,11 +1362,12 @@ class _QuizScreenState extends State<QuizScreen> {
                   child: Row(
                     children: [
                       SizedBox(
-                        width: 80,
+                        width: 96,
                         child: Text(
                           axisNames[i],
                           maxLines: 1,
-                          overflow: TextOverflow.clip,
+                          overflow: TextOverflow.visible,
+                          softWrap: false,
                           style: WwText.bodySmall(
                             color: isActive ? WwColors.violet : WwColors.textSecondary,
                           ).copyWith(

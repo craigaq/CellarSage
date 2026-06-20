@@ -705,6 +705,51 @@ def beer_picks(
     return BeerPicksResponse(style=style, picks=picks)
 
 
+@app.get("/beer-budget-availability")
+def beer_budget_availability(
+    edges: str = Query("3,4,5,7", max_length=60, description="Comma-separated per-drink band upper edges (frontend's beer brackets)"),
+    style: Optional[str] = Query(None, max_length=60, description="Limit to one style (the user's style anchor); omit for whole catalog"),
+):
+    """Distinct-beer stock per per-drink budget band, for greying out empty
+    budget options in the quiz. The frontend owns the band definitions and
+    passes their upper edges; we bucket COALESCE(unit_price, price) and count
+    distinct beers in each band (a beer can land in several bands — single can
+    vs carton). 'counts' aligns 1:1 with the frontend brackets."""
+    import os
+    try:
+        cuts = [float(x) for x in edges.split(",") if x.strip()]
+    except ValueError:
+        raise HTTPException(status_code=422, detail="edges must be numbers")
+    bounds = [0.0] + sorted(cuts) + [1e9]          # e.g. [0,3,4,5,7,1e9]
+    band_ids: list[set] = [set() for _ in range(len(bounds) - 1)]
+
+    url = os.environ.get("DATABASE_URL")
+    if url:
+        try:
+            import psycopg2, psycopg2.extras
+            conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
+            with conn, conn.cursor() as cur:
+                sql = ("SELECT b.id, COALESCE(o.unit_price, o.price) AS pd "
+                       "FROM beers b JOIN beer_merchant_offers o ON o.beer_id = b.id "
+                       "WHERE o.price IS NOT NULL")
+                params: list = []
+                if style:
+                    sql += " AND b.beer_style = %s"
+                    params.append(style)
+                cur.execute(sql, params)
+                for row in cur.fetchall():
+                    pd = float(row["pd"])
+                    for i in range(len(bounds) - 1):
+                        if bounds[i] <= pd < bounds[i + 1]:
+                            band_ids[i].add(row["id"])
+                            break
+        except Exception as e:
+            logging.getLogger("cellar_sage").warning("beer_budget_availability failed: %s", e)
+
+    counts = [len(s) for s in band_ids]
+    return {"style": style, "counts": counts, "total": len({i for s in band_ids for i in s})}
+
+
 @app.get("/wine-picks", response_model=WinePicksResponse)
 def wine_picks(
     varietal: str = Query(..., max_length=100, description="Canonical varietal name (e.g. 'Sauvignon Blanc')"),

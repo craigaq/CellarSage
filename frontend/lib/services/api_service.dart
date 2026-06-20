@@ -225,6 +225,25 @@ class ApiService {
     throw Exception('Server returned status ${response.statusCode}');
   }
 
+  /// Distinct-beer stock per per-drink budget band, aligned 1:1 with the
+  /// frontend beer brackets (whose upper edges are passed in [edges]). Used to
+  /// grey out empty budget options. [style] limits to the user's style anchor.
+  Future<List<int>> beerBudgetAvailability({
+    required String edges,
+    String? style,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/beer-budget-availability').replace(queryParameters: {
+      'edges': edges,
+      if (style != null) 'style': style,
+    });
+    final response = await _client.get(uri);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return (data['counts'] as List).map((e) => (e as num).toInt()).toList();
+    }
+    throw Exception('Server returned status ${response.statusCode}');
+  }
+
   Future<NearbyResponse> nearby({
     required String wineName,
     required double userLat,
