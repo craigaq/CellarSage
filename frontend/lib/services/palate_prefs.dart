@@ -72,6 +72,7 @@ class PalatePrefs {
     String name,
     PalateSnapshot snap, {
     String? savedWineName,
+    String? savedBeerName,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final profiles = await loadProfiles();
@@ -100,6 +101,7 @@ class PalatePrefs {
       budgetIndex: snap.budgetIndex,
       prefDry:     snap.prefDry,
       savedWineName: savedWineName ?? existing.savedWineName,
+      savedBeerName: savedBeerName ?? existing.savedBeerName,
     );
     final idx = profiles.indexWhere((p) => p.name == name);
     if (idx >= 0) {
@@ -158,6 +160,7 @@ class PalateProfile {
   final int budgetIndex;
   final bool prefDry;
   final String? savedWineName;
+  final String? savedBeerName;
 
   const PalateProfile({
     required this.id,
@@ -170,6 +173,7 @@ class PalateProfile {
     required this.budgetIndex,
     required this.prefDry,
     this.savedWineName,
+    this.savedBeerName,
   });
 
   factory PalateProfile.fromJson(Map<String, dynamic> json) => PalateProfile(
@@ -183,6 +187,7 @@ class PalateProfile {
         budgetIndex:   json['budget_index']   as int,
         prefDry:       json['pref_dry']       as bool,
         savedWineName: json['saved_wine_name'] as String?,
+        savedBeerName: json['saved_beer_name'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -196,6 +201,7 @@ class PalateProfile {
         'budget_index':    budgetIndex,
         'pref_dry':        prefDry,
         if (savedWineName != null) 'saved_wine_name': savedWineName,
+        if (savedBeerName != null) 'saved_beer_name': savedBeerName,
       };
 
   PalateSnapshot toSnapshot() => PalateSnapshot(

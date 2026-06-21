@@ -1231,6 +1231,37 @@ class _QuizScreenState extends State<QuizScreen> {
   // Step 7 — Budget
   // ---------------------------------------------------------------------------
 
+  // A "My Saved Wine/Beer" row shown on a loaded profile.
+  Widget _savedDrinkRow(IconData icon, String label, String value) => Column(
+        children: [
+          const Divider(height: 16, color: WwColors.borderSubtle),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            child: Row(
+              children: [
+                Icon(icon, size: 16, color: WwColors.violetMuted),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(label,
+                      style: WwText.bodyMedium(color: WwColors.textPrimary)),
+                ),
+                const SizedBox(width: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 180),
+                  child: Text(
+                    value,
+                    style: WwText.bodyMedium(color: WwColors.violet)
+                        .copyWith(fontWeight: FontWeight.w600),
+                    textAlign: TextAlign.right,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+
   Widget _buildBudgetStep() {
     if (_isBeer) _ensureBeerBudgetCounts();
     final counts = _isBeer ? _beerBudgetCounts : null;
@@ -1605,36 +1636,12 @@ class _QuizScreenState extends State<QuizScreen> {
                     ],
                   ),
                 ),
-                if (_loadedProfile?.savedWineName != null) ...[
-                  const Divider(height: 16, color: WwColors.borderSubtle),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.wine_bar_outlined, size: 16, color: WwColors.violetMuted),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'My Saved Wine',
-                            style: WwText.bodyMedium(color: WwColors.textPrimary),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 180),
-                          child: Text(
-                            _loadedProfile!.savedWineName!,
-                            style: WwText.bodyMedium(color: WwColors.violet)
-                                .copyWith(fontWeight: FontWeight.w600),
-                            textAlign: TextAlign.right,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                if (_loadedProfile?.savedWineName != null)
+                  _savedDrinkRow(Icons.wine_bar_outlined, 'My Saved Wine',
+                      _loadedProfile!.savedWineName!),
+                if (_loadedProfile?.savedBeerName != null)
+                  _savedDrinkRow(Icons.sports_bar_outlined, 'My Saved Beer',
+                      _loadedProfile!.savedBeerName!),
               ],
             ),
           ),
@@ -2294,6 +2301,7 @@ class _WineResultCardState extends State<_WineResultCard> {
                             budgetMin: widget.budgetMin,
                             budgetMax: widget.budgetMax,
                             userState: widget.userState,
+                            snapshot: widget.snapshot,
                           ),
                         ),
                       ),
@@ -2846,27 +2854,33 @@ class _ProfileCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final subtitleText = profile.prefDry ? '$foodLabel · Dry' : foodLabel;
     final savedWine = profile.savedWineName;
+    final savedBeer = profile.savedBeerName;
 
-    final subtitleWidget = savedWine != null
+    Widget savedRow(IconData icon, String name) => Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Row(
+            children: [
+              Icon(icon, size: 12, color: WwColors.violetMuted),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  name,
+                  style: WwText.bodySmall(color: WwColors.violetMuted),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ),
+        );
+
+    final subtitleWidget = (savedWine != null || savedBeer != null)
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(subtitleText, style: WwText.bodySmall(color: WwColors.textSecondary)),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(Icons.wine_bar_outlined, size: 12, color: WwColors.violetMuted),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      savedWine,
-                      style: WwText.bodySmall(color: WwColors.violetMuted),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                  ),
-                ],
-              ),
+              if (savedWine != null) savedRow(Icons.wine_bar_outlined, savedWine),
+              if (savedBeer != null) savedRow(Icons.sports_bar_outlined, savedBeer),
             ],
           )
         : Text(subtitleText, style: WwText.bodySmall(color: WwColors.textSecondary));
