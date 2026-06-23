@@ -25,7 +25,7 @@ BEERS = [
     # ── Wheat (was: zero in catalog) ──
     ("Hoegaarden Witbier",                    13, 2.8, 3, 2, 4.9, 4, "Wheat", "International"),
     ("Weihenstephaner Hefeweissbier",         14, 3.0, 3, 2, 5.4, 4, "Wheat", "International"),
-    ("White Rabbit White Ale",                15, 2.8, 3, 2, 4.5, 4, "Wheat", "National"),
+    ("White Rabbit Dark Ale",                 18, 3.5, 3, 2, 4.9, 3, "Brown Ale", "National"),
 
     # ── Sour (was: zero in catalog) ──
     ("Pirate Life Acai & Passionfruit Sour",   8, 2.4, 3, 2, 4.2, 4, "Sour", "National"),
@@ -41,6 +41,20 @@ BEERS = [
     # Duvel: high-ABV, bottle-conditioned fizz — the strong golden benchmark.
     ("Duvel Belgian Strong Golden",           32, 3.4, 2, 4, 8.5, 5, "Strong Ale", "International"),
 ]
+
+# Data correction (BEFORE the insert loop so the rename can't create a duplicate
+# against the new tuple name): White Rabbit's beer is the Belgian-style Dark Ale,
+# not a White Ale / Wheat. The original seed had the wrong name and style — all
+# retailer and Untappd URLs point to the Dark Ale. No canonical "Dark Ale" style
+# exists, so Brown Ale is the closest fit (dark, malty, low-bitterness).
+cur.execute(
+    """UPDATE beers
+          SET name = 'White Rabbit Dark Ale', beer_style = 'Brown Ale',
+              ibu_bitterness = 18, body = 3.5, malt_sweetness = 3,
+              hop_intensity = 2, abv_percentage = 4.9, carbonation_level = 3
+        WHERE name = 'White Rabbit White Ale'"""
+)
+wr_fixed = cur.rowcount
 
 inserted, skipped = 0, 0
 for (name, ibu, body, sweet, hop, abv, carb, style, loc) in BEERS:
@@ -67,7 +81,7 @@ conn.commit()
 cur.execute("SELECT COUNT(*) AS n FROM beers")
 total = cur.fetchone()['n']
 cur.execute("SELECT beer_style, COUNT(*) AS n FROM beers GROUP BY beer_style ORDER BY n DESC")
-print(f"Inserted {inserted}, skipped {skipped} (already present), corrected {corrected} (Temptress -> Porter)")
+print(f"Inserted {inserted}, skipped {skipped} (already present), corrected {corrected} (Temptress -> Porter), white_rabbit_fixed {wr_fixed}")
 print(f"Total beers: {total}")
 for row in cur.fetchall():
     print(f"  {row['beer_style']:<16} {row['n']}")
