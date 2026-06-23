@@ -116,6 +116,7 @@ def infer_style(title: str, extra: str = "") -> str | None:
 _INTERNATIONAL_BRANDS: tuple[str, ...] = (
     "asahi", "kirin", "sapporo", "orion", "heineken", "beck", "carlsberg",
     "henninger", "paulaner", "schofferhofer", "weihenstephaner", "stella artois",
+    "benediktiner", "erdinger", "franziskaner",
     "hoegaarden", "duvel", "birra moretti", "peroni", "budvar", "praga",
     "budweiser", "corona", "sol cerveza", "san miguel", "estrella", "singha",
     "efes", "almaza", "kingfisher", "guinness", "coors", "miller genuine",
