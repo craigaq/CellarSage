@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "6467831637",
+    "project_id": "cellar-sage-6651b",
+    "storage_bucket": "cellar-sage-6651b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:6467831637:android:63ace01d704487671051dc",
+        "android_client_info": {
+          "package_name": "au.com.cellarsage"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAr-Umsov-xWgcMyOwOPe9_k9GDpIOQn0E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,5 +1,9 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/age_gate_screen.dart';
@@ -9,6 +13,22 @@ import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Crashlytics: capture both Flutter framework errors and uncaught async
+  // errors. Initialised before runApp so early crashes are reported too.
+  // Android-only setup reads config from google-services.json (no
+  // firebase_options.dart needed).
+  try {
+    await Firebase.initializeApp();
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+  } catch (_) {
+    // Never let crash reporting setup block app startup.
+  }
+
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const CellarSageApp());
 }
