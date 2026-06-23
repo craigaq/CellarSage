@@ -24,8 +24,17 @@ import logging
 import os
 import re
 import time
+import unicodedata
 import urllib.error
 import urllib.request
+
+
+def _fold_accents(s: str) -> str:
+    """Lowercase + strip diacritics so accented names match their ASCII forms
+    (retailers list 'Schofferhofer'; we may store 'Schöfferhofer'). NFKD splits
+    'ö' into 'o' + combining mark, which we then drop."""
+    decomposed = unicodedata.normalize("NFKD", s.lower())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
 
 log = logging.getLogger(__name__)
 
@@ -128,7 +137,7 @@ def infer_location(name: str) -> str:
     'Local' vs 'Interstater' is decided at query time by matching brewery_state
     to the user's state (see infer_brewery_state + /beer-picks). This only flags
     overseas brands; everything else is Australian ('National')."""
-    n = name.lower()
+    n = _fold_accents(name)
     if any(b in n for b in _INTERNATIONAL_BRANDS):
         return "International"
     return "National"
@@ -215,7 +224,7 @@ def parse_pack_count(package_info: str | None, title: str = "") -> int:
 
 
 def _norm_tokens(name: str) -> set[str]:
-    return set(re.sub(r"[^a-z0-9 ]", " ", name.lower()).split())
+    return set(re.sub(r"[^a-z0-9 ]", " ", _fold_accents(name)).split())
 
 
 # ── Boozeit fetcher ───────────────────────────────────────────────────────────
