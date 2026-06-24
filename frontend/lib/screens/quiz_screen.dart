@@ -76,21 +76,109 @@ class _QuizScreenState extends State<QuizScreen> {
     'Sour':     [1, 2, 4, 3],
   };
 
-  /// Recompute the four beer dials as the rounded average of the currently
-  /// selected style chips. No-op when nothing is selected (dials stay put).
+  /// Wine style anchor chips shown on the welcome page in wine mode — the
+  /// parallel to the beer chips. A soft head-start (pre-fills the dials), NOT a
+  /// filter: the user still gets recommendations across every varietal.
+  /// Descriptive style names rather than grape names keep it discovery-friendly.
+  static const List<Map<String, String>> _wineStyleOptions = [
+    {'id': 'Crisp White', 'label': '🥂 Crisp White'},
+    {'id': 'Rich White',  'label': '🧈 Rich White'},
+    {'id': 'Rosé',        'label': '🌸 Rosé'},
+    {'id': 'Light Red',   'label': '🍒 Light Red'},
+    {'id': 'Bold Red',    'label': '🥩 Bold Red'},
+  ];
+
+  // Wine style → typical dial profile [acidity, body, tannin, flavour] on the
+  // 1-5 scale. UI head-start only (the wine engine doesn't use style anchors),
+  // so these ids stay descriptive and are never sent to the backend.
+  static const Map<String, List<int>> _wineStyleDialProfile = {
+    'Crisp White': [4, 2, 1, 3],
+    'Rich White':  [3, 4, 1, 4],
+    'Rosé':        [4, 2, 2, 3],
+    'Light Red':   [3, 2, 2, 3],
+    'Bold Red':    [2, 4, 4, 4],
+  };
+
+  /// Recompute the four dials as the rounded average of the currently selected
+  /// style chips. No-op when nothing is selected (dials stay put). Uses the
+  /// beverage-appropriate profile map; the dial state vars are shared (beer
+  /// reads them as bitterness/body/carbonation/aroma, wine as
+  /// acidity/body/tannin/flavour), so the positional mapping is identical.
   void _applyStyleAnchorsToDials() {
     if (_styleAnchors.isEmpty) return;
+    final profileMap = _isBeer ? _beerStyleDialProfile : _wineStyleDialProfile;
     final profiles =
-        _styleAnchors.map((id) => _beerStyleDialProfile[id]).whereType<List<int>>().toList();
+        _styleAnchors.map((id) => profileMap[id]).whereType<List<int>>().toList();
     if (profiles.isEmpty) return;
     int avg(int i) =>
         (profiles.map((p) => p[i]).reduce((a, b) => a + b) / profiles.length).round().clamp(1, 5);
     setState(() {
-      _crispness = avg(0); // bitterness
+      _crispness = avg(0); // beer: bitterness · wine: acidity
       _weight    = avg(1); // body
-      _texture   = avg(2); // carbonation
-      _flavor    = avg(3); // aroma
+      _texture   = avg(2); // beer: carbonation · wine: tannin
+      _flavor    = avg(3); // beer: aroma · wine: flavour
     });
+  }
+
+  /// "Drink a style already?" chips on the welcome page — a soft head-start that
+  /// pre-fills the dials from a recognisable style. Single-select. Shared by
+  /// beer and wine; pass the beverage-appropriate options.
+  Widget _buildStyleAnchorSection(List<Map<String, String>> options) {
+    return Column(
+      children: [
+        Text(
+          'Drink a style already? Tap it for a head start — (optional)',
+          style: WwText.bodySmall(color: WwColors.textSecondary),
+          textAlign: TextAlign.center,
+        ),
+        Text(
+          "We'll set your dials to match; tweak them on the next steps.",
+          style: WwText.bodySmall(color: WwColors.textDisabled),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          children: options.map((style) {
+            final id = style['id']!;
+            final selected = _styleAnchors.contains(id);
+            return GestureDetector(
+              onTap: () {
+                // Single-select: a chip pre-fills the dials to ONE coherent
+                // style profile. Tapping selects only that style (replacing any
+                // previous); tapping it again clears it. Averaging two styles
+                // would produce a blend that matches neither.
+                setState(() {
+                  _styleAnchors.clear();
+                  if (!selected) _styleAnchors.add(id);
+                });
+                _applyStyleAnchorsToDials();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? WwColors.violet.withValues(alpha: 0.15)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: selected ? WwColors.violet : WwColors.borderMedium,
+                  ),
+                ),
+                child: Text(
+                  style['label']!,
+                  style: WwText.bodySmall(
+                    color: selected ? WwColors.violet : WwColors.textSecondary,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
   }
 
   // --- Results state ---
@@ -922,7 +1010,10 @@ class _QuizScreenState extends State<QuizScreen> {
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => setState(() => _beverageType = 'wine'),
+                    onTap: () => setState(() {
+                      _beverageType = 'wine';
+                      _styleAnchors.clear(); // avoid carrying a beer anchor into wine
+                    }),
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
@@ -949,7 +1040,10 @@ class _QuizScreenState extends State<QuizScreen> {
                 Container(width: 1, color: WwColors.borderMedium),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => setState(() => _beverageType = 'beer'),
+                    onTap: () => setState(() {
+                      _beverageType = 'beer';
+                      _styleAnchors.clear(); // avoid carrying a wine anchor into beer
+                    }),
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
@@ -977,62 +1071,10 @@ class _QuizScreenState extends State<QuizScreen> {
             ),
           ),
           const SizedBox(height: 32),
-          // Beer style anchors — the strongest palate signal in beer mode.
-          if (_isBeer) ...[
-            Text(
-              'Drink a style already? Tap it for a head start — (optional)',
-              style: WwText.bodySmall(color: WwColors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-            Text(
-              "We'll set your dials to match; tweak them on the next steps.",
-              style: WwText.bodySmall(color: WwColors.textDisabled),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: _beerStyleOptions.map((style) {
-                final id = style['id']!;
-                final selected = _styleAnchors.contains(id);
-                return GestureDetector(
-                  onTap: () {
-                    // Single-select: a chip is a head-start that pre-fills the
-                    // dials to ONE coherent style profile. Tapping selects only
-                    // that style (replacing any previous); tapping it again
-                    // clears the selection. Averaging two styles would produce
-                    // a blend that matches neither.
-                    setState(() {
-                      _styleAnchors.clear();
-                      if (!selected) _styleAnchors.add(id);
-                    });
-                    _applyStyleAnchorsToDials();
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? WwColors.violet.withValues(alpha: 0.15)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: selected ? WwColors.violet : WwColors.borderMedium,
-                      ),
-                    ),
-                    child: Text(
-                      style['label']!,
-                      style: WwText.bodySmall(
-                        color: selected ? WwColors.violet : WwColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 24),
-          ],
+          // Style anchors — a soft head-start that pre-fills the dials. Shown
+          // for both beverages (beer styles vs wine styles).
+          _buildStyleAnchorSection(_isBeer ? _beerStyleOptions : _wineStyleOptions),
+          const SizedBox(height: 24),
           if (_savedProfiles.isNotEmpty) ...[
             const SizedBox(height: 28),
             Row(
