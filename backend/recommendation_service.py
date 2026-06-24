@@ -628,6 +628,7 @@ class RecommendationService:
             "avoid": cfg.get("avoid", []),
             "why": cfg.get("why", ""),
             "food_intensity": food_entry.get("intensity"),
+            "is_sweet_pairing": food_entry.get("is_sweet_pairing", False),
         }
 
     @staticmethod
@@ -668,6 +669,15 @@ class RecommendationService:
             wine_intensity = sum(getattr(wine, a) for a in _WINE_INTENSITY_ATTRS) / len(_WINE_INTENSITY_ATTRS)
             gap = abs(wine_intensity - food_intensity)
             penalty += min(0.18, 0.06 * max(0.0, gap - 1.2))
+
+        # Dessert / fortified gate: a dessert-sweet wine (sweetness >= 4.0, e.g.
+        # Port) is an after-dinner style — keep it out of savoury and no-food
+        # ("just sipping") results, where it scores high on body/intensity but
+        # is a poor real-world pick. Only eligible when the dish itself calls for
+        # sweetness (is_sweet_pairing — dessert, spicy). The penalty pushes it
+        # well below the genuine matches without hard-excluding it.
+        if getattr(wine, "sweetness", 0.0) >= 4.0 and not ctx.get("is_sweet_pairing", False):
+            penalty += 0.45
 
         score = _soft_cap(base + affinity_bonus - penalty)
 
