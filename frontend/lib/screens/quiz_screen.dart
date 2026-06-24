@@ -95,8 +95,8 @@ class _QuizScreenState extends State<QuizScreen> {
     'Crisp White': [4, 2, 1, 3],
     'Rich White':  [3, 4, 1, 4],
     'Rosé':        [4, 2, 2, 3],
-    'Light Red':   [3, 2, 2, 3],
-    'Bold Red':    [2, 4, 4, 4],
+    'Light Red':   [4, 2, 2, 3],
+    'Bold Red':    [3, 4, 4, 4],
   };
 
   /// Recompute the four dials as the rounded average of the currently selected
