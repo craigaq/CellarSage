@@ -117,7 +117,10 @@ MERCHANT_REGISTRY: dict = {
         "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
         "max_items": 50,
         "pages": 3,
-        "enabled": True,
+        # AUDIT 2026-06-25: disabled to stay within Apify free-tier monthly limit.
+        # Merlot already has ~30 Liquorland wines from the broad /wine + premium
+        # scrapes — far more than the engine needs (3-4/varietal for Tier picks).
+        "enabled": False,
         "actor_input": {
             "operation": "search",
             "query": "merlot",
@@ -130,7 +133,9 @@ MERCHANT_REGISTRY: dict = {
         "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
         "max_items": 50,
         "pages": 3,
-        "enabled": True,
+        # AUDIT 2026-06-25: disabled — broad scrape covers Pinot Grigio (~64);
+        # same grape as Pinot Gris. Free-tier Apify budget.
+        "enabled": False,
         "actor_input": {
             "operation": "search",
             "query": "pinot grigio",
@@ -142,7 +147,8 @@ MERCHANT_REGISTRY: dict = {
         "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
         "max_items": 50,
         "pages": 2,
-        "enabled": True,
+        # AUDIT 2026-06-25: disabled — broad scrape covers Pinot Gris (~78). Free-tier Apify budget.
+        "enabled": False,
         "actor_input": {
             "operation": "search",
             "query": "pinot gris",
@@ -154,7 +160,8 @@ MERCHANT_REGISTRY: dict = {
         "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
         "max_items": 50,
         "pages": 3,
-        "enabled": True,
+        # AUDIT 2026-06-25: disabled — broad scrape covers Chardonnay (~83). Free-tier Apify budget.
+        "enabled": False,
         "actor_input": {
             "operation": "search",
             "query": "chardonnay",
@@ -166,7 +173,8 @@ MERCHANT_REGISTRY: dict = {
         "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
         "max_items": 50,
         "pages": 3,
-        "enabled": True,
+        # AUDIT 2026-06-25: disabled — broad scrape covers Shiraz (~118). Free-tier Apify budget.
+        "enabled": False,
         "actor_input": {
             "operation": "search",
             "query": "shiraz",
@@ -178,7 +186,8 @@ MERCHANT_REGISTRY: dict = {
         "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
         "max_items": 50,
         "pages": 3,
-        "enabled": True,
+        # AUDIT 2026-06-25: disabled — broad scrape covers Cabernet (~91). Free-tier Apify budget.
+        "enabled": False,
         "actor_input": {
             "operation": "search",
             "query": "cabernet sauvignon",
@@ -190,7 +199,8 @@ MERCHANT_REGISTRY: dict = {
         "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
         "max_items": 50,
         "pages": 3,
-        "enabled": True,
+        # AUDIT 2026-06-25: disabled — broad scrape covers Rosé (~130, the most of any varietal). Free-tier Apify budget.
+        "enabled": False,
         "actor_input": {
             "operation": "search",
             "query": "rose",
@@ -202,7 +212,8 @@ MERCHANT_REGISTRY: dict = {
         "actor_id": "dromb/liquorland-au-catalog-product-lookup-unofficial",
         "max_items": 50,
         "pages": 3,
-        "enabled": True,
+        # AUDIT 2026-06-25: disabled — broad scrape covers Sauvignon Blanc (~113). Free-tier Apify budget.
+        "enabled": False,
         "actor_input": {
             "operation": "search",
             "query": "sauvignon blanc",
