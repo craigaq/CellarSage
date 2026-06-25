@@ -11,6 +11,7 @@ Run via GitHub Actions: see .github/workflows/weekly_sync.yml
 """
 
 import logging
+import os
 import sys
 
 from dotenv import load_dotenv
@@ -148,13 +149,19 @@ def main() -> int:
         log.warning("Producer state backfill failed (non-fatal): %s", exc)
 
     # Vivino enrichment — runs after all merchants so new wines are in the DB.
-    log.info("--- Vivino enrichment (limit=%d) ---", _VIVINO_WEEKLY_LIMIT)
-    try:
-        from .enrich_vivino import enrich_vivino
-        enriched = enrich_vivino(limit=_VIVINO_WEEKLY_LIMIT)
-        log.info("Vivino enrichment complete — %d wines enriched", enriched)
-    except Exception as exc:
-        log.warning("Vivino enrichment failed (non-fatal): %s", exc)
+    # Apify-billed, so the weekly workflow runs it fortnightly (RUN_VIVINO=false
+    # on off weeks) to stay within the free-tier monthly limit. Defaults to
+    # running (manual/local runs are unaffected).
+    if os.environ.get("RUN_VIVINO", "true").lower() == "false":
+        log.info("--- Vivino enrichment skipped (RUN_VIVINO=false — fortnightly cadence) ---")
+    else:
+        log.info("--- Vivino enrichment (limit=%d) ---", _VIVINO_WEEKLY_LIMIT)
+        try:
+            from .enrich_vivino import enrich_vivino
+            enriched = enrich_vivino(limit=_VIVINO_WEEKLY_LIMIT)
+            log.info("Vivino enrichment complete — %d wines enriched", enriched)
+        except Exception as exc:
+            log.warning("Vivino enrichment failed (non-fatal): %s", exc)
 
     # Summary
     log.info("=== Sync complete ===")

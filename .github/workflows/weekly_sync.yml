@@ -59,11 +59,25 @@ jobs:
       - name: Install dependencies
         run: pip install -r backend/sync/requirements.txt
 
+      - name: Determine enrichment cadence (fortnightly)
+        id: cadence
+        run: |
+          # Vivino + Untappd enrichment are Apify-billed. Run them on EVEN ISO
+          # weeks only (every 2nd week) to stay within the free-tier monthly
+          # usage limit. Core price scrapes still run every week.
+          if [ $(( 10#$(date +%V) % 2 )) -eq 0 ]; then
+            echo "enrich=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "enrich=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "ISO week $(date +%V) — enrichment this run: $(grep -o 'enrich=.*' "$GITHUB_OUTPUT" | tail -1)"
+
       - name: Run sync engine
         working-directory: backend
         env:
           APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
           DATABASE_URL:    ${{ secrets.DATABASE_URL }}
+          RUN_VIVINO:      ${{ steps.cadence.outputs.enrich }}
         run: python -m sync.main
 
       - name: Run beer pipeline (Boozeit + Liquorland)
@@ -74,8 +88,9 @@ jobs:
         run: python -m sync.beer_pipeline --liquorland
 
       - name: Enrich beer ratings (Untappd)
+        if: steps.cadence.outputs.enrich == 'true'   # fortnightly — Apify free-tier budget
         working-directory: backend
-        continue-on-error: true   # rate-limiting may truncate a run; resumes next week
+        continue-on-error: true   # rate-limiting may truncate a run; resumes next enrichment week
         env:
           APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
           DATABASE_URL:    ${{ secrets.DATABASE_URL }}
