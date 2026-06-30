@@ -961,6 +961,22 @@ class _QuizScreenState extends State<QuizScreen> {
                 ),
               ),
             ],
+            // Results screen — save the palate that produced these matches
+            // (tester request; works for both wine and beer).
+            if (_currentPage == _totalPages - 1) ...[
+              const SizedBox(height: 4),
+              TextButton.icon(
+                onPressed: _savedProfiles.length < PalatePrefs.maxProfiles
+                    ? _showSaveProfileDialog
+                    : null,
+                icon: const Icon(Icons.bookmark_add_outlined, size: 14),
+                label: const Text('Save Profile'),
+                style: TextButton.styleFrom(
+                  foregroundColor: WwColors.violetMuted,
+                  textStyle: WwText.bodySmall(),
+                ),
+              ),
+            ],
             if (_currentPage == _kSummaryPage && _loadedProfile != null) ...[
               const SizedBox(height: 4),
               TextButton.icon(
