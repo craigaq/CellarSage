@@ -38,7 +38,7 @@ BEERS = [
     ("Little Creatures Rogers", 35, 3.8, 3, 4, 4.8, 3, "Amber Ale", "National"),
 
     # ── Stone & Wood (Byron Bay, NSW) — coastal craft ──
-    ("Stone & Wood Pacific Ale", 35, 3.2, 2, 6, 4.4, 3, "Blonde Ale", "National"),
+    ("Stone & Wood Pacific Ale", 35, 3.2, 2, 6, 4.4, 3, "Ale", "National"),  # AU Pacific Ale (was mis-seeded Blonde Ale; "Ale" matches the other Pacific Ales)
     ("Stone & Wood Green Coast IPA", 60, 3.6, 2, 8, 5.3, 3, "IPA", "National"),
     ("Stone & Wood Lager", 25, 3.0, 1, 3, 4.2, 3, "Lager", "National"),
 
