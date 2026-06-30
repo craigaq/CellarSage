@@ -20,9 +20,28 @@ void main() async {
   // firebase_options.dart needed).
   try {
     await Firebase.initializeApp();
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    final crashlytics = FirebaseCrashlytics.instance;
+
+    // io.flutter.util.PathUtils (and other io.flutter.* core classes) can be
+    // momentarily unloadable right after an in-place Play update while ART
+    // re-optimises the new DEX — a known environmental install/update transient
+    // (heavily Samsung), not an app-logic bug. Record those NON-FATAL so they
+    // don't bury genuine crashes or distort the crash-free-users metric; real
+    // errors (anything not matching this signature) stay fatal.
+    bool isInstallTransient(String s) =>
+        s.contains('ClassNotFoundException') &&
+        (s.contains('io.flutter.') || s.contains('PathUtils'));
+
+    FlutterError.onError = (FlutterErrorDetails details) {
+      if (isInstallTransient(details.exception.toString())) {
+        crashlytics.recordFlutterError(details); // non-fatal
+      } else {
+        crashlytics.recordFlutterFatalError(details);
+      }
+    };
     PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      crashlytics.recordError(error, stack,
+          fatal: !isInstallTransient(error.toString()));
       return true;
     };
   } catch (_) {
