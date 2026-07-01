@@ -516,6 +516,16 @@ class _QuizScreenState extends State<QuizScreen> {
   // Saved profiles
   // ---------------------------------------------------------------------------
 
+  // Non-destructive: return to the welcome page (where the Saved Profiles list
+  // lives) without resetting the current session, unlike Start Over.
+  void _goToProfiles() {
+    _controller.animateToPage(
+      0,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+  }
+
   Future<void> _refreshProfiles() async {
     final profiles = await PalatePrefs.loadProfiles();
     if (mounted) setState(() => _savedProfiles = profiles);
@@ -961,20 +971,36 @@ class _QuizScreenState extends State<QuizScreen> {
                 ),
               ),
             ],
-            // Results screen — save the palate that produced these matches
-            // (tester request; works for both wine and beer).
+            // Results screen — save the palate that produced these matches, and
+            // jump to the saved profiles list (tester request; wine + beer).
             if (_currentPage == _totalPages - 1) ...[
               const SizedBox(height: 4),
-              TextButton.icon(
-                onPressed: _savedProfiles.length < PalatePrefs.maxProfiles
-                    ? _showSaveProfileDialog
-                    : null,
-                icon: const Icon(Icons.bookmark_add_outlined, size: 14),
-                label: const Text('Save Profile'),
-                style: TextButton.styleFrom(
-                  foregroundColor: WwColors.violetMuted,
-                  textStyle: WwText.bodySmall(),
-                ),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                children: [
+                  TextButton.icon(
+                    onPressed: _savedProfiles.length < PalatePrefs.maxProfiles
+                        ? _showSaveProfileDialog
+                        : null,
+                    icon: const Icon(Icons.bookmark_add_outlined, size: 14),
+                    label: const Text('Save Profile'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: WwColors.violetMuted,
+                      textStyle: WwText.bodySmall(),
+                    ),
+                  ),
+                  if (_savedProfiles.isNotEmpty)
+                    TextButton.icon(
+                      onPressed: _goToProfiles,
+                      icon: const Icon(Icons.bookmarks_outlined, size: 14),
+                      label: const Text('My Profiles'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: WwColors.violetMuted,
+                        textStyle: WwText.bodySmall(),
+                      ),
+                    ),
+                ],
               ),
             ],
             if (_currentPage == _kSummaryPage && _loadedProfile != null) ...[
@@ -1289,36 +1315,84 @@ class _QuizScreenState extends State<QuizScreen> {
   // Step 7 — Budget
   // ---------------------------------------------------------------------------
 
-  // A "My Saved Wine/Beer" row shown on a loaded profile.
-  Widget _savedDrinkRow(IconData icon, String label, String value) => Column(
-        children: [
-          const Divider(height: 16, color: WwColors.borderSubtle),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-            child: Row(
-              children: [
-                Icon(icon, size: 16, color: WwColors.violetMuted),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(label,
-                      style: WwText.bodyMedium(color: WwColors.textPrimary)),
-                ),
-                const SizedBox(width: 8),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 180),
-                  child: Text(
-                    value,
-                    style: WwText.bodyMedium(color: WwColors.violet)
-                        .copyWith(fontWeight: FontWeight.w600),
-                    textAlign: TextAlign.right,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
+  // "My Saved Wines/Beers" — a tappable list on a loaded profile. Each item
+  // opens its varietal/style picks so the user can see details & where to buy.
+  // Legacy saves (no ref) render as plain, non-tappable rows.
+  Widget _savedDrinksSection(IconData icon, String label,
+      List<SavedDrink> items, void Function(SavedDrink) onOpen) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 16, color: WwColors.borderSubtle),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+          child: Row(
+            children: [
+              Icon(icon, size: 16, color: WwColors.violetMuted),
+              const SizedBox(width: 8),
+              Text(label, style: WwText.bodyMedium(color: WwColors.textPrimary)),
+            ],
           ),
-        ],
-      );
+        ),
+        ...items.map((d) {
+          final tappable = d.ref.isNotEmpty;
+          return InkWell(
+            onTap: tappable ? () => onOpen(d) : null,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      d.name,
+                      style: WwText.bodyMedium(color: WwColors.violet)
+                          .copyWith(fontWeight: FontWeight.w600),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (tappable)
+                    const Icon(Icons.chevron_right,
+                        size: 18, color: WwColors.violetMuted),
+                ],
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  void _openSavedWine(SavedDrink d) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WinePicksScreen(
+          varietal: d.ref,
+          budgetMin: 0,
+          budgetMax: 99999,
+          userState: _userState,
+          snapshot: _loadedProfile?.toSnapshot(),
+        ),
+      ),
+    );
+  }
+
+  void _openSavedBeer(SavedDrink d) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BeerPicksScreen(
+          style: d.ref,
+          budgetMin: 0,
+          budgetMax: 99999,
+          userState: _userState,
+          snapshot: _loadedProfile?.toSnapshot(),
+        ),
+      ),
+    );
+  }
 
   Widget _buildBudgetStep() {
     if (_isBeer) _ensureBeerBudgetCounts();
@@ -1694,12 +1768,12 @@ class _QuizScreenState extends State<QuizScreen> {
                     ],
                   ),
                 ),
-                if (_loadedProfile?.savedWineName != null)
-                  _savedDrinkRow(Icons.wine_bar_outlined, 'My Saved Wine',
-                      _loadedProfile!.savedWineName!),
-                if (_loadedProfile?.savedBeerName != null)
-                  _savedDrinkRow(Icons.sports_bar_outlined, 'My Saved Beer',
-                      _loadedProfile!.savedBeerName!),
+                if (_loadedProfile != null && _loadedProfile!.savedWines.isNotEmpty)
+                  _savedDrinksSection(Icons.wine_bar_outlined, 'My Saved Wines',
+                      _loadedProfile!.savedWines, _openSavedWine),
+                if (_loadedProfile != null && _loadedProfile!.savedBeers.isNotEmpty)
+                  _savedDrinksSection(Icons.sports_bar_outlined, 'My Saved Beers',
+                      _loadedProfile!.savedBeers, _openSavedBeer),
               ],
             ),
           ),
@@ -2911,10 +2985,10 @@ class _ProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subtitleText = profile.prefDry ? '$foodLabel · Dry' : foodLabel;
-    final savedWine = profile.savedWineName;
-    final savedBeer = profile.savedBeerName;
+    final wineCount = profile.savedWines.length;
+    final beerCount = profile.savedBeers.length;
 
-    Widget savedRow(IconData icon, String name) => Padding(
+    Widget savedRow(IconData icon, String text) => Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Row(
             children: [
@@ -2922,7 +2996,7 @@ class _ProfileCard extends StatelessWidget {
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  name,
+                  text,
                   style: WwText.bodySmall(color: WwColors.violetMuted),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
@@ -2932,13 +3006,18 @@ class _ProfileCard extends StatelessWidget {
           ),
         );
 
-    final subtitleWidget = (savedWine != null || savedBeer != null)
+    // Card shows a saved-count summary; the tappable list lives on the profile.
+    final subtitleWidget = (wineCount > 0 || beerCount > 0)
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(subtitleText, style: WwText.bodySmall(color: WwColors.textSecondary)),
-              if (savedWine != null) savedRow(Icons.wine_bar_outlined, savedWine),
-              if (savedBeer != null) savedRow(Icons.sports_bar_outlined, savedBeer),
+              if (wineCount > 0)
+                savedRow(Icons.wine_bar_outlined,
+                    '$wineCount saved wine${wineCount == 1 ? '' : 's'}'),
+              if (beerCount > 0)
+                savedRow(Icons.sports_bar_outlined,
+                    '$beerCount saved beer${beerCount == 1 ? '' : 's'}'),
             ],
           )
         : Text(subtitleText, style: WwText.bodySmall(color: WwColors.textSecondary));

@@ -74,7 +74,7 @@ class _BeerPicksScreenState extends State<BeerPicksScreen> {
           await PalatePrefs.saveProfile(
             profile.name,
             profile.toSnapshot(),
-            savedBeerName: pick.name,
+            addBeer: SavedDrink(name: pick.name, ref: pick.beerStyle),
           );
           await _loadProfiles();
           if (mounted) {
@@ -89,7 +89,7 @@ class _BeerPicksScreenState extends State<BeerPicksScreen> {
           final ok = await PalatePrefs.saveProfile(
             name,
             widget.snapshot!,
-            savedBeerName: pick.name,
+            addBeer: SavedDrink(name: pick.name, ref: pick.beerStyle),
           );
           await _loadProfiles();
           if (mounted) {
@@ -490,8 +490,10 @@ class _BeerSaveToProfileSheetState extends State<_BeerSaveToProfileSheet> {
               (p) => ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(p.name, style: WwText.bodyMedium(color: WwColors.textPrimary)),
-                subtitle: p.savedBeerName != null
-                    ? Text('Saved: ${p.savedBeerName}', style: WwText.bodySmall())
+                subtitle: p.savedBeers.isNotEmpty
+                    ? Text('Saved: ${p.savedBeers.map((d) => d.name).join(', ')}',
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: WwText.bodySmall())
                     : null,
                 trailing: FilledButton(
                   onPressed: () => widget.onSaveToProfile(p),

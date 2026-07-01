@@ -13,6 +13,7 @@ class PalatePrefs {
   static const _kProfiles    = 'palate_named_profiles';
 
   static const int maxProfiles = 5;
+  static const int maxSavedPerProfile = 20;
 
   static Future<PalateSnapshot?> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -65,14 +66,16 @@ class PalatePrefs {
     }
   }
 
-  /// Saves a named profile. If a profile with the same name already exists
-  /// it is replaced in-place; otherwise it is appended (up to maxProfiles).
-  /// Returns false if the list is already full and no match by name exists.
+  /// Saves a named profile. If a profile with the same name already exists it is
+  /// updated in place (palate refreshed); otherwise appended (up to maxProfiles).
+  /// [addWine]/[addBeer] append to the profile's saved lists (deduped by name),
+  /// so multiple saves accumulate rather than overwrite.
+  /// Returns false if the list is full and no match by name exists.
   static Future<bool> saveProfile(
     String name,
     PalateSnapshot snap, {
-    String? savedWineName,
-    String? savedBeerName,
+    SavedDrink? addWine,
+    SavedDrink? addBeer,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final profiles = await loadProfiles();
@@ -90,6 +93,14 @@ class PalatePrefs {
         prefDry: snap.prefDry,
       ),
     );
+
+    // Append a saved item, deduping by name and capping the list length.
+    List<SavedDrink> merged(List<SavedDrink> current, SavedDrink? add) {
+      if (add == null) return current;
+      if (current.any((d) => d.name == add.name)) return current;
+      return [...current, add].take(maxSavedPerProfile).toList();
+    }
+
     final profile = PalateProfile(
       id: existing.id,
       name: name,
@@ -100,8 +111,8 @@ class PalatePrefs {
       foodPairing: snap.foodPairing,
       budgetIndex: snap.budgetIndex,
       prefDry:     snap.prefDry,
-      savedWineName: savedWineName ?? existing.savedWineName,
-      savedBeerName: savedBeerName ?? existing.savedBeerName,
+      savedWines: merged(existing.savedWines, addWine),
+      savedBeers: merged(existing.savedBeers, addBeer),
     );
     final idx = profiles.indexWhere((p) => p.name == name);
     if (idx >= 0) {
@@ -149,6 +160,21 @@ class PalateSnapshot {
   });
 }
 
+/// A wine or beer the user saved to a profile. [ref] is the varietal (wine) or
+/// beer style — enough to re-open the item's details. Empty for legacy saves.
+class SavedDrink {
+  final String name;
+  final String ref;
+
+  const SavedDrink({required this.name, this.ref = ''});
+
+  factory SavedDrink.fromJson(Map<String, dynamic> j) =>
+      SavedDrink(name: j['name'] as String, ref: (j['ref'] as String?) ?? '');
+
+  Map<String, dynamic> toJson() =>
+      {'name': name, if (ref.isNotEmpty) 'ref': ref};
+}
+
 class PalateProfile {
   final String id;
   final String name;
@@ -159,8 +185,8 @@ class PalateProfile {
   final String foodPairing;
   final int budgetIndex;
   final bool prefDry;
-  final String? savedWineName;
-  final String? savedBeerName;
+  final List<SavedDrink> savedWines;
+  final List<SavedDrink> savedBeers;
 
   const PalateProfile({
     required this.id,
@@ -172,23 +198,40 @@ class PalateProfile {
     required this.foodPairing,
     required this.budgetIndex,
     required this.prefDry,
-    this.savedWineName,
-    this.savedBeerName,
+    this.savedWines = const [],
+    this.savedBeers = const [],
   });
 
-  factory PalateProfile.fromJson(Map<String, dynamic> json) => PalateProfile(
-        id:            json['id']             as String,
-        name:          json['name']           as String,
-        crispness:     json['crispness']      as int,
-        weight:        json['weight']         as int,
-        texture:       json['texture']        as int,
-        flavor:        json['flavor']         as int,
-        foodPairing:   json['food_pairing']   as String,
-        budgetIndex:   json['budget_index']   as int,
-        prefDry:       json['pref_dry']       as bool,
-        savedWineName: json['saved_wine_name'] as String?,
-        savedBeerName: json['saved_beer_name'] as String?,
-      );
+  factory PalateProfile.fromJson(Map<String, dynamic> json) {
+    // New format = a 'saved_wines'/'saved_beers' list; legacy = a single
+    // 'saved_wine_name'/'saved_beer_name' string. Migrate legacy → 1-item list.
+    List<SavedDrink> parseSaved(String listKey, String legacyKey) {
+      final raw = json[listKey];
+      if (raw is List) {
+        return raw
+            .map((e) => SavedDrink.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      final legacy = json[legacyKey] as String?;
+      return (legacy != null && legacy.isNotEmpty)
+          ? [SavedDrink(name: legacy)]
+          : const [];
+    }
+
+    return PalateProfile(
+      id:          json['id']           as String,
+      name:        json['name']         as String,
+      crispness:   json['crispness']    as int,
+      weight:      json['weight']       as int,
+      texture:     json['texture']      as int,
+      flavor:      json['flavor']       as int,
+      foodPairing: json['food_pairing'] as String,
+      budgetIndex: json['budget_index'] as int,
+      prefDry:     json['pref_dry']     as bool,
+      savedWines:  parseSaved('saved_wines', 'saved_wine_name'),
+      savedBeers:  parseSaved('saved_beers', 'saved_beer_name'),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'id':              id,
@@ -200,8 +243,10 @@ class PalateProfile {
         'food_pairing':    foodPairing,
         'budget_index':    budgetIndex,
         'pref_dry':        prefDry,
-        if (savedWineName != null) 'saved_wine_name': savedWineName,
-        if (savedBeerName != null) 'saved_beer_name': savedBeerName,
+        if (savedWines.isNotEmpty)
+          'saved_wines': savedWines.map((d) => d.toJson()).toList(),
+        if (savedBeers.isNotEmpty)
+          'saved_beers': savedBeers.map((d) => d.toJson()).toList(),
       };
 
   PalateSnapshot toSnapshot() => PalateSnapshot(

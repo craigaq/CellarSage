@@ -100,7 +100,7 @@ class _WinePicksScreenState extends State<WinePicksScreen> {
           await PalatePrefs.saveProfile(
             profile.name,
             profile.toSnapshot(),
-            savedWineName: pick.name,
+            addWine: SavedDrink(name: pick.name, ref: widget.varietal),
           );
           await _loadProfiles();
           if (mounted) {
@@ -115,7 +115,7 @@ class _WinePicksScreenState extends State<WinePicksScreen> {
           final ok = await PalatePrefs.saveProfile(
             name,
             widget.snapshot!,
-            savedWineName: pick.name,
+            addWine: SavedDrink(name: pick.name, ref: widget.varietal),
           );
           await _loadProfiles();
           if (mounted) {
@@ -725,8 +725,10 @@ class _SaveToProfileSheetState extends State<_SaveToProfileSheet> {
               (p) => ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(p.name, style: WwText.bodyMedium(color: WwColors.textPrimary)),
-                subtitle: p.savedWineName != null
-                    ? Text('Saved: ${p.savedWineName}', style: WwText.bodySmall())
+                subtitle: p.savedWines.isNotEmpty
+                    ? Text('Saved: ${p.savedWines.map((d) => d.name).join(', ')}',
+                        style: WwText.bodySmall(),
+                        maxLines: 1, overflow: TextOverflow.ellipsis)
                     : null,
                 trailing: FilledButton(
                   onPressed: () => widget.onSaveToProfile(p),
