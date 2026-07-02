@@ -11,6 +11,7 @@ import json
 import random
 import ssl
 import logging
+import re
 import time
 import urllib.parse
 import urllib.request
@@ -18,6 +19,26 @@ import uuid
 from typing import Optional
 
 log = logging.getLogger(__name__)
+
+
+def _search_query(name: str) -> str:
+    """Simplify a product name into a store-search query — strip volume/packaging
+    noise ("750mL Bottle", "6 Pack", "Can") so the Cellarbrations store search
+    matches. Mirrors the working link a user gets from the site itself."""
+    q = re.sub(r"\b\d+\s*(?:ml|l|pk|pack)\b", " ", name, flags=re.IGNORECASE)
+    q = re.sub(r"\b(?:bottle|bottles|can|cans|case|pack|nv)\b", " ", q, flags=re.IGNORECASE)
+    q = re.sub(r"\s+", " ", q).strip()
+    return (q or name).lower()
+
+
+def _sunbury_buy_url(name: str) -> str:
+    """Store-scoped Cellarbrations Sunbury search URL. The selected store lives in
+    the PATH (/sm/pickup/rsid/<store>/results), NOT a ?storeId= param — the param
+    form searches the national catalogue and yields 'wine not available'."""
+    return (
+        f"{_SITE_BASE}/sm/pickup/rsid/{_STORE_ID}/results"
+        f"?q={urllib.parse.quote_plus(_search_query(name))}"
+    )
 
 _GW_BASE   = "https://storefrontgateway.cellarbrations.com.au"
 _SITE_BASE = "https://www.cellarbrations.com.au"
@@ -117,12 +138,8 @@ def scrape_cellarbrations_sunbury() -> list[dict]:
         if price <= 0:
             continue
 
-        # Store-scoped buy URL — takes user directly to this wine at the Sunbury store
-        buy_url = (
-            f"{_SITE_BASE}/search"
-            f"?q={urllib.parse.quote(name)}"
-            f"&storeId={_STORE_ID}"
-        )
+        # Store-scoped buy URL (path-based rsid, not a storeId param).
+        buy_url = _sunbury_buy_url(name)
 
         results.append({
             "name":     name,
