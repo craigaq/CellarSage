@@ -473,19 +473,6 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
-  void _skipToSip() {
-    setState(() {
-      _foodPairing = 'none';
-      _overrideMode = 'use_pairing_logic';
-      _pairingMode = 'congruent';
-    });
-    _fetchResults();
-    _controller.animateToPage(
-      _totalPages - 1,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeInOut,
-    );
-  }
 
   void _startOver() {
     setState(() {
@@ -958,13 +945,17 @@ class _QuizScreenState extends State<QuizScreen> {
                   ),
               ],
             ),
+            // Last dial page — offer Start Over (the "just sipping" shortcut
+            // lives on the next/food step, so Skip to Sip here was redundant).
             if (_currentPage == 4) ...[
               const SizedBox(height: 4),
-              TextButton(
-                onPressed: _skipToSip,
-                child: Text(
-                  'Skip to Sip →',
-                  style: WwText.bodySmall().copyWith(color: WwColors.violetMuted),
+              TextButton.icon(
+                onPressed: _startOver,
+                icon: const Icon(Icons.refresh, size: 14),
+                label: const Text('Start Over'),
+                style: TextButton.styleFrom(
+                  foregroundColor: WwColors.violetMuted,
+                  textStyle: WwText.bodySmall(),
                 ),
               ),
             ],
