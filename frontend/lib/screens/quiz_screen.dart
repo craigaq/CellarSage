@@ -531,18 +531,24 @@ class _QuizScreenState extends State<QuizScreen> {
     if (mounted) setState(() => _savedProfiles = profiles);
   }
 
-  void _loadProfileAndJump(PalateProfile profile) {
+  Future<void> _loadProfileAndJump(PalateProfile profile) async {
+    // Re-read from storage so wines/beers saved earlier this session (from the
+    // picks screens) are included — the cached _savedProfiles list can be stale.
+    final all = await PalatePrefs.loadProfiles();
+    final fresh = all.firstWhere((p) => p.id == profile.id, orElse: () => profile);
+    if (!mounted) return;
     setState(() {
-      _crispness    = profile.crispness;
-      _weight       = profile.weight;
-      _texture      = profile.texture;
-      _flavor       = profile.flavor;
-      _foodPairing  = profile.foodPairing;
-      _budgetIndex  = profile.budgetIndex;
-      _prefDry      = profile.prefDry;
+      _savedProfiles = all;
+      _crispness    = fresh.crispness;
+      _weight       = fresh.weight;
+      _texture      = fresh.texture;
+      _flavor       = fresh.flavor;
+      _foodPairing  = fresh.foodPairing;
+      _budgetIndex  = fresh.budgetIndex;
+      _prefDry      = fresh.prefDry;
       _overrideMode = 'use_pairing_logic';
       _pairingMode  = 'congruent';
-      _loadedProfile = profile;
+      _loadedProfile = fresh;
     });
     _controller.animateToPage(
       _kSummaryPage, // jump straight here so user sees the full profile
@@ -853,7 +859,12 @@ class _QuizScreenState extends State<QuizScreen> {
             child: PageView(
               controller: _controller,
               physics: const NeverScrollableScrollPhysics(),
-              onPageChanged: (p) => setState(() => _currentPage = p),
+              onPageChanged: (p) {
+                setState(() => _currentPage = p);
+                // Landing back on the welcome page → refresh the saved-profiles
+                // list so counts reflect wines/beers saved this session.
+                if (p == 0) _refreshProfiles();
+              },
               children: [
                 _buildWelcome(),
                 _buildAttributeStep(
