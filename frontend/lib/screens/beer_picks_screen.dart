@@ -291,22 +291,7 @@ class _BeerPickCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: Text(pick.name, style: WwText.headlineMedium())),
-                    if (onSave != null)
-                      IconButton(
-                        onPressed: onSave,
-                        icon: const Icon(Icons.bookmark_add_outlined, size: 20),
-                        color: WwColors.violet,
-                        tooltip: 'Save to profile',
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                  ],
-                ),
+                Text(pick.name, style: WwText.headlineMedium()),
             const SizedBox(height: 4),
             Text(
               '${pick.beerStyle}'
@@ -369,6 +354,22 @@ class _BeerPickCard extends StatelessWidget {
                     label: Text('Buy on ${_retailerLabel(pick.retailer)}'),
                   ),
                 ),
+                if (onSave != null) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: onSave,
+                      icon: const Icon(Icons.bookmark_add_outlined, size: 15),
+                      label: const Text('Save to Profile'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: WwColors.violetMuted,
+                        side: BorderSide(
+                            color: WwColors.violetMuted.withValues(alpha: 0.5)),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
